@@ -30,7 +30,7 @@ function ProductThumbnail({ src, alt }: { src: string; alt: string }) {
 
   if (!src || broken) {
     return (
-      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
         <ImageOff className="h-5 w-5 text-zinc-300" />
       </div>
     );
@@ -42,7 +42,7 @@ function ProductThumbnail({ src, alt }: { src: string; alt: string }) {
       src={src}
       alt={alt}
       onError={() => setBroken(true)}
-      className="h-14 w-14 shrink-0 rounded-xl object-cover"
+      className="h-14 w-14 shrink-0 rounded-lg object-cover"
     />
   );
 }
@@ -61,7 +61,7 @@ function ProductCard({ product }: { product: LinkPickProduct }) {
   }
 
   return (
-    <article className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-sm">
+    <article className="flex items-center gap-3 border-b border-slate-100 py-4">
       <ProductThumbnail src={product.thumbnail} alt={product.title} />
 
       <div className="min-w-0 flex-1">
@@ -96,7 +96,7 @@ function ProductCard({ product }: { product: LinkPickProduct }) {
         <button
           type="button"
           onClick={openAffiliateLink}
-          className="shrink-0 rounded-xl bg-amber-400 px-3.5 py-2.5 text-xs font-bold text-zinc-900 hover:bg-amber-300"
+          className="shrink-0 rounded-md bg-amber-400 px-3.5 py-2.5 text-xs font-bold text-zinc-900 hover:bg-amber-300"
         >
           구매하기
         </button>
@@ -119,7 +119,7 @@ export default function StoreTab() {
   }, [filter]);
 
   return (
-    <div className="flex flex-col gap-4 px-4 py-4">
+    <div className="flex flex-col gap-4 px-4 py-6 sm:px-6">
       <div className="flex gap-2 overflow-x-auto">
         {FILTERS.map(({ label, value }) => (
           <button
@@ -139,7 +139,7 @@ export default function StoreTab() {
 
       {loading && <p className="py-10 text-center text-sm text-zinc-400">불러오는 중...</p>}
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}

@@ -18,7 +18,7 @@ export default function RegionDropdown({
       {/* 바깥 클릭 시 닫히는 투명 캐처 (어둡게 덮지 않음) */}
       <div className="fixed inset-0 z-40" onClick={onClose} />
 
-      <div className="absolute left-1/2 top-full z-50 mt-1.5 w-60 -translate-x-1/2 rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-xl">
+      <div className="absolute left-1/2 top-full z-50 mt-1.5 w-60 -translate-x-1/2 rounded-md border border-slate-100 bg-white p-1.5 shadow-lg">
         {DEMO_REGIONS.map((region) => {
           const active = region.code === currentRegion.code;
           return (
@@ -29,7 +29,7 @@ export default function RegionDropdown({
                 onSelect(region);
                 onClose();
               }}
-              className={`flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+              className={`flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors ${
                 active ? "bg-amber-50 text-zinc-900" : "text-zinc-600 hover:bg-zinc-50"
               }`}
             >

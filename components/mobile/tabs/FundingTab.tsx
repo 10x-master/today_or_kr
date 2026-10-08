@@ -28,7 +28,7 @@ function ReportThumbnail({ src, alt }: { src: string; alt: string }) {
 
   if (!src || broken) {
     return (
-      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
         <ImageOff className="h-5 w-5 text-zinc-300" />
       </div>
     );
@@ -40,7 +40,7 @@ function ReportThumbnail({ src, alt }: { src: string; alt: string }) {
       src={src}
       alt={alt}
       onError={() => setBroken(true)}
-      className="h-14 w-14 shrink-0 rounded-xl object-cover"
+      className="h-14 w-14 shrink-0 rounded-lg object-cover"
     />
   );
 }
@@ -96,9 +96,9 @@ export default function FundingTab() {
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 py-4">
+    <div className="flex flex-col px-4 py-6 sm:px-6">
       {toast && (
-        <div className="rounded-xl bg-zinc-900 px-3.5 py-2.5 text-xs font-medium text-white">
+        <div className="mb-4 rounded-md bg-zinc-900 px-3.5 py-2.5 text-xs font-medium text-white">
           {toast}
         </div>
       )}
@@ -106,12 +106,9 @@ export default function FundingTab() {
       {campaigns.map((campaign) => {
         const percent = Math.round(campaign.achievementRate * 100);
         return (
-          <section
-            key={campaign.id}
-            className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"
-          >
+          <section key={campaign.id} className="border-b border-slate-100 py-5 first:pt-0">
             <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-50">
                 <HeartHandshake className="h-5 w-5 text-rose-500" />
               </span>
               <div>
@@ -144,7 +141,7 @@ export default function FundingTab() {
               type="button"
               onClick={() => handleParticipate(campaign.id)}
               disabled={participatingId === campaign.id}
-              className="mt-4 w-full rounded-xl bg-amber-400 py-3 text-sm font-bold text-zinc-900 transition-colors hover:bg-amber-300 disabled:opacity-50"
+              className="mt-4 w-full rounded-md bg-amber-400 py-3 text-sm font-bold text-zinc-900 transition-colors hover:bg-amber-300 disabled:opacity-50"
             >
               {participatingId === campaign.id ? "적립 중..." : "펀딩 참여하기"}
             </button>
@@ -152,12 +149,12 @@ export default function FundingTab() {
         );
       })}
 
-      <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-bold text-zinc-900">투명 설치 인증 리포트</h3>
+      <section className="flex flex-col pt-2">
+        <h3 className="pb-3 text-sm font-bold text-zinc-900">투명 설치 인증 리포트</h3>
         {reports.map((report) => (
           <article
             key={report.id}
-            className="flex gap-3 rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-sm"
+            className="flex gap-3 border-b border-slate-100 py-4 last:border-b-0"
           >
             <ReportThumbnail src={report.photoUrl} alt={report.title} />
             <div className="min-w-0 flex-1">

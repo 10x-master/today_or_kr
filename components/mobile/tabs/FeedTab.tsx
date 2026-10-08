@@ -27,7 +27,7 @@ function FeedImage({ src, alt }: { src: string; alt: string }) {
 
   if (!src || broken) {
     return (
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-zinc-100">
+      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
         <ImageOff className="h-5 w-5 text-zinc-300" />
       </div>
     );
@@ -39,7 +39,7 @@ function FeedImage({ src, alt }: { src: string; alt: string }) {
       src={src}
       alt={alt}
       onError={() => setBroken(true)}
-      className="h-16 w-16 shrink-0 rounded-xl object-cover"
+      className="h-16 w-16 shrink-0 rounded-lg object-cover"
     />
   );
 }
@@ -119,7 +119,7 @@ export default function FeedTab({ region }: { region: Region }) {
   );
 
   const sharingNoticeCard = campaign && (
-    <div className="flex items-center gap-2 rounded-xl bg-zinc-100/70 px-3.5 py-2 text-[11px] text-zinc-500">
+    <div className="flex items-center gap-2 border-b border-slate-100 py-2.5 text-[11px] text-zinc-500">
       <HeartHandshake className="h-3.5 w-3.5 shrink-0 text-rose-400" />
       <span className="truncate">
         우리동네 상생 나눔 알림 · {campaign.title} {Math.round(campaign.achievementRate * 100)}%
@@ -129,10 +129,10 @@ export default function FeedTab({ region }: { region: Region }) {
   );
 
   return (
-    <div className="flex flex-col gap-4 px-4 py-4">
-      <section className="rounded-2xl border border-yellow-200 bg-yellow-50 p-4">
+    <div className="flex flex-col gap-4 px-4 py-6 sm:px-6">
+      <section className="rounded-md border border-yellow-100 bg-yellow-50 p-4">
         <div className="flex items-start gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-yellow-300">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-yellow-300">
             <MessageCircle className="h-4.5 w-4.5 text-zinc-900" />
           </span>
           <div>
@@ -173,12 +173,12 @@ export default function FeedTab({ region }: { region: Region }) {
         </p>
       )}
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col">
         {filteredPosts.length < 2 && sharingNoticeCard}
 
         {filteredPosts.map((post, index) => (
           <Fragment key={post.id}>
-            <article className="flex gap-3 rounded-2xl border border-zinc-200 bg-white p-3.5 shadow-sm">
+            <article className="flex gap-3 border-b border-slate-100 py-4 first:pt-0">
               <FeedImage src={post.images[0]} alt={post.title} />
 
               <div className="min-w-0 flex-1">

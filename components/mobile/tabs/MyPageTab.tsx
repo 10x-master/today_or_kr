@@ -65,8 +65,8 @@ export default function MyPageTab() {
   const activeLevels = dashboard.levelBreakdown.filter((l) => l.contributionCount > 0);
 
   return (
-    <div className="flex flex-col gap-4 px-4 py-4">
-      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+    <div className="flex flex-col px-4 py-6 sm:px-6">
+      <section className="border-b border-slate-100 py-6 first:pt-0">
         <p className="text-xs font-semibold text-amber-500">{dashboard.user.name}님의 계정</p>
         <div className="mt-1 flex items-center justify-between">
           <span className="text-lg font-extrabold tracking-wide text-zinc-900">
@@ -83,7 +83,7 @@ export default function MyPageTab() {
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-xl bg-zinc-50 p-3">
+          <div className="rounded-md bg-zinc-50 p-3">
             <div className="flex items-center gap-1.5 text-xs text-zinc-500">
               <Users className="h-3.5 w-3.5" />
               산하 조직원 (1~10단계)
@@ -92,7 +92,7 @@ export default function MyPageTab() {
               {dashboard.totalDownlineCount}명
             </p>
           </div>
-          <div className="rounded-xl bg-amber-50 p-3">
+          <div className="rounded-md bg-amber-50 p-3">
             <div className="flex items-center gap-1.5 text-xs text-amber-600">
               <Sparkles className="h-3.5 w-3.5" />
               누적 10X 기여 포인트
@@ -104,16 +104,16 @@ export default function MyPageTab() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <section className="border-b border-slate-100 py-6">
         <h3 className="text-sm font-bold text-zinc-900">단계별 기여 내역</h3>
         {activeLevels.length === 0 ? (
           <p className="mt-3 text-xs text-zinc-400">아직 적립된 수당이 없습니다.</p>
         ) : (
-          <div className="mt-3 flex flex-col gap-2">
+          <div className="mt-3 flex flex-col">
             {activeLevels.map((level) => (
               <div
                 key={level.level}
-                className="flex items-center justify-between rounded-xl bg-zinc-50 px-3 py-2 text-sm"
+                className="flex items-center justify-between border-b border-slate-100 py-2.5 text-sm last:border-b-0"
               >
                 <span className="font-semibold text-zinc-700">{level.level}단계</span>
                 <span className="text-zinc-500">{level.contributionCount}건</span>
@@ -124,9 +124,9 @@ export default function MyPageTab() {
         )}
       </section>
 
-      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <section className="py-6">
         <div className="flex items-start gap-2.5">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-900">
             <Zap className="h-4.5 w-4.5 text-amber-300" />
           </span>
           <div>
@@ -142,7 +142,7 @@ export default function MyPageTab() {
           type="button"
           onClick={handleTrigger}
           disabled={triggering}
-          className="mt-4 w-full rounded-xl bg-zinc-900 py-3 text-sm font-bold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
+          className="mt-4 w-full rounded-md bg-zinc-900 py-3 text-sm font-bold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
         >
           {triggering ? "적립 처리 중..." : "가상 실적 10만원 발생 테스트"}
         </button>
@@ -152,7 +152,7 @@ export default function MyPageTab() {
             {log.map((entry) => (
               <div
                 key={entry.id}
-                className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-2 text-xs"
+                className="flex items-center justify-between rounded-md bg-emerald-50 px-3 py-2 text-xs"
               >
                 <span className="font-semibold text-emerald-700">
                   {entry.level}단계 · {displayUserName(entry.beneficiaryUserId)}

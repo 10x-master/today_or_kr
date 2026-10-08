@@ -15,11 +15,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<MobileTab>("feed");
 
   return (
-    <div
-      className="flex min-h-screen w-full max-w-md flex-1 flex-col bg-zinc-50
-        sm:min-h-0 sm:h-[840px] sm:max-h-[88vh] sm:my-8 sm:overflow-y-auto
-        sm:rounded-[2.5rem] sm:border sm:border-zinc-300/70 sm:shadow-2xl sm:shadow-zinc-400/30"
-    >
+    <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-1 flex-col bg-white">
       <MobileHeader region={region} onRegionChange={setRegion} />
 
       <main className="flex-1">

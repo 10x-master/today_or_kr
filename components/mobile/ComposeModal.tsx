@@ -65,7 +65,7 @@ export default function ComposeModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl"
+        className="w-full max-w-sm rounded-t-lg bg-white p-5 shadow-xl sm:rounded-lg"
       >
         <div className="flex items-center justify-between">
           <h3 className="text-base font-bold text-zinc-900">
@@ -85,7 +85,7 @@ export default function ComposeModal({
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as LocalPickCategory)}
-            className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900"
+            className="w-full rounded-md border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900"
           >
             {LOCAL_PICK_CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -98,7 +98,7 @@ export default function ComposeModal({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="제목"
-            className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400"
+            className="w-full rounded-md border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400"
           />
 
           <textarea
@@ -106,14 +106,14 @@ export default function ComposeModal({
             onChange={(e) => setContent(e.target.value)}
             placeholder="우리 동네 소식을 들려주세요"
             rows={4}
-            className="w-full resize-none rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400"
+            className="w-full resize-none rounded-md border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400"
           />
 
           <input
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
             placeholder="이미지 URL (선택)"
-            className="w-full rounded-xl border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400"
+            className="w-full rounded-md border border-zinc-300 px-3.5 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400"
           />
 
           {error && <p className="text-xs font-medium text-rose-500">{error}</p>}
@@ -122,7 +122,7 @@ export default function ComposeModal({
             type="button"
             onClick={handleSubmit}
             disabled={submitting}
-            className="mt-1 w-full rounded-xl bg-zinc-900 py-3 text-sm font-bold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
+            className="mt-1 w-full rounded-md bg-zinc-900 py-3 text-sm font-bold text-white transition-colors hover:bg-zinc-800 disabled:opacity-50"
           >
             {submitting ? "등록 중..." : "등록하기"}
           </button>

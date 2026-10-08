@@ -22,11 +22,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full bg-white antialiased`}
     >
-      <body className="min-h-full flex flex-col items-center bg-gradient-to-b from-zinc-100 via-zinc-200 to-zinc-300 sm:justify-center">
-        {children}
-      </body>
+      <body className="flex min-h-full flex-col bg-white text-zinc-900">{children}</body>
     </html>
   );
 }
