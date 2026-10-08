@@ -1,4 +1,5 @@
 import {
+  mockCivicNotices,
   mockCommissionLedger,
   mockDonationCampaigns,
   mockLinkPickProducts,
@@ -19,6 +20,7 @@ import type {
   ProductType,
 } from "@/types/commerce";
 import type { CommissionLedgerEntry, UserConsents, UserProfile } from "@/types/auth";
+import type { CivicNotice } from "@/types/civic";
 
 const AUTO_BLIND_THRESHOLD = 3;
 
@@ -37,6 +39,18 @@ export function getVisibleLocalPosts(filter: LocalFeedFilter = {}): LocalPost[] 
     if (filter.gugun && post.region.gugun !== filter.gugun) return false;
     if (filter.dong && post.region.dong !== filter.dong) return false;
     if (filter.category && post.category !== filter.category) return false;
+    return true;
+  });
+}
+
+export interface CivicNoticeFilter {
+  dong?: string;
+}
+
+/** 지자체 공식 고시공고/새소식 조회 */
+export function getCivicNotices(filter: CivicNoticeFilter = {}): CivicNotice[] {
+  return mockCivicNotices.filter((notice) => {
+    if (filter.dong && notice.region.dong !== filter.dong) return false;
     return true;
   });
 }
