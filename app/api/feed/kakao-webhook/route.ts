@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createLocalPost } from "@/lib/db/store";
 import { mockRegions } from "@/lib/db/mockSeed";
 import { containsBannedWords } from "@/lib/moderation";
+import { LOCAL_PICK_CATEGORIES } from "@/lib/localPickCategory";
 import type { LocalPickCategory, Region } from "@/types/local";
 
 interface KakaoDetailParam {
@@ -21,20 +22,10 @@ interface KakaoSkillPayload {
   };
 }
 
-const VALID_CATEGORIES: LocalPickCategory[] = [
-  "festival",
-  "spot",
-  "food",
-  "activity",
-  "welfare",
-  "repair",
-  "business",
-];
-
 function isValidCategory(value: unknown): value is LocalPickCategory {
   return (
     typeof value === "string" &&
-    VALID_CATEGORIES.includes(value as LocalPickCategory)
+    LOCAL_PICK_CATEGORIES.includes(value as LocalPickCategory)
   );
 }
 

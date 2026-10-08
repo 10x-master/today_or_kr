@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createLocalPost, getVisibleLocalPosts } from "@/lib/db/store";
 import { containsBannedWords } from "@/lib/moderation";
+import { LOCAL_PICK_CATEGORIES } from "@/lib/localPickCategory";
 import type { LocalPickCategory, LocalPostAuthor, Region } from "@/types/local";
-
-const VALID_CATEGORIES: LocalPickCategory[] = [
-  "festival",
-  "spot",
-  "food",
-  "activity",
-  "welfare",
-  "repair",
-  "business",
-];
 
 function isValidCategory(value: unknown): value is LocalPickCategory {
   return (
     typeof value === "string" &&
-    VALID_CATEGORIES.includes(value as LocalPickCategory)
+    LOCAL_PICK_CATEGORIES.includes(value as LocalPickCategory)
   );
 }
 

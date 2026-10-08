@@ -15,6 +15,7 @@ export interface Region {
 
 /** 로컬 피드 카테고리 */
 export type LocalPickCategory =
+  | "notice" // 지자체 공지/행정 안내
   | "festival" // 축제/행사
   | "spot" // 명소/여행
   | "food" // 특산물/맛집
@@ -47,6 +48,8 @@ export interface LocalPost {
   images: string[];
   sourceChannel: LocalPostSourceChannel;
   author: LocalPostAuthor;
+  /** 접수 마감일 또는 진행 기간 표시용 (예: "~10/31 접수", "10/18(일) 1일") */
+  noticePeriod?: string;
   /** 누적 신고수 */
   reportCount: number;
   /** reportCount >= 3 이면 true (자동 블라인드 플래그) */
