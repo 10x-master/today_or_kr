@@ -27,12 +27,21 @@ export type LocalPostSourceChannel =
   | "mobile_web" // 웹 직접등록
   | "official_gov"; // 지자체 공공
 
+/** 등록 주체(게시자) 카테고리 */
+export type AuthorRole =
+  | "gov" // 지자체·공공기관
+  | "ngo" // 시민·사회단체
+  | "biz" // 기업·소상공인
+  | "club" // 동호회·소모임
+  | "user"; // 개인·주민
+
 export interface LocalPostAuthor {
   id: string;
   name: string;
   /** 협회회원사 여부 */
   isPartner: boolean;
   badge?: string;
+  role: AuthorRole;
 }
 
 export interface LocalPost {

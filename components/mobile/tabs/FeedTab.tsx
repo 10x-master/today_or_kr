@@ -10,18 +10,28 @@ import {
   type FeedChannelFilter,
 } from "@/lib/localPickCategory";
 import { CIVIC_CATEGORY_COLUMN, CIVIC_COLUMN_TITLES } from "@/lib/civicCategory";
+import { AUTHOR_ROLE_TEXT_CLASS } from "@/lib/authorRole";
 import type { LocalPost, Region } from "@/types/local";
 import type { CivicNotice } from "@/types/civic";
 
 const SHORT_LINK_BANNER_INTERVAL = 5;
 
+/** 배경 없이 테마 컬러 텍스트 + 연한 테두리로만 표현하는 등록 주체 라벨 */
+function RoleBadge({ label, colorClass }: { label: string; colorClass: string }) {
+  return (
+    <span
+      className={`rounded border border-current/30 px-1.5 py-0.5 text-[10px] font-bold ${colorClass}`}
+    >
+      {label}
+    </span>
+  );
+}
+
 function CivicRow({ notice }: { notice: CivicNotice }) {
   return (
     <article className="border-b border-slate-100 py-1.5 first:pt-0">
       <div className="flex items-center gap-1.5">
-        <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-normal text-white">
-          {notice.department}
-        </span>
+        <RoleBadge label={notice.department} colorClass={AUTHOR_ROLE_TEXT_CLASS.gov} />
         <span className="text-[10px] font-normal text-zinc-500">{notice.publishedAt}</span>
       </div>
       <h4 className="mt-1 line-clamp-2 text-[13px] font-normal leading-snug text-zinc-900">
@@ -54,9 +64,7 @@ function CommunityRow({
     <article className="border-b border-slate-100 py-1.5 first:pt-0">
       <div className="flex flex-wrap items-center gap-1.5">
         {post.author.badge && (
-          <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-normal text-white">
-            {post.author.badge}
-          </span>
+          <RoleBadge label={post.author.badge} colorClass={AUTHOR_ROLE_TEXT_CLASS[post.author.role]} />
         )}
         {post.noticePeriod && (
           <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-normal text-rose-500">

@@ -59,6 +59,7 @@ function resolveAuthor(author: CreateFeedPostBody["author"]): LocalPostAuthor {
     name: typeof author?.name === "string" ? author.name : "익명",
     isPartner: typeof author?.isPartner === "boolean" ? author.isPartner : false,
     badge: typeof author?.badge === "string" ? author.badge : undefined,
+    role: "user",
   };
 }
 

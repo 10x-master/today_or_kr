@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
       id: payload.userRequest?.user?.id ?? "kakao-guest",
       name: "카카오톡 제보자",
       isPartner: false,
+      role: "user",
     },
   });
 
