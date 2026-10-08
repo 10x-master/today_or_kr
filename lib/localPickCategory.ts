@@ -1,47 +1,38 @@
 import type { LocalPickCategory } from "@/types/local";
 
+/** 채널 아이콘 (이모지) */
+export const LOCAL_PICK_CATEGORY_ICONS: Record<LocalPickCategory, string> = {
+  notice: "📢",
+  meetup: "👥",
+  talk: "☕",
+  flash: "⚡",
+  tip: "💡",
+};
+
+/** 채널 라벨 (아이콘 없이, 카드/select 등에서 사용) */
 export const LOCAL_PICK_CATEGORY_LABELS: Record<LocalPickCategory, string> = {
-  notice: "지자체 공지",
-  festival: "축제/행사",
-  spot: "명소/여행",
-  food: "특산물/맛집",
-  activity: "체험/공방",
-  welfare: "안심복지",
-  repair: "동네수리",
-  business: "소상공인",
+  notice: "지자체·공지",
+  meetup: "동네소모임·클럽",
+  talk: "자유토크·잡담",
+  flash: "번개·나눔",
+  tip: "동네질문·꿀팁",
 };
 
 export const LOCAL_PICK_CATEGORIES = Object.keys(
   LOCAL_PICK_CATEGORY_LABELS
 ) as LocalPickCategory[];
 
-/** 동네 피드 화면의 카테고리 필터 칩 그룹 */
-export type FeedFilterGroup = "all" | "notice" | "welfare" | "culture" | "life";
+/** 상단 채널 탭 바에서 사용하는 필터 값 ("전체" + 5개 채널) */
+export type FeedChannelFilter = "all" | LocalPickCategory;
 
-export const FEED_FILTER_GROUP_LABELS: Record<FeedFilterGroup, string> = {
+export const FEED_CHANNEL_FILTERS: FeedChannelFilter[] = ["all", ...LOCAL_PICK_CATEGORIES];
+
+/** 탭 바 라벨 (아이콘 포함) */
+export const FEED_CHANNEL_TAB_LABELS: Record<FeedChannelFilter, string> = {
   all: "전체",
-  notice: "지자체 공지",
-  welfare: "복지·보건",
-  culture: "문화·행사",
-  life: "주민생활",
-};
-
-export const FEED_FILTER_GROUPS: FeedFilterGroup[] = [
-  "all",
-  "notice",
-  "welfare",
-  "culture",
-  "life",
-];
-
-/** LocalPickCategory -> 피드 필터 칩 그룹 매핑 */
-export const CATEGORY_TO_FILTER_GROUP: Record<LocalPickCategory, FeedFilterGroup> = {
-  notice: "notice",
-  welfare: "welfare",
-  festival: "culture",
-  activity: "culture",
-  spot: "culture",
-  food: "life",
-  repair: "life",
-  business: "life",
+  notice: `${LOCAL_PICK_CATEGORY_ICONS.notice} ${LOCAL_PICK_CATEGORY_LABELS.notice}`,
+  meetup: `${LOCAL_PICK_CATEGORY_ICONS.meetup} ${LOCAL_PICK_CATEGORY_LABELS.meetup}`,
+  talk: `${LOCAL_PICK_CATEGORY_ICONS.talk} ${LOCAL_PICK_CATEGORY_LABELS.talk}`,
+  flash: `${LOCAL_PICK_CATEGORY_ICONS.flash} ${LOCAL_PICK_CATEGORY_LABELS.flash}`,
+  tip: `${LOCAL_PICK_CATEGORY_ICONS.tip} ${LOCAL_PICK_CATEGORY_LABELS.tip}`,
 };

@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
   const categoryParam = payload.action?.params?.category;
   const category: LocalPickCategory = isValidCategory(categoryParam)
     ? categoryParam
-    : "business";
+    : "talk";
 
   createLocalPost({
     title: utterance.length > 30 ? `${utterance.slice(0, 30)}...` : utterance,

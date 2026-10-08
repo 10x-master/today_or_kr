@@ -65,6 +65,7 @@ export function createLocalPost(input: CreateLocalPostInput): LocalPost {
     isBlinded: false,
     viewCount: 0,
     likeCount: 0,
+    commentCount: 0,
     createdAt: new Date().toISOString(),
   };
 

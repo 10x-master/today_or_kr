@@ -16,7 +16,7 @@ export default function ComposeModal({
 }) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [category, setCategory] = useState<LocalPickCategory>("business");
+  const [category, setCategory] = useState<LocalPickCategory>("talk");
   const [imageUrl, setImageUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

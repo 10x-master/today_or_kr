@@ -13,16 +13,13 @@ export interface Region {
   lng: number;
 }
 
-/** 로컬 피드 카테고리 */
+/** 로컬 피드 채널 (블라인드 스타일 하이퍼로컬 커뮤니티 채널) */
 export type LocalPickCategory =
-  | "notice" // 지자체 공지/행정 안내
-  | "festival" // 축제/행사
-  | "spot" // 명소/여행
-  | "food" // 특산물/맛집
-  | "activity" // 체험/공방
-  | "welfare" // 안심복지
-  | "repair" // 동네수리
-  | "business"; // 소상공인
+  | "notice" // 📢 지자체·공지
+  | "meetup" // 👥 동네소모임·클럽
+  | "talk" // ☕ 자유토크·잡담
+  | "flash" // ⚡ 번개·나눔
+  | "tip"; // 💡 동네질문·꿀팁
 
 /** 게시글 유입 채널 (2-트랙: GPS 기반 모바일 웹 / 카카오톡 제보) */
 export type LocalPostSourceChannel =
@@ -56,5 +53,6 @@ export interface LocalPost {
   isBlinded: boolean;
   viewCount: number;
   likeCount: number;
+  commentCount: number;
   createdAt: string;
 }

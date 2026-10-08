@@ -19,7 +19,9 @@ export default function Home() {
       <MobileHeader region={region} onRegionChange={setRegion} />
 
       <main className="flex-1">
-        {activeTab === "feed" && <FeedTab region={region} />}
+        {activeTab === "feed" && (
+          <FeedTab region={region} onNavigateFunding={() => setActiveTab("funding")} />
+        )}
         {activeTab === "funding" && <FundingTab />}
         {activeTab === "store" && <StoreTab />}
         {activeTab === "mypage" && <MyPageTab />}
