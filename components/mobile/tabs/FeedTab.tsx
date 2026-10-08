@@ -17,19 +17,21 @@ const SHORT_LINK_BANNER_INTERVAL = 5;
 
 function CivicRow({ notice }: { notice: CivicNotice }) {
   return (
-    <article className="border-b border-slate-100 py-2.5 first:pt-0">
+    <article className="border-b border-slate-100 py-1.5 first:pt-0">
       <div className="flex items-center gap-1.5">
-        <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+        <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-normal text-white">
           {notice.department}
         </span>
-        <span className="text-[10px] text-zinc-400">{notice.publishedAt}</span>
+        <span className="text-[10px] font-normal text-zinc-500">{notice.publishedAt}</span>
       </div>
-      <h4 className="mt-1 line-clamp-2 text-sm font-bold text-zinc-900">{notice.title}</h4>
+      <h4 className="mt-1 line-clamp-2 text-[13px] font-normal leading-snug text-zinc-900">
+        {notice.title}
+      </h4>
       <a
         href={notice.originUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-1 inline-block text-[11px] font-semibold text-sky-600 hover:underline"
+        className="mt-1 inline-block text-[11px] font-normal text-sky-600 hover:underline"
       >
         원문 보기 ↗
       </a>
@@ -49,32 +51,32 @@ function CommunityRow({
   const isNotice = post.category === "notice";
 
   return (
-    <article className="border-b border-slate-100 py-2.5 first:pt-0">
+    <article className="border-b border-slate-100 py-1.5 first:pt-0">
       <div className="flex flex-wrap items-center gap-1.5">
         {post.author.badge && (
-          <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+          <span className="rounded-full bg-zinc-900 px-2 py-0.5 text-[10px] font-normal text-white">
             {post.author.badge}
           </span>
         )}
         {post.noticePeriod && (
-          <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-500">
+          <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-normal text-rose-500">
             {post.noticePeriod}
           </span>
         )}
       </div>
 
       <h4
-        className={`mt-1 flex items-center gap-1 truncate text-sm font-bold ${
+        className={`mt-1 flex items-center gap-1 truncate text-[13px] font-normal leading-snug ${
           isNotice ? "text-amber-600" : "text-zinc-900"
         }`}
       >
         {isNotice && <Pin className="h-3.5 w-3.5 shrink-0 fill-amber-500 text-amber-500" />}
         <span className="truncate">{post.title}</span>
       </h4>
-      <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-zinc-500">{post.content}</p>
+      <p className="mt-0.5 line-clamp-2 text-xs leading-tight text-zinc-500">{post.content}</p>
 
-      <div className="mt-1.5 flex items-center justify-between">
-        <span className="truncate text-[11px] text-zinc-400">
+      <div className="mt-1 flex items-center justify-between">
+        <span className="truncate text-[11px] font-normal text-zinc-500">
           {formatRelativeTime(post.createdAt)} · 조회 {post.viewCount} · 👍 {post.likeCount} · 💬{" "}
           {post.commentCount}
         </span>
@@ -83,7 +85,7 @@ function CommunityRow({
           onClick={() => onReport(post.id)}
           disabled={reporting}
           aria-label="신고"
-          className="flex shrink-0 items-center gap-1 rounded-full bg-zinc-50 px-2 py-1 text-[11px] font-semibold text-zinc-500 hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50"
+          className="flex shrink-0 items-center gap-1 rounded-full bg-zinc-50 px-2 py-1 text-[11px] font-normal text-zinc-500 hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50"
         >
           <AlertTriangle className="h-3.5 w-3.5" />
           {post.reportCount > 0 && post.reportCount}
