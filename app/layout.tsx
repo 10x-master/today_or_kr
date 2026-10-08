@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { MemberProvider } from "@/components/linkpick/member/MemberProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,7 +25,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full bg-white antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-white text-zinc-900">{children}</body>
+      <body className="flex min-h-full flex-col bg-white text-zinc-900">
+        <MemberProvider>{children}</MemberProvider>
+      </body>
     </html>
   );
 }

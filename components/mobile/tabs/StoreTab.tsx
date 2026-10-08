@@ -1,148 +1,100 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ImageOff, ShoppingCart, Sprout, Wrench } from "lucide-react";
-import type { LinkPickProduct, ProductType } from "@/types/commerce";
+import { useState } from "react";
+import { Check, Copy, LogOut } from "lucide-react";
+import { useMember } from "@/components/linkpick/member/member-context";
+import { LinkManager } from "@/components/linkpick/member/LinkManager";
+import { LinkPage } from "@/components/linkpick/LinkPage";
+import { badge } from "@/components/linkpick/styles";
 
-const PRODUCT_TYPE_LABELS: Record<ProductType, string> = {
-  coupang_affiliate: "쿠팡 제휴",
-  local_specialty: "지역 특산물",
-  welfare_device: "복지기기",
-};
+/** 링크픽 제휴/수익 허브: linkpick 프로젝트에서 이식한 카카오 인증 + 링크 리스트 컴포넌트 */
+export default function StoreTab() {
+  const { authReady, authConfigured, currentUser, openLogin, logout } = useMember();
+  const [copied, setCopied] = useState(false);
 
-const PRODUCT_TYPE_ICONS: Record<ProductType, typeof ShoppingCart> = {
-  coupang_affiliate: ShoppingCart,
-  local_specialty: Sprout,
-  welfare_device: Wrench,
-};
+  function handleCopyReferralLink() {
+    if (!currentUser) return;
+    navigator.clipboard.writeText(`${window.location.origin}/?ref=${currentUser.referralCode}`).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
 
-const FILTERS: Array<{ label: string; value: ProductType | "all" }> = [
-  { label: "전체", value: "all" },
-  { label: "쿠팡 제휴", value: "coupang_affiliate" },
-  { label: "지역 특산물", value: "local_specialty" },
-  { label: "복지기기", value: "welfare_device" },
-];
+  if (!authReady) {
+    return <p className="py-10 text-center text-sm text-zinc-400">불러오는 중...</p>;
+  }
 
-const won = (amount: number) => `${new Intl.NumberFormat("ko-KR").format(amount)}원`;
-
-function ProductThumbnail({ src, alt }: { src: string; alt: string }) {
-  const [broken, setBroken] = useState(false);
-
-  if (!src || broken) {
+  if (!authConfigured) {
     return (
-      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-zinc-100">
-        <ImageOff className="h-5 w-5 text-zinc-300" />
+      <div className="px-4 py-10 text-center sm:px-6">
+        <p className="text-sm font-medium text-zinc-500">
+          로그인 설정을 준비 중입니다. Supabase 프로젝트 연결(NEXT_PUBLIC_SUPABASE_URL /
+          NEXT_PUBLIC_SUPABASE_ANON_KEY) 후 이용할 수 있어요.
+        </p>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="flex flex-col items-center px-4 py-14 text-center sm:px-6">
+        <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-600">
+          링크픽 제휴/수익 허브
+        </span>
+        <h2 className="mt-3 text-lg font-bold text-zinc-900">
+          내 쿠팡 파트너스 링크를 한 페이지에 모아보세요
+        </h2>
+        <p className="mt-2 max-w-xs text-sm leading-6 text-zinc-500">
+          카카오 계정으로 로그인하면 나만의 제휴 링크 페이지를 만들고, 추천 코드로 들어온
+          방문자에게 보여줄 수 있어요.
+        </p>
+        <button
+          type="button"
+          onClick={openLogin}
+          className="mt-5 rounded-full bg-[#FEE500] px-6 py-3 text-sm font-bold text-[#191919] transition hover:brightness-95"
+        >
+          카카오로 시작하기
+        </button>
       </div>
     );
   }
 
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
-      alt={alt}
-      onError={() => setBroken(true)}
-      className="h-14 w-14 shrink-0 rounded-lg object-cover"
-    />
-  );
-}
-
-function ProductCard({ product }: { product: LinkPickProduct }) {
-  const [revealed, setRevealed] = useState(product.priceDisplayMode === "show_price");
-  const Icon = PRODUCT_TYPE_ICONS[product.productType];
-
-  function openAffiliateLink() {
-    window.open(product.affiliateUrl, "_blank", "noopener,noreferrer");
-  }
-
-  function handleButtonClick() {
-    setRevealed(true);
-    openAffiliateLink();
-  }
-
-  return (
-    <article className="flex items-center gap-3 border-b border-slate-100 py-4">
-      <ProductThumbnail src={product.thumbnail} alt={product.title} />
-
-      <div className="min-w-0 flex-1">
-        <span className="inline-flex items-center gap-1 rounded-full bg-zinc-50 px-2 py-0.5 text-[11px] font-semibold text-zinc-500">
-          <Icon className="h-3 w-3" />
-          {PRODUCT_TYPE_LABELS[product.productType]}
-        </span>
-        <h4 className="mt-1 truncate text-sm font-bold text-zinc-900">{product.title}</h4>
-
-        {revealed && product.price !== undefined ? (
-          <p className="mt-1 text-base font-extrabold text-zinc-900">{won(product.price)}</p>
-        ) : (
-          !revealed && (
+    <div className="px-4 py-6 sm:px-6">
+      <div className="mb-6 flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span className={badge}>{currentUser.displayName}님</span>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="text-sm font-bold text-zinc-900">
+              내 추천 코드 {currentUser.referralCode}
+            </span>
             <button
               type="button"
-              onClick={handleButtonClick}
-              className="mt-1.5 rounded-full bg-zinc-900 px-3 py-1 text-xs font-bold text-white"
+              onClick={handleCopyReferralLink}
+              className="flex items-center gap-1 rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-600 hover:bg-zinc-200"
             >
-              {product.priceDisplayMode === "lowest_price_btn" ? "최저가 보러가기" : "특가 확인"}
+              {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+              {copied ? "복사됨" : "링크 복사"}
             </button>
-          )
-        )}
-
-        {product.donationPerSale !== undefined && (
-          <p className="mt-1 text-[11px] font-medium text-rose-500">
-            구매 시 {won(product.donationPerSale)} 착한소비 적립
-          </p>
-        )}
-      </div>
-
-      {revealed && (
+          </div>
+        </div>
         <button
           type="button"
-          onClick={openAffiliateLink}
-          className="shrink-0 rounded-md bg-amber-400 px-3.5 py-2.5 text-xs font-bold text-zinc-900 hover:bg-amber-300"
+          onClick={() => logout()}
+          className="flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-zinc-500 hover:bg-slate-50"
         >
-          구매하기
+          <LogOut className="h-3.5 w-3.5" />
+          로그아웃
         </button>
-      )}
-    </article>
-  );
-}
-
-export default function StoreTab() {
-  const [products, setProducts] = useState<LinkPickProduct[]>([]);
-  const [filter, setFilter] = useState<ProductType | "all">("all");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const query = filter === "all" ? "" : `?type=${filter}`;
-    fetch(`/api/commerce/products${query}`)
-      .then((res) => res.json())
-      .then((data: { products: LinkPickProduct[] }) => setProducts(data.products))
-      .finally(() => setLoading(false));
-  }, [filter]);
-
-  return (
-    <div className="flex flex-col gap-4 px-4 py-6 sm:px-6">
-      <div className="flex gap-2 overflow-x-auto">
-        {FILTERS.map(({ label, value }) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setFilter(value)}
-            className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${
-              filter === value
-                ? "bg-zinc-900 text-white"
-                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
       </div>
 
-      {loading && <p className="py-10 text-center text-sm text-zinc-400">불러오는 중...</p>}
+      <LinkManager />
 
-      <div className="flex flex-col">
-        {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+      <div className="mt-10 border-t border-slate-100 pt-6">
+        <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-zinc-400">
+          공개 페이지 미리보기
+        </h3>
+        <LinkPage />
       </div>
     </div>
   );
