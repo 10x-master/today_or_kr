@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 /**
  * 공급자/비즈홈 맞춤 동적 PWA Web App Manifest API
- * GET /api/pwa/manifest?bizId={id}&ref={userId}
+ * GET /api/pwa/manifest?bizId={id}&ref={userId}&type={APT|BIZ}
  */
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -12,7 +12,17 @@ export async function GET(request: NextRequest) {
   const isApt = bizId.startsWith("apt-");
   const isCreator =
     bizId.startsWith("creator-") || bizId.startsWith("ambassador-") || bizId.startsWith("@");
-  const type = isApt ? "APT" : isCreator ? "CREATOR" : "BIZ";
+
+  // type 파라미터 우선 적용, 없을 시 bizId 접두어로 자동 판정
+  const explicitType = searchParams.get("type")?.toUpperCase();
+  const type =
+    explicitType === "APT" || explicitType === "BIZ" || explicitType === "CREATOR"
+      ? explicitType
+      : isApt
+      ? "APT"
+      : isCreator
+      ? "CREATOR"
+      : "BIZ";
 
   // 기본 상호명/단지명 결정
   let rawName = searchParams.get("name");
@@ -33,6 +43,7 @@ export async function GET(request: NextRequest) {
   const name = `${rawName} 공식 비즈홈`;
   const shortName = rawName.slice(0, 12);
 
+  // 영구 레퍼럴 바인딩 start_url
   const startUrl = isCreator
     ? `/p/${encodeURIComponent(bizId)}?ref=${encodeURIComponent(ref)}&subId=${encodeURIComponent(ref)}&installed=pwa`
     : `/biz/${encodeURIComponent(bizId)}?ref=${encodeURIComponent(ref)}&subId=${encodeURIComponent(ref)}&installed=pwa`;
@@ -47,8 +58,8 @@ export async function GET(request: NextRequest) {
     start_url: startUrl,
     display: "standalone",
     orientation: "portrait",
-    background_color: isApt ? "#0f172a" : "#ffffff",
-    theme_color: isApt ? "#0f172a" : "#ffffff",
+    background_color: "#ffffff",
+    theme_color: "#0f172a",
     icons: [
       {
         src: icon192,

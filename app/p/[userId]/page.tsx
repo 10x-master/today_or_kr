@@ -29,6 +29,7 @@ import {
   X,
 } from "lucide-react";
 import GroupBuyVoteButton from "@/components/commerce/GroupBuyVoteButton";
+import PwaInstallBanner from "@/components/pwa/PwaInstallBanner";
 
 interface LinkPickUserProfile {
   userId: string;
@@ -572,6 +573,14 @@ function LinkPickMobileHubContent() {
           </div>
         </div>
       )}
+
+      {/* 크리에이터 전용 모바일 1-Tap PWA 홈 화면 설치 배너 */}
+      <PwaInstallBanner
+        bizId={profile.userId}
+        bizName={profile.name}
+        bizType="CREATOR"
+        referrerId={profile.userId}
+      />
     </div>
   );
 }

@@ -9,8 +9,19 @@ function escapeXml(unsafe: string): string {
     .replace(/'/g, "&apos;");
 }
 
+function extractAptShortName(fullName: string): string {
+  // 예: "상계주공 14단지" -> "상계 14", "중계주공 3단지" -> "중계 3"
+  const cleaned = fullName
+    .replace(/주공/g, " ")
+    .replace(/아파트/g, " ")
+    .replace(/단지/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || fullName;
+}
+
 /**
- * 공급자별 PWA 동적 앱 아이콘 생성 API
+ * 공급자 맞춤형 PWA 동적 앱 아이콘 생성 API
  * GET /api/pwa/icon/[id]?type=APT|BIZ|CREATOR&name=...&size=512
  */
 export async function GET(
@@ -20,7 +31,7 @@ export async function GET(
   const { id } = await params;
   const searchParams = request.nextUrl.searchParams;
 
-  // 타입 결정: 쿼리 파라미터 우선, 없을 시 id 접두어로 추론
+  // 1. 타입 파싱: 쿼리스트링 우선, 없을 시 ID 접두어로 추론
   let type = searchParams.get("type")?.toUpperCase();
   if (!type || !["APT", "BIZ", "CREATOR"].includes(type)) {
     if (id.startsWith("apt-")) {
@@ -32,7 +43,7 @@ export async function GET(
     }
   }
 
-  // 상호명/단지명 결정
+  // 2. 상호명 / 단지명 파싱
   let name = searchParams.get("name");
   if (!name) {
     if (id === "apt-sanggye14") name = "상계주공 14단지";
@@ -40,7 +51,7 @@ export async function GET(
     else if (id === "store-nowon-roastery") name = "노원 로스터리";
     else if (id === "corp-topsonic") name = "(주)탑소닉";
     else if (id.startsWith("apt-")) {
-      name = decodeURIComponent(id.replace("apt-", "")).toUpperCase();
+      name = decodeURIComponent(id.replace("apt-", "")).toUpperCase() + " 단지";
     } else if (id.startsWith("store-") || id.startsWith("corp-")) {
       name = decodeURIComponent(id.replace("store-", "").replace("corp-", ""));
     } else {
@@ -49,162 +60,158 @@ export async function GET(
   }
 
   const safeName = escapeXml(name);
-  const safeId = escapeXml(id);
+  const safeShortName = escapeXml(type === "APT" ? extractAptShortName(name) : name);
 
   let svgContent = "";
 
   if (type === "APT") {
-    // [A형: 아파트 단지 공식 앱 아이콘]
-    // 다크 네이비 배경 + 단지명 중앙 배치 + '공식 단지 홈' 캡션
+    // =========================================================================
+    // [APT 타입]
+    // 다크 네이비(#0F172A) 배경 + 단지 약칭("상계 14") 중앙 화이트 볼드 타이포
+    // + 골드 테두리(#F59E0B) + 하단 "공식 단지 홈" 캡션
+    // =========================================================================
     svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="navyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0f172a" />
-      <stop offset="50%" stop-color="#1e293b" />
-      <stop offset="100%" stop-color="#090d16" />
-    </linearGradient>
-    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#f59e0b" />
-      <stop offset="100%" stop-color="#fbbf24" />
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B" />
+      <stop offset="50%" stop-color="#FBBF24" />
+      <stop offset="100%" stop-color="#D97706" />
     </linearGradient>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.35" />
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#000000" flood-opacity="0.4" />
     </filter>
   </defs>
 
-  <!-- 다크 네이비 라운드 스퀘어 배경 -->
-  <rect width="512" height="512" rx="116" fill="url(#navyGrad)" />
+  <!-- 다크 네이비(#0F172A) 배경 + 골드 테두리(stroke-width: 8) -->
+  <rect width="512" height="512" rx="116" fill="#0F172A" stroke="url(#goldGrad)" stroke-width="8" />
 
-  <!-- 건축 그리드 엠블럼 백그라운드 라인 -->
-  <g opacity="0.12" stroke="#ffffff" stroke-width="1.5">
-    <line x1="80" y1="180" x2="432" y2="180" />
-    <line x1="80" y1="360" x2="432" y2="360" />
-    <line x1="160" y1="120" x2="160" y2="420" />
-    <line x1="352" y1="120" x2="352" y2="420" />
-  </g>
-
-  <!-- 상단 CERA 공인 단지 뱃지 -->
+  <!-- 상단 K-apt CERA 골드 뱃지 -->
   <g filter="url(#shadow)">
-    <rect x="156" y="68" width="200" height="38" rx="19" fill="#0f172a" stroke="url(#goldAccent)" stroke-width="2" />
-    <circle cx="178" cy="87" r="5" fill="#f59e0b" />
-    <text x="262" y="93" fill="#fbbf24" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="15" font-weight="700" letter-spacing="1" text-anchor="middle">K-apt CERA 94 AAA</text>
+    <rect x="156" y="60" width="200" height="36" rx="18" fill="rgba(245, 158, 11, 0.12)" stroke="#F59E0B" stroke-width="1.5" />
+    <circle cx="178" cy="78" r="4.5" fill="#F59E0B" />
+    <text x="262" y="84" fill="#FBBF24" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="14" font-weight="700" letter-spacing="1" text-anchor="middle">K-apt CERA 94 AAA</text>
   </g>
 
-  <!-- 중앙 아파트 단지 아이콘 -->
-  <g transform="translate(224, 136)" fill="none" stroke="#f8fafc" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="0" y="8" width="64" height="72" rx="4" />
-    <line x1="16" y1="24" x2="24" y2="24" />
-    <line x1="40" y1="24" x2="48" y2="24" />
-    <line x1="16" y1="40" x2="24" y2="40" />
-    <line x1="40" y1="40" x2="48" y2="40" />
-    <line x1="24" y1="80" x2="40" y2="80" />
+  <!-- 아파트 빌딩 미니 심볼 -->
+  <g transform="translate(228, 122)" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8">
+    <rect x="0" y="4" width="56" height="64" rx="4" />
+    <line x1="14" y1="18" x2="22" y2="18" />
+    <line x1="34" y1="18" x2="42" y2="18" />
+    <line x1="14" y1="32" x2="22" y2="32" />
+    <line x1="34" y1="32" x2="42" y2="32" />
+    <line x1="22" y1="68" x2="34" y2="68" />
   </g>
 
-  <!-- 단지명 텍스트 -->
-  <text x="256" y="292" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', 'Malgun Gothic', sans-serif" font-size="44" font-weight="700" letter-spacing="-1" text-anchor="middle" filter="url(#shadow)">
+  <!-- 중앙 단지 약칭 (예: "상계 14") 대형 화이트 볼드 타이포 -->
+  <text x="256" y="275" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', 'Malgun Gothic', sans-serif" font-size="58" font-weight="900" letter-spacing="-1.5" text-anchor="middle" filter="url(#shadow)">
+    ${safeShortName}
+  </text>
+
+  <!-- 전체 단지 정식 명칭 서브 텍스트 -->
+  <text x="256" y="322" fill="#94A3B8" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="20" font-weight="500" letter-spacing="0.5" text-anchor="middle">
     ${safeName}
   </text>
 
-  <!-- 캡션: 공식 단지 홈 -->
-  <text x="256" y="342" fill="#94a3b8" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="20" font-weight="500" letter-spacing="3" text-anchor="middle">
-    공식 단지 홈
-  </text>
-
-  <!-- 하단 Today 로컬 OS 서브 라벨 -->
-  <g transform="translate(166, 396)">
-    <rect width="180" height="32" rx="16" fill="rgba(255, 255, 255, 0.08)" stroke="rgba(255, 255, 255, 0.15)" stroke-width="1" />
-    <text x="90" y="21" fill="#cbd5e1" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="12" font-weight="600" letter-spacing="1.5" text-anchor="middle">TODAY. HYPERLOCAL</text>
+  <!-- 하단 "공식 단지 홈" 골드 캡션 -->
+  <g transform="translate(146, 368)">
+    <rect width="220" height="42" rx="21" fill="rgba(245, 158, 11, 0.15)" stroke="#F59E0B" stroke-width="1.5" />
+    <text x="110" y="27" fill="#FBBF24" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="18" font-weight="700" letter-spacing="2" text-anchor="middle">
+      공식 단지 홈
+    </text>
   </g>
+
+  <!-- 최하단 서브 라벨 -->
+  <text x="256" y="442" fill="#64748B" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="11" font-weight="600" letter-spacing="2" text-anchor="middle">
+    TODAY LOCAL HYPERLINK
+  </text>
 </svg>`;
   } else if (type === "BIZ") {
-    // [B형: 일반 상점 및 회원사 비즈 홈 아이콘]
-    // 화이트 배경 + 상호명/로고 + 우측 상단 녹색 인증(Verified) 뱃지
+    // =========================================================================
+    // [BIZ 타입]
+    // 퓨어 화이트(#FFFFFF) 배경 + 상호명/로고 심볼
+    // + 우측 상단 녹색 인증(Verified) 체크 뱃지
+    // =========================================================================
     svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <filter id="bizShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="6" stdDeviation="14" flood-color="#0f172a" flood-opacity="0.08" />
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#0F172A" flood-opacity="0.08" />
     </filter>
-    <linearGradient id="whiteGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="100%" stop-color="#f8fafc" />
-    </linearGradient>
   </defs>
 
-  <!-- 화이트 베이스 + 미세 테두리 -->
-  <rect width="512" height="512" rx="116" fill="url(#whiteGrad)" stroke="#e2e8f0" stroke-width="4" />
+  <!-- 퓨어 화이트(#FFFFFF) 베이스 + 헤어라인 1줄 경계 -->
+  <rect width="512" height="512" rx="116" fill="#FFFFFF" stroke="#E2E8F0" stroke-width="4" />
 
-  <!-- 중앙 엠블럼 박스 -->
+  <!-- 중앙 상호명 로고 심볼 박스 -->
   <g filter="url(#bizShadow)">
-    <rect x="196" y="96" width="120" height="120" rx="32" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="2" />
+    <rect x="196" y="96" width="120" height="120" rx="32" fill="#F8FAFC" stroke="#E2E8F0" stroke-width="2" />
     <text x="256" y="174" font-size="52" text-anchor="middle">🍽️</text>
   </g>
 
-  <!-- 우측 상단 녹색 공식 인증(Verified) 뱃지 -->
+  <!-- 우측 상단 녹색 인증(Verified) 체크 뱃지 (#10B981) -->
   <g filter="url(#bizShadow)">
-    <circle cx="410" cy="102" r="32" fill="#10b981" />
-    <path d="M398 102l9 9 17-17" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="410" cy="102" r="32" fill="#10B981" />
+    <path d="M398 102l9 9 17-17" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
   </g>
 
-  <!-- 상호명 -->
-  <text x="256" y="286" fill="#0f172a" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', 'Malgun Gothic', sans-serif" font-size="38" font-weight="700" letter-spacing="-0.5" text-anchor="middle">
+  <!-- 상호명 중앙 볼드 타이포 -->
+  <text x="256" y="286" fill="#0F172A" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', 'Malgun Gothic', sans-serif" font-size="40" font-weight="700" letter-spacing="-0.5" text-anchor="middle">
     ${safeName}
   </text>
 
   <!-- 캡션: 공식 비즈홈 -->
-  <text x="256" y="334" fill="#64748b" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="19" font-weight="500" letter-spacing="2" text-anchor="middle">
+  <text x="256" y="334" fill="#64748B" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="19" font-weight="500" letter-spacing="2" text-anchor="middle">
     공식 비즈홈 · Verified
   </text>
 
-  <!-- 하단 지자체 인허가 인증 태그 -->
+  <!-- 하단 소진공·지자체 인허가 태그 -->
   <g transform="translate(146, 386)">
-    <rect width="220" height="36" rx="18" fill="#ecfdf5" stroke="#10b981" stroke-width="1.5" />
-    <circle cx="28" cy="18" r="4" fill="#059669" />
-    <text x="124" y="23" fill="#047857" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="13" font-weight="600" text-anchor="middle">소진공 · 지자체 등록 완료</text>
+    <rect width="220" height="38" rx="19" fill="#ECFDF5" stroke="#10B981" stroke-width="1.5" />
+    <circle cx="28" cy="19" r="4.5" fill="#059669" />
+    <text x="124" y="24" fill="#047857" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="13" font-weight="600" text-anchor="middle">소진공 · 지자체 등록 완료</text>
   </g>
 </svg>`;
   } else {
-    // [C형: 크리에이터 및 엠버서더 LinkPick 아이콘]
-    // 프로필 원형 프레임 + 👑 엠버서더 뱃지 + 네온 앰버 그라디언트
+    // =========================================================================
+    // [CREATOR 타입]
+    // 웜그레이/소프트 배경(#F4F4F5) + 원형 프로필 프레임 + 👑 골드 엠버서더 미니 뱃지
+    // =========================================================================
     svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="creatorBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#18181b" />
-      <stop offset="100%" stop-color="#09090b" />
-    </linearGradient>
-    <linearGradient id="crownGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f59e0b" />
-      <stop offset="50%" stop-color="#fbbf24" />
-      <stop offset="100%" stop-color="#f97316" />
-    </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="16" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#0F172A" flood-opacity="0.08" />
     </filter>
   </defs>
 
-  <rect width="512" height="512" rx="116" fill="url(#creatorBg)" />
+  <!-- 웜그레이/소프트 배경(#F4F4F5) -->
+  <rect width="512" height="512" rx="116" fill="#F4F4F5" stroke="#E4E4E7" stroke-width="4" />
 
-  <!-- 외부 그라디언트 링 -->
-  <circle cx="256" cy="180" r="92" fill="none" stroke="url(#crownGrad)" stroke-width="6" opacity="0.8" />
-  <circle cx="256" cy="180" r="82" fill="#27272a" />
+  <!-- 원형 프로필 프레임 -->
+  <g filter="url(#softShadow)">
+    <circle cx="256" cy="184" r="84" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="4" />
+    <circle cx="256" cy="184" r="72" fill="#E4E4E7" />
+    <text x="256" y="202" font-size="48" text-anchor="middle">👤</text>
+  </g>
 
-  <!-- 👑 엠버서더 뱃지 & 아이콘 -->
-  <text x="256" y="196" font-size="64" text-anchor="middle" filter="url(#glow)">👑</text>
+  <!-- 👑 골드 엠버서더 미니 뱃지 (원형 프로필 우측 상단) -->
+  <g filter="url(#softShadow)">
+    <circle cx="316" cy="126" r="24" fill="#F59E0B" stroke="#FFFFFF" stroke-width="3.5" />
+    <text x="316" y="134" font-size="16" text-anchor="middle">👑</text>
+  </g>
 
-  <!-- 크리에이터 닉네임 / 핸들 -->
-  <text x="256" y="320" fill="#ffffff" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="40" font-weight="700" letter-spacing="-0.5" text-anchor="middle">
+  <!-- 크리에이터 닉네임 -->
+  <text x="256" y="324" fill="#18181B" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="38" font-weight="700" letter-spacing="-0.5" text-anchor="middle">
     ${safeName}
   </text>
 
-  <!-- 공식 캡션 -->
-  <text x="256" y="366" fill="#fbbf24" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="20" font-weight="600" letter-spacing="1" text-anchor="middle">
-    LinkPick 공식 엠버서더
+  <!-- 골드 엠버서더 캡션 -->
+  <text x="256" y="366" fill="#D97706" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="18" font-weight="600" letter-spacing="1" text-anchor="middle">
+    LinkPick 골드 엠버서더
   </text>
 
-  <!-- 하단 1-Tap 허브 태그 -->
+  <!-- 하단 1-Tap 모바일 허브 태그 -->
   <g transform="translate(156, 404)">
-    <rect width="200" height="34" rx="17" fill="rgba(245, 158, 11, 0.15)" stroke="#f59e0b" stroke-width="1.5" />
-    <text x="100" y="22" fill="#fde68a" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="13" font-weight="600" letter-spacing="0.5" text-anchor="middle">1-TAP MOBILE HUB</text>
+    <rect width="200" height="34" rx="17" fill="#FFFFFF" stroke="#E4E4E7" stroke-width="1.5" />
+    <text x="100" y="22" fill="#71717A" font-family="-apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif" font-size="12" font-weight="600" letter-spacing="0.5" text-anchor="middle">1-TAP MOBILE HUB</text>
   </g>
 </svg>`;
   }

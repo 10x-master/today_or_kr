@@ -243,13 +243,18 @@ const STORE_TNOTE_TIMELINE: TNoteTimelineEntry[] = [
 // ============================================================================
 // LinkPick 추천샵 (쿠팡 1초 담기 딥링크 상품)
 // ============================================================================
+// LinkPick 추천샵 (쿠팡 1초 담기 딥링크 상품)
+// ============================================================================
 interface BizLinkPickProduct {
   id: string;
   coupangProductId: string;
   title: string;
   category: string;
+  specialPrice: string; // 특판가
+  originalPrice?: string; // 정가
+  discountRate?: string; // 할인율
   badge: string;
-  recommendReason: string;
+  providerComment: string; // 공급자 픽 코멘트
   imageEmoji: string;
   fallbackUrl: string;
 }
@@ -260,8 +265,11 @@ const APT_LINKPICK_PRODUCTS: BizLinkPickProduct[] = [
     coupangProductId: "748291039",
     title: "아파트 싱크볼 일체형 초음파 식기·과일세척기",
     category: "친환경 주방 설비",
+    specialPrice: "680,000원",
+    originalPrice: "1,650,000원",
+    discountRate: "58%",
     badge: "단지 10인 공구 1위",
-    recommendReason: "주방 잔류 농약 99.9% 세척 및 식기 소독. 단지 입주민 10인 공구 성사 시 특별 B2B 혜택.",
+    providerComment: "관리사무소 픽: 주방 잔류 농약 99.9% 세척 및 식기 소독. 단지 입주민 10인 공구 성사 시 특별 B2B 단체 할인가 적용.",
     imageEmoji: "🧼",
     fallbackUrl: "https://link.coupang.com/a/748291039",
   },
@@ -270,8 +278,11 @@ const APT_LINKPICK_PRODUCTS: BizLinkPickProduct[] = [
     coupangProductId: "619284102",
     title: "옥상 탄성 우레탄 방수제 하도/상도 세트 (18kg)",
     category: "공용시설 보수 자재",
+    specialPrice: "79,000원",
+    originalPrice: "115,000원",
+    discountRate: "31%",
     badge: "K-apt CERA 규격",
-    recommendReason: "관리사무소 직영 보수 및 장기수선계획 CERA 표준 시공자재 공인 인증 규격품.",
+    providerComment: "기전실 픽: 관리사무소 직영 보수 및 장기수선계획 CERA 표준 시공자재 공인 인증 규격품.",
     imageEmoji: "🏢",
     fallbackUrl: "https://link.coupang.com/a/619284102",
   },
@@ -280,8 +291,11 @@ const APT_LINKPICK_PRODUCTS: BizLinkPickProduct[] = [
     coupangProductId: "827103941",
     title: "승강기 및 공용부 500만화소 적외선 보안 CCTV 돔",
     category: "단지 안전 인프라",
+    specialPrice: "54,000원",
+    originalPrice: "89,000원",
+    discountRate: "39%",
     badge: "지자체 지원 매칭",
-    recommendReason: "노후 아파트 공용시설물 보수 지자체 매칭 지원사업 승인 규격 방범 카메라.",
+    providerComment: "보안팀 픽: 노후 아파트 공용시설물 보수 지자체 매칭 지원사업 승인 규격 방범 카메라.",
     imageEmoji: "📹",
     fallbackUrl: "https://link.coupang.com/a/827103941",
   },
@@ -290,8 +304,11 @@ const APT_LINKPICK_PRODUCTS: BizLinkPickProduct[] = [
     coupangProductId: "918274019",
     title: "제주 산지직송 무농약 고당도 조생감귤 (5kg)",
     category: "산지직송 친환경 먹거리",
+    specialPrice: "18,900원",
+    originalPrice: "29,000원",
+    discountRate: "35%",
     badge: "입주민 직거래 특판",
-    recommendReason: "10X 상생 파트너스 연계로 유통 마진 없이 단지 일괄 직배송되는 신선 먹거리.",
+    providerComment: "입대의 픽: 10X 상생 파트너스 연계로 유통 마진 없이 단지 일괄 직배송되는 신선 먹거리.",
     imageEmoji: "🍊",
     fallbackUrl: "https://link.coupang.com/a/918274019",
   },
@@ -303,8 +320,11 @@ const STORE_LINKPICK_PRODUCTS: BizLinkPickProduct[] = [
     coupangProductId: "738192041",
     title: "노원 로스터리 스페셜티 예가체프 당일 로스팅 원두 (1kg)",
     category: "스페셜티 커피",
+    specialPrice: "24,500원",
+    originalPrice: "36,000원",
+    discountRate: "32%",
     badge: "단골 인기 1위",
-    recommendReason: "상계동 매장에서 직접 프로파일링 로스팅한 최상급 싱글 오리진 아라비카 원두.",
+    providerComment: "사장님 픽: 상계동 매장에서 직접 프로파일링 로스팅한 최상급 싱글 오리진 아라비카 원두.",
     imageEmoji: "☕",
     fallbackUrl: "https://link.coupang.com/a/738192041",
   },
@@ -313,8 +333,11 @@ const STORE_LINKPICK_PRODUCTS: BizLinkPickProduct[] = [
     coupangProductId: "748291039",
     title: "(주)탑소닉 특허 스마트 초음파 세척기 B2B 특판형",
     category: "매장 위생 설비",
+    specialPrice: "850,000원",
+    originalPrice: "1,790,000원",
+    discountRate: "52%",
     badge: "소공인 혁신 기술",
-    recommendReason: "수작업 설거지 노동 80% 절감 및 온수/세제 비용 획기적 절약 상업용 특화 모델.",
+    providerComment: "대표님 픽: 수작업 설거지 노동 80% 절감 및 온수/세제 비용 획기적 절약 상업용 특화 모델.",
     imageEmoji: "⚙️",
     fallbackUrl: "https://link.coupang.com/a/748291039",
   },
@@ -323,8 +346,11 @@ const STORE_LINKPICK_PRODUCTS: BizLinkPickProduct[] = [
     coupangProductId: "519283019",
     title: "매장 포스·키오스크 프리미엄 무독성 감열지 79x80 (50롤)",
     category: "매장 운영 소모품",
+    specialPrice: "32,000원",
+    originalPrice: "48,000원",
+    discountRate: "33%",
     badge: "대용량 B2B 특가",
-    recommendReason: "BPA 프리 친환경 감열지. 노원 상권 소상공인 공동구매 공급단가 적용 상품.",
+    providerComment: "점장님 픽: BPA 프리 친환경 감열지. 노원 상권 소상공인 공동구매 공급단가 적용 상품.",
     imageEmoji: "🧾",
     fallbackUrl: "https://link.coupang.com/a/519283019",
   },
@@ -333,8 +359,11 @@ const STORE_LINKPICK_PRODUCTS: BizLinkPickProduct[] = [
     coupangProductId: "618290341",
     title: "식약처 인증 식품접객업 매장 살균 소독제 (4L)",
     category: "안심 위생 방역",
+    specialPrice: "16,500원",
+    originalPrice: "25,000원",
+    discountRate: "34%",
     badge: "HACCP 기준 충족",
-    recommendReason: "매장 테이블 및 조리 도구 안심 분무 소독. 잔류 화학물질 없는 친환경 살균수.",
+    providerComment: "위생팀 픽: 매장 테이블 및 조리 도구 안심 분무 소독. 잔류 화학물질 없는 친환경 살균수.",
     imageEmoji: "✨",
     fallbackUrl: "https://link.coupang.com/a/618290341",
   },
@@ -700,7 +729,7 @@ function BizHomeContent() {
               <ShoppingCart className="h-4 w-4 text-amber-500" />
               <div>
                 <h3 className="text-xs font-medium text-slate-900 tracking-tight">
-                  {isApt ? "단지 공인 추천샵 (LinkPick)" : "사장님이 픽한 추천샵 (LinkPick)"}
+                  [LinkPick 파트너스 추천 비품 / 공구 샵]
                 </h3>
               </div>
             </div>
@@ -723,12 +752,13 @@ function BizHomeContent() {
                 className="flex flex-col justify-between p-3.5 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-slate-200 transition-colors"
               >
                 <div>
+                  {/* 상단 썸네일 & 카테고리/뱃지/상품명 */}
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-slate-100 text-base shadow-2xs">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white border border-slate-100 text-lg shadow-2xs">
                         {prod.imageEmoji}
                       </span>
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-[10px] text-slate-400 font-normal">{prod.category}</span>
                         <h4 className="text-xs font-medium text-slate-900 line-clamp-1 leading-snug">
                           {prod.title}
@@ -740,9 +770,33 @@ function BizHomeContent() {
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-slate-500 font-normal leading-relaxed mt-2.5">
-                    {prod.recommendReason}
-                  </p>
+                  {/* 특판가 및 할인율 표기 */}
+                  <div className="mt-2.5 flex items-baseline gap-2">
+                    <span className="text-sm font-bold text-red-600">
+                      {prod.specialPrice}
+                    </span>
+                    <span className="text-[10px] px-1 py-0.2 rounded bg-red-50 text-red-600 font-semibold border border-red-100">
+                      특판가
+                    </span>
+                    {prod.originalPrice && (
+                      <span className="text-[11px] text-slate-400 line-through">
+                        {prod.originalPrice}
+                      </span>
+                    )}
+                    {prod.discountRate && (
+                      <span className="text-[11px] font-semibold text-emerald-600">
+                        {prod.discountRate} OFF
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 공급자 픽 코멘트 */}
+                  <div className="mt-2.5 p-2.5 rounded-lg bg-white border border-slate-100 text-[11px] text-slate-600 font-normal leading-relaxed">
+                    <p>
+                      <strong className="text-slate-900 font-medium">💡 공급자 픽:</strong>{" "}
+                      {prod.providerComment}
+                    </p>
+                  </div>
                 </div>
 
                 {/* 쿠팡 앱 1초 장바구니 담기 딥링크 버튼 */}
