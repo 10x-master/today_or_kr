@@ -866,7 +866,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
             {/* 3순위: 상단 2열 스테이지 (좌측: CleanTrustScoreCard / 우측: GovPolicyFundWidget or AptConsultingSection) */}
             <div className="p-2 sm:p-2.5 bg-slate-50/40 border-b border-slate-100">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
-                {/* 좌측: CleanTrustScoreCard (착한아파트 지수 라이브 게이지) */}
+                {/* 좌측: CleanTrustScoreCard (공동주택 안심 케어 & 자산 수호 진단 게이지) */}
                 <CleanTrustScoreCard
                   currentDong={region.dong}
                   initialApartmentName="상계주공 14단지"

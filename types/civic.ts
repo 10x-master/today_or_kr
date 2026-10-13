@@ -18,14 +18,14 @@ export interface CivicNotice {
   originUrl: string;
 }
 
-/** 착한아파트(클린트러스트) 4대 평가 지수 스코어카드 모델 */
-export type CleanTrustGrade = "AAA" | "AA" | "A" | "NORMAL";
+/** 공동주택 안심 케어 & 자산 수호 진단 스코어카드 모델 */
+export type CleanTrustGrade = "AAA" | "AA" | "A" | "CARE" | "NORMAL";
 
 export interface CleanTrustBreakdown {
-  biddingFairness: number;    // 30점 만점 (K-apt CERA 적정가 편차 분석)
-  reserveFundHealth: number;  // 25점 만점 (장충금 적립 요율 및 목적외 사용 방어)
-  legalCompliance: number;    // 25점 만점 (3년 법정 장기수선계획 정기조정 이행)
-  residentEngagement: number; // 20점 만점 (주민 공구 청원/투표 참여율)
+  biddingFairness: number;    // K-apt 실거래 예산 적정성 (30점 기준)
+  reserveFundHealth: number;  // 미래 대규모 수선 준비도 (25점 기준)
+  legalCompliance: number;    // 지자체 행정 점검 안심도 (25점 기준)
+  residentEngagement: number; // 입주민 상생 소통 지수 (20점 기준)
 }
 
 export interface CleanTrustScoreCard {
