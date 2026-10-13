@@ -15,6 +15,7 @@ import {
   User,
   SlidersHorizontal,
   Building,
+  Coins,
 } from "lucide-react";
 import type { AuthProfile } from "@/types/auth";
 import { signOutKakao } from "@/lib/auth/kakaoAuth";
@@ -316,6 +317,21 @@ export default function UserAccountDropdown({
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-rose-600 transition-colors">
                 청원·클레임·광고 →
+              </span>
+            </Link>
+
+            {/* 5. [💰 배포자 수익 지갑 & PWA 영구 지분] */}
+            <Link
+              href="/note?tab=wallet"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <Coins className="h-4 w-4 text-emerald-600" />
+                <span className="font-medium text-slate-800">💰 배포자 수익 지갑 (PWA 영구 지분)</span>
+              </div>
+              <span className="text-[10px] text-emerald-700 font-semibold font-mono bg-emerald-50 px-1.5 py-0.2 rounded group-hover:bg-emerald-100 transition-colors">
+                284,000원 →
               </span>
             </Link>
           </div>

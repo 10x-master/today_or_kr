@@ -36,6 +36,7 @@ import BizOwnershipClaimModal from "@/components/biz/BizOwnershipClaimModal";
 import CleanTrustScoreCard from "@/components/portal/CleanTrustScoreCard";
 import PwaInstallBanner from "@/components/pwa/PwaInstallBanner";
 import QuickShareToolbar from "@/components/note/QuickShareToolbar";
+import { trackCoupangClick } from "@/lib/referral";
 import type { BizType, BizClaimStatus, BizClaimRequest } from "@/types/biz";
 
 // ============================================================================
@@ -465,6 +466,15 @@ function BizHomeContent() {
 
     setToastMessage(`🛒 [${productTitle}] 쿠팡으로 1초 연결합니다! (앱 미설치 시 웹으로 자동 이동)`);
     setTimeout(() => setToastMessage(null), 3000);
+
+    // 실시간 제휴 클릭 및 PWA 배포자 리퍼럴 적립 연동
+    trackCoupangClick({
+      productId,
+      productTitle,
+      subId: refCode,
+      referrerUserId: refCode,
+      aptName: title,
+    });
 
     const start = Date.now();
     let hasHidden = false;
