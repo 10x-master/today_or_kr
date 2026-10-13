@@ -26,6 +26,59 @@ interface ResidentVerifyModalProps {
   onSuccess?: () => void;
 }
 
+/**
+ * HTML Canvas를 이용한 브라우저단 이미지 자동 리사이징
+ * 최대 가로폭 1280px, 품질 0.8 수준의 JPEG Blob 및 DataURL 생성
+ */
+async function resizeImageClient(
+  file: File,
+  maxWidth = 1280,
+  quality = 0.8
+): Promise<{ blob: Blob; dataUrl: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          reject(new Error("Canvas context is not supported"));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const dataUrl = canvas.toDataURL("image/jpeg", quality);
+              resolve({ blob, dataUrl });
+            } else {
+              reject(new Error("Canvas toBlob failed"));
+            }
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+      img.onerror = () => reject(new Error("Image load error"));
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => reject(new Error("FileReader error"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function ResidentVerifyModal({
   event,
   isOpen,
@@ -37,7 +90,9 @@ export default function ResidentVerifyModal({
   const [phoneNumber, setPhoneNumber] = useState("");
   const [dongHo, setDongHo] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [resizedBlob, setResizedBlob] = useState<Blob | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -52,6 +107,7 @@ export default function ResidentVerifyModal({
       setTimeout(() => {
         setIsSubmitted(false);
         setSelectedFile(null);
+        setResizedBlob(null);
         setPreviewUrl(null);
         setErrorMsg(null);
       }, 300);
@@ -69,16 +125,29 @@ export default function ResidentVerifyModal({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, isSubmitting, onClose]);
 
-  // 파일 선택 처리
-  const handleFileSelect = (file: File) => {
+  // 파일 선택 처리 (HTML Canvas 자동 리사이징 적용)
+  const handleFileSelect = async (file: File) => {
     if (!file.type.startsWith("image/")) {
       setErrorMsg("이미지 파일(PNG, JPG, JPEG 등)만 업로드 가능합니다.");
       return;
     }
     setErrorMsg(null);
-    setSelectedFile(file);
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
+    setIsResizing(true);
+
+    try {
+      // 최대 폭 1280px, 품질 0.8 브라우저단 리사이징
+      const { blob, dataUrl } = await resizeImageClient(file, 1280, 0.8);
+      setSelectedFile(file);
+      setResizedBlob(blob);
+      setPreviewUrl(dataUrl);
+    } catch (err) {
+      console.warn("Client-side image resize fallback to original:", err);
+      setSelectedFile(file);
+      setResizedBlob(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    } finally {
+      setIsResizing(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -121,12 +190,41 @@ export default function ResidentVerifyModal({
     setIsSubmitting(true);
     setErrorMsg(null);
 
+    // Supabase Storage 이미지 업로드 시도
+    let proofImageUrl = previewUrl ? "attached_receipt_image.jpg" : null;
+    const supabase = getSupabaseBrowserClient();
+
+    if (supabase && resizedBlob) {
+      try {
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.jpg`;
+        const filePath = `verifications/${fileName}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("resident-proofs")
+          .upload(filePath, resizedBlob, {
+            contentType: "image/jpeg",
+            upsert: false,
+          });
+
+        if (!uploadError && uploadData) {
+          const { data: publicUrlData } = supabase.storage
+            .from("resident-proofs")
+            .getPublicUrl(filePath);
+          if (publicUrlData?.publicUrl) {
+            proofImageUrl = publicUrlData.publicUrl;
+          }
+        }
+      } catch (storageErr) {
+        console.warn("Supabase Storage upload warning, using local placeholder:", storageErr);
+      }
+    }
+
     const payload = {
       event_id: event.id,
       applicant_name: applicantName.trim(),
       phone_number: phoneNumber.trim(),
       verification_method: method,
-      proof_image_url: previewUrl ? "attached_receipt_image.jpg" : null,
+      proof_image_url: proofImageUrl,
       complex_name: event.complex_name,
       dong_ho: dongHo.trim() || null,
       privacy_agreed: privacyAgreed,
@@ -134,7 +232,6 @@ export default function ResidentVerifyModal({
 
     try {
       // 1. Supabase 직접 insert 시도
-      const supabase = getSupabaseBrowserClient();
       if (supabase) {
         await supabase.from("resident_verifications").insert({
           event_id: payload.event_id,
@@ -347,7 +444,14 @@ export default function ResidentVerifyModal({
                 }}
               />
 
-              {previewUrl ? (
+              {isResizing ? (
+                <div className="flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50/40 p-4 text-center">
+                  <div className="h-4 w-4 rounded-full border-2 border-indigo-600 border-t-transparent animate-spin" />
+                  <span className="text-xs font-semibold text-indigo-700">
+                    고화질 이미지 최적화 리사이징 중 (최대 1280px)...
+                  </span>
+                </div>
+              ) : previewUrl ? (
                 <div className="relative rounded-2xl border border-indigo-200 bg-indigo-50/30 p-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -362,7 +466,7 @@ export default function ResidentVerifyModal({
                       </p>
                       <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
                         <CheckCircle2 className="h-3 w-3" />
-                        업로드 완료
+                        최적화 리사이징 완료 (최대 1280px)
                       </span>
                     </div>
                   </div>
@@ -371,6 +475,7 @@ export default function ResidentVerifyModal({
                     type="button"
                     onClick={() => {
                       setSelectedFile(null);
+                      setResizedBlob(null);
                       setPreviewUrl(null);
                     }}
                     className="rounded-lg p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition-colors"

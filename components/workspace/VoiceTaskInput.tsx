@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Sparkles, Volume2 } from "lucide-react";
+import { Keyboard, Mic, MicOff, Send, Sparkles, Volume2 } from "lucide-react";
 
 interface ParsedVoiceTask {
   title: string;
@@ -115,6 +115,11 @@ export default function VoiceTaskInput({
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [supported, setSupported] = useState(true);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const [isTextMode, setIsTextMode] = useState(false);
+  const [manualText, setManualText] = useState("");
+  const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
   const recognitionRef = useRef<IWindowSpeechRecognition | null>(null);
 
   useEffect(() => {
@@ -128,46 +133,61 @@ export default function VoiceTaskInput({
 
     if (!SpeechRecognition) {
       setSupported(false);
+      setIsTextMode(true); // 미지원 브라우저는 텍스트 빠른 입력 모드로 기본 전환
       return;
     }
 
-    const recognition: IWindowSpeechRecognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = "ko-KR";
+    try {
+      const recognition: IWindowSpeechRecognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = "ko-KR";
 
-    recognition.onstart = () => {
-      setIsListening(true);
-      setTranscript("");
-    };
+      recognition.onstart = () => {
+        setIsListening(true);
+        setTranscript("");
+        setFeedbackMsg(null);
+      };
 
-    recognition.onresult = (event) => {
-      let current = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        current += event.results[i][0].transcript;
-      }
-      setTranscript(current);
-    };
+      recognition.onresult = (event) => {
+        let current = "";
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          current += event.results[i][0].transcript;
+        }
+        setTranscript(current);
+      };
 
-    recognition.onend = () => {
-      setIsListening(false);
-    };
+      recognition.onend = () => {
+        setIsListening(false);
+      };
 
-    recognition.onerror = (e) => {
-      console.warn("Speech recognition error:", e.error);
-      setIsListening(false);
-    };
+      recognition.onerror = (e) => {
+        console.warn("Speech recognition error:", e.error);
+        setIsListening(false);
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+          setPermissionDenied(true);
+          setIsTextMode(true);
+          setFeedbackMsg("마이크 권한이 비활성화되어 텍스트 빠른 입력 모드로 전환되었습니다.");
+        } else if (e.error !== "no-speech") {
+          setIsTextMode(true);
+          setFeedbackMsg("음성 인식 오류로 텍스트 빠른 입력 모드로 전환되었습니다.");
+        }
+      };
 
-    recognitionRef.current = recognition;
+      recognitionRef.current = recognition;
 
-    return () => {
-      recognition.abort();
-    };
+      return () => {
+        recognition.abort();
+      };
+    } catch {
+      setSupported(false);
+      setIsTextMode(true);
+    }
   }, []);
 
   const toggleListening = () => {
-    if (!supported) {
-      alert("현재 브라우저에서는 음성 인식을 지원하지 않습니다. Chrome 또는 Safari를 권장합니다.");
+    if (!supported || permissionDenied) {
+      setIsTextMode(true);
       return;
     }
 
@@ -182,9 +202,25 @@ export default function VoiceTaskInput({
       try {
         recognitionRef.current?.start();
       } catch (err) {
-        console.warn("Speech start failed:", err);
+        console.warn("Speech start failed, switching to text mode:", err);
+        setIsTextMode(true);
       }
     }
+  };
+
+  // 텍스트 모드에서 자연어 문장 제출 처리
+  const handleManualSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualText.trim()) return;
+
+    const parsed = parseKoreanDateTime(manualText);
+    onTaskParsed(parsed);
+    setManualText("");
+    setFeedbackMsg(`"${parsed.title}" 일정이 분석되어 등록 폼에 반영되었습니다.`);
+
+    setTimeout(() => {
+      setFeedbackMsg(null);
+    }, 3000);
   };
 
   // 음성 인식이 끝났을 때 자동 파싱 반영
@@ -195,14 +231,64 @@ export default function VoiceTaskInput({
     }
   }, [isListening, transcript, onTaskParsed]);
 
-  if (!supported) return null;
+  // Web Speech API 미지원 또는 텍스트 모드 활성화 시 부드러운 텍스트 빠른 입력 UI 렌더링
+  if (!supported || isTextMode) {
+    return (
+      <div className={`flex flex-col gap-1.5 ${className}`}>
+        <form
+          onSubmit={handleManualSubmit}
+          className="flex items-center gap-1.5 rounded-2xl border border-indigo-200 bg-white p-1.5 shadow-xs focus-within:ring-2 focus-within:ring-indigo-500/20"
+        >
+          <div className="flex items-center gap-1 px-2 text-indigo-600 font-bold text-xs shrink-0">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">빠른 입력</span>
+          </div>
+
+          <input
+            type="text"
+            value={manualText}
+            onChange={(e) => setManualText(e.target.value)}
+            placeholder="예: 내일 오후 3시 상계2구역 현장 점검 (날짜·시간 자동 분석)"
+            className="flex-1 bg-transparent px-2 py-1 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden"
+          />
+
+          <button
+            type="submit"
+            disabled={!manualText.trim()}
+            className="flex items-center gap-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 px-3 py-1.5 text-xs font-bold text-white shadow-2xs transition-all cursor-pointer"
+          >
+            <span>분석 반영</span>
+            <Send className="h-3 w-3" />
+          </button>
+
+          {supported && !permissionDenied && (
+            <button
+              type="button"
+              onClick={() => setIsTextMode(false)}
+              className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 px-2 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors"
+              title="음성 인식 모드로 복귀"
+            >
+              <Mic className="h-3 w-3 text-indigo-600" />
+              <span className="hidden md:inline">음성 모드</span>
+            </button>
+          )}
+        </form>
+
+        {feedbackMsg && (
+          <p className="text-[11px] text-indigo-600 font-medium px-2 animate-in fade-in">
+            ✓ {feedbackMsg}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       <button
         type="button"
         onClick={toggleListening}
-        className={`relative inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+        className={`relative inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
           isListening
             ? "bg-rose-600 text-white shadow-md animate-pulse ring-2 ring-rose-400"
             : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
@@ -222,6 +308,17 @@ export default function VoiceTaskInput({
         )}
       </button>
 
+      {/* 텍스트 모드로 수동 전환 버튼 */}
+      <button
+        type="button"
+        onClick={() => setIsTextMode(true)}
+        className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors cursor-pointer"
+        title="텍스트 자연어 입력 모드로 전환"
+      >
+        <Keyboard className="h-3.5 w-3.5 text-slate-500" />
+        <span className="hidden sm:inline">텍스트 빠른 입력</span>
+      </button>
+
       {/* 실시간 음성 인식 피드백 */}
       {isListening && (
         <span className="flex items-center gap-1 text-[11px] text-slate-500 animate-in fade-in">
@@ -229,6 +326,12 @@ export default function VoiceTaskInput({
           <span className="italic max-w-[200px] truncate text-slate-700">
             {transcript || "말씀해주세요 (예: '내일 오후 3시 현장 점검')"}
           </span>
+        </span>
+      )}
+
+      {feedbackMsg && (
+        <span className="text-[11px] text-amber-600 font-medium animate-in fade-in">
+          {feedbackMsg}
         </span>
       )}
     </div>

@@ -16,14 +16,17 @@ export async function GET(request: NextRequest) {
 
   // 실제 구글 클라이언트 ID가 설정된 경우 구글 로그인 창으로 리다이렉트
   if (clientId) {
-    const scope = encodeURIComponent(
-      "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email"
-    );
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
-      redirectUri
-    )}&response_type=code&scope=${scope}&access_type=offline&prompt=consent&state=${encodeURIComponent(
-      userId
-    )}`;
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email",
+      access_type: "offline",
+      prompt: "consent",
+      include_granted_scopes: "true",
+      state: userId,
+    });
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
     return NextResponse.redirect(authUrl);
   }

@@ -15,6 +15,26 @@ export function generateStaticParams() {
   ];
 }
 
+/**
+ * 한글 행정동 URL 파라미터 인코딩 깨짐 방어 헬퍼
+ * URL 인코딩 및 중복 인코딩(%25 등)을 안전하게 원본 한글명으로 복원
+ */
+function safeDecodeDong(rawDong: string): string {
+  if (!rawDong) return "";
+  let decoded = rawDong;
+  try {
+    decoded = decodeURIComponent(rawDong);
+    if (decoded.includes("%")) {
+      try {
+        decoded = decodeURIComponent(decoded);
+      } catch {}
+    }
+  } catch {
+    decoded = rawDong;
+  }
+  return decoded.trim();
+}
+
 interface DongPageProps {
   params: Promise<{ dong: string }>;
 }
@@ -23,12 +43,7 @@ export async function generateMetadata({
   params,
 }: DongPageProps): Promise<Metadata> {
   const { dong } = await params;
-  let decodedDong = "";
-  try {
-    decodedDong = decodeURIComponent(dong);
-  } catch {
-    decodedDong = dong;
-  }
+  const decodedDong = safeDecodeDong(dong);
 
   return {
     title: `${decodedDong} 로컬 팩트 피드 | Today.`,
@@ -42,12 +57,7 @@ export async function generateMetadata({
 
 export default async function DongPage({ params }: DongPageProps) {
   const { dong } = await params;
-  let decodedDong = "";
-  try {
-    decodedDong = decodeURIComponent(dong);
-  } catch {
-    decodedDong = dong;
-  }
+  const decodedDong = safeDecodeDong(dong);
 
   // 정적 예약어 또는 리소스 경로 예외 처리
   if (["favicon.ico", "robots.txt", "sitemap.xml", "icons"].includes(decodedDong)) {
