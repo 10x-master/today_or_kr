@@ -198,7 +198,12 @@ export interface TodayNote {
   content: string;
   note_type: "SCHEDULE" | "MEMO" | "TASK" | string;
   due_date: string | null;
-  linked_notice_id: string;
+  scheduled_at?: string | null;
+  location?: string | null;
+  category?: "PLACE" | "PERSON" | "WORK" | "TRAVEL" | string;
+  is_todo?: boolean;
+  sync_status?: "SYNCED" | "LOCAL" | string;
+  linked_notice_id?: string | null;
   linked_kapt_code?: string | null;
   created_at?: string;
   updated_at?: string;

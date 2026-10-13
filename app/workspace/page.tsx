@@ -20,17 +20,20 @@ import {
   ShieldCheck,
   User,
   Users,
+  MapPin,
 } from "lucide-react";
 import KakaoLoginModal from "@/components/auth/KakaoLoginModal";
 import { getCurrentAuthUser, signOutKakao } from "@/lib/auth/kakaoAuth";
 import type { AuthProfile } from "@/types/auth";
 import PwaInstallBanner from "@/components/home/PwaInstallBanner";
 import InstallAppButton from "@/components/common/InstallAppButton";
-import VoiceTaskInput from "@/components/workspace/VoiceTaskInput";
+import VoiceTaskInput, { type ParsedVoiceTask } from "@/components/workspace/VoiceTaskInput";
 import TodayCardDetail from "@/components/home/TodayCardDetail";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { mockOfficialNotices, mockTodayNotes, mockWorkLogs } from "@/lib/db/mockSeed";
 import type { LocalOfficialNotice, TodayNote, WorkLog } from "@/types/officialNotice";
+import { saveNoteWithCalendarSync } from "@/lib/calendar/googleSync";
+import type { NoteCategory, ParsedNoteData } from "@/types/note";
 
 type NoteViewMode = "personal" | "complex";
 
@@ -42,6 +45,9 @@ export default function WorkspacePage() {
   const [newContent, setNewContent] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
   const [newAlertTime, setNewAlertTime] = useState("08:30");
+  const [newLocation, setNewLocation] = useState("");
+  const [newCategory, setNewCategory] = useState<NoteCategory>("WORK");
+  const [parsedTask, setParsedTask] = useState<ParsedNoteData | null>(null);
   const [creating, setCreating] = useState(false);
 
   // 티노트/티단노트 (today_notes) 연동 상태
@@ -240,14 +246,67 @@ export default function WorkspacePage() {
     }
   };
 
-  const handleVoiceParsed = (task: {
-    title: string;
-    dueDate?: string;
-    alertTime?: string;
-  }) => {
+  const handleVoiceParsed = (task: ParsedVoiceTask) => {
     setNewTitle(task.title);
     if (task.dueDate) setNewDueDate(task.dueDate);
     if (task.alertTime) setNewAlertTime(task.alertTime);
+    if (task.location) setNewLocation(task.location);
+    if (task.category) setNewCategory(task.category);
+    setParsedTask(task);
+  };
+
+  // 원클릭 직접 동기화 저장 (VoiceTaskInput 프리뷰에서 즉시 저장 버튼 클릭 시)
+  const handleDirectSave = async (parsed: ParsedNoteData) => {
+    setCreating(true);
+    try {
+      const res = await saveNoteWithCalendarSync({
+        userId: currentUser?.id || "user-001",
+        parsed,
+        content: newContent.trim() || parsed.raw_text,
+        kaptCode: activeTab === "complex" ? kaptCode : null,
+      });
+
+      setTodayNotes((prev) => [res.note, ...prev]);
+
+      const workLogItem: WorkLog = {
+        id: `work-${Date.now()}`,
+        workspace_id: activeTab === "complex" ? kaptCode : "personal",
+        title: parsed.title,
+        content_text: parsed.location
+          ? `[장소: ${parsed.location}] ${parsed.raw_text}`
+          : parsed.raw_text,
+        due_date: parsed.scheduled_at ? parsed.scheduled_at.slice(0, 10) : null,
+        status: "TODO",
+        is_alert_enabled: true,
+        alert_time: parsed.scheduled_at
+          ? new Date(parsed.scheduled_at).toLocaleTimeString("ko-KR", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: false,
+            })
+          : "08:30",
+        created_at: new Date().toISOString(),
+      };
+      setLogs((prev) => [workLogItem, ...prev]);
+
+      if (res.sync_status === "SYNCED") {
+        setSyncToast(
+          "📅 구글 캘린더와 Supabase에 일정이 성공적으로 동기화 저장되었습니다! (10분 전 알림)"
+        );
+      } else {
+        setSyncToast("✓ 일정이 티노트에 저장되었습니다.");
+      }
+
+      setNewTitle("");
+      setNewContent("");
+      setNewDueDate("");
+      setNewLocation("");
+      setParsedTask(null);
+    } catch (err) {
+      console.error("Direct calendar save error:", err);
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -255,11 +314,50 @@ export default function WorkspacePage() {
     if (!newTitle.trim()) return;
 
     setCreating(true);
+
+    let scheduledAt: string | null = null;
+    if (newDueDate) {
+      scheduledAt = newDueDate.includes("T")
+        ? newDueDate
+        : `${newDueDate}T${newAlertTime || "09:00"}:00.000Z`;
+    }
+
+    const parsedData: ParsedNoteData = parsedTask || {
+      title: newTitle.trim(),
+      scheduled_at: scheduledAt,
+      location: newLocation.trim() || null,
+      category: newCategory,
+      is_todo: true,
+      raw_text: newTitle.trim(),
+      reminder_minutes: 10,
+    };
+
+    // 1. 구글 캘린더(10분 전 알림) 및 Supabase today_notes 동기화 저장
+    try {
+      const syncResult = await saveNoteWithCalendarSync({
+        userId: currentUser?.id || "user-001",
+        parsed: parsedData,
+        content: newContent.trim(),
+        kaptCode: activeTab === "complex" ? kaptCode : null,
+      });
+
+      setTodayNotes((prev) => [syncResult.note, ...prev]);
+
+      if (syncResult.sync_status === "SYNCED") {
+        setSyncToast("📅 구글 캘린더에 시작 10분 전 알림과 함께 일정이 실시간 동기화되었습니다!");
+      }
+    } catch (calErr) {
+      console.warn("Auto calendar sync on handleCreate:", calErr);
+    }
+
+    // 2. WorkLog(업무일지) 목록에도 반영
     const newLogItem: WorkLog = {
       id: `work-${Date.now()}`,
       workspace_id: activeTab === "complex" ? kaptCode : "personal",
       title: newTitle.trim(),
-      content_text: newContent.trim() || null,
+      content_text: newLocation
+        ? `[장소: ${newLocation.trim()}] ${newContent.trim()}`
+        : newContent.trim() || null,
       due_date: newDueDate || null,
       status: "TODO",
       is_alert_enabled: true,
@@ -288,6 +386,8 @@ export default function WorkspacePage() {
           setNewTitle("");
           setNewContent("");
           setNewDueDate("");
+          setNewLocation("");
+          setParsedTask(null);
           setCreating(false);
           return;
         }
@@ -297,42 +397,11 @@ export default function WorkspacePage() {
     }
 
     setLogs((prev) => [newLogItem, ...prev]);
-
-    // 일정이 지정된 경우 today_notes 및 구글 캘린더에 자동 실시간 동기화
-    if (newDueDate) {
-      try {
-        const fullDateTime = newDueDate.includes("T")
-          ? newDueDate
-          : `${newDueDate}T${newAlertTime || "09:00"}:00`;
-
-        const noteRes = await fetch("/api/today-notes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            title: newTitle.trim(),
-            content: newContent.trim() || "",
-            due_date: fullDateTime,
-            note_type: "SCHEDULE",
-            linked_kapt_code: activeTab === "complex" ? kaptCode : null,
-            user_id: "user-001",
-          }),
-        });
-
-        if (noteRes.ok) {
-          const noteJson = await noteRes.json();
-          if (noteJson.calendar_synced) {
-            setSyncToast("📅 구글 캘린더에 일정이 실시간 동기화되었습니다!");
-          }
-          fetchTodayNotes();
-        }
-      } catch (calErr) {
-        console.warn("Auto calendar sync on handleCreate:", calErr);
-      }
-    }
-
     setNewTitle("");
     setNewContent("");
     setNewDueDate("");
+    setNewLocation("");
+    setParsedTask(null);
     setCreating(false);
   };
 
@@ -600,22 +669,33 @@ export default function WorkspacePage() {
 
           {/* 새 업무 등록 폼 (음성 등록 VoiceTaskInput 연동) */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
-              <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
-                <Plus className="h-4 w-4 text-indigo-600" />
-                새 개인 업무 등록
-              </h2>
+            <div className="border-b border-slate-100 pb-3.5 space-y-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+                  <Plus className="h-4 w-4 text-indigo-600" />
+                  새 개인 업무 및 일정 등록
+                </h2>
+                <span className="text-[11px] text-slate-400">
+                  🎙️ 음성 • 📁 오디오 파일 • ⌨️ 자연어 파싱
+                </span>
+              </div>
 
-              {/* 음성 업무 입력 버튼 */}
-              <VoiceTaskInput onTaskParsed={handleVoiceParsed} />
+              {/* 음성 / 오디오(최대 15MB) / 텍스트 3모드 통합 입력 */}
+              <VoiceTaskInput
+                onTaskParsed={handleVoiceParsed}
+                onDirectSave={handleDirectSave}
+              />
             </div>
 
             <form onSubmit={handleCreate} className="mt-3.5 space-y-3">
               <div>
+                <label className="block text-[11px] font-medium text-slate-500 mb-1">
+                  업무/일정 제목
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="업무 제목을 입력하거나 마이크로 말씀하세요 (예: '내일 오후 3시 상계2구역 감정평가 현장 확인')"
+                  placeholder="업무 제목을 입력하거나 음성/오디오로 분석하세요 (예: '내일 오후 3시 상계주공 14단지 관리소 미팅')"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-hidden"
@@ -625,7 +705,41 @@ export default function WorkspacePage() {
               <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                 <div>
                   <label className="block text-[11px] font-medium text-slate-500">
-                    마감 예정일
+                    장소 (선택)
+                  </label>
+                  <div className="relative mt-1">
+                    <MapPin className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="예: 상계주공 14단지 관리소"
+                      value={newLocation}
+                      onChange={(e) => setNewLocation(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 pl-8.5 pr-3 py-2 text-xs focus:border-indigo-500 focus:outline-hidden"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-500">
+                    분류 (카테고리)
+                  </label>
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value as NoteCategory)}
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:border-indigo-500 focus:outline-hidden bg-white text-slate-800"
+                  >
+                    <option value="WORK">👔 업무/회의 (WORK)</option>
+                    <option value="PLACE">📍 장소/방문 (PLACE)</option>
+                    <option value="PERSON">👥 미팅/만남 (PERSON)</option>
+                    <option value="TRAVEL">✈️ 출장/이동 (TRAVEL)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-500">
+                    마감/일정 예정일
                   </label>
                   <input
                     type="date"
@@ -637,7 +751,7 @@ export default function WorkspacePage() {
 
                 <div>
                   <label className="block text-[11px] font-medium text-slate-500">
-                    아침 알림 시간
+                    알림 및 시작 시간
                   </label>
                   <input
                     type="time"
@@ -661,14 +775,14 @@ export default function WorkspacePage() {
               <div className="flex items-center justify-between pt-1">
                 <span className="flex items-center gap-1.5 text-xs text-slate-400">
                   <Bell className="h-3.5 w-3.5 text-indigo-500" />
-                  카카오톡 알림톡 및 브라우저 알림 연동
+                  시작 10분 전 팝업 및 구글 캘린더 자동 동기화
                 </span>
                 <button
                   type="submit"
                   disabled={creating}
-                  className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                  className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer"
                 >
-                  {creating ? "등록 중..." : "티노트에 추가하기"}
+                  {creating ? "동기화 등록 중..." : "티노트에 추가하기"}
                 </button>
               </div>
             </form>
@@ -830,19 +944,55 @@ export default function WorkspacePage() {
                       className="cursor-pointer rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/40 via-white to-slate-50/50 p-4 shadow-xs hover:border-indigo-300 hover:shadow-md transition-all group"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-1.5 pb-2 border-b border-indigo-50">
-                        <div className="flex items-center gap-1.5">
-                          <span className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
-                            📰 투데이 고시 연동
-                          </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {notice ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                              📰 투데이 고시 연동
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                              🎙️ 티노트 스마트 일정
+                            </span>
+                          )}
+
+                          {note.category && (
+                            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700">
+                              {note.category === "WORK"
+                                ? "👔 업무"
+                                : note.category === "PLACE"
+                                ? "📍 장소"
+                                : note.category === "PERSON"
+                                ? "👥 미팅"
+                                : "✈️ 출장"}
+                            </span>
+                          )}
+
+                          {note.sync_status === "SYNCED" ? (
+                            <span className="inline-flex items-center gap-1 rounded bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
+                              🟢 캘린더 연동됨 (10분 전 알림)
+                            </span>
+                          ) : note.scheduled_at ? (
+                            <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                              ⚪ 로컬 일정
+                            </span>
+                          ) : null}
+
                           {notice && (
                             <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-700">
                               {notice.issuing_agency}
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-indigo-600 font-semibold flex items-center gap-0.5 group-hover:underline">
-                          원문 고시 상세 보기 ↗
-                        </span>
+
+                        {note.location ? (
+                          <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                            📍 {note.location}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-indigo-600 font-semibold flex items-center gap-0.5 group-hover:underline">
+                            {notice ? "원문 고시 상세 보기 ↗" : "상세 보기 ↗"}
+                          </span>
+                        )}
                       </div>
 
                       <h4 className="mt-2 text-xs sm:text-sm font-bold text-slate-900 group-hover:text-indigo-900 transition-colors">
@@ -874,8 +1024,14 @@ export default function WorkspacePage() {
                       </div>
 
                       <div className="mt-2.5 flex items-center justify-between text-[10px] text-slate-400">
-                        <span>마감/게시: {note.due_date || "상시"}</span>
-                        <span className="text-indigo-600 font-medium">탭하여 전체 열람</span>
+                        <span>
+                          {note.scheduled_at
+                            ? `일시: ${new Date(note.scheduled_at).toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
+                            : `마감/게시: ${note.due_date || "상시"}`}
+                        </span>
+                        <span className="text-indigo-600 font-medium">
+                          {notice ? "탭하여 원문 열람" : "일정 열람"}
+                        </span>
                       </div>
                     </div>
                   );

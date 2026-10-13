@@ -67,6 +67,11 @@ export async function POST(request: NextRequest) {
       content,
       note_type = "SCHEDULE",
       due_date,
+      scheduled_at,
+      location,
+      category = "WORK",
+      is_todo = false,
+      sync_status = "LOCAL",
       linked_notice_id,
       linked_kapt_code = null,
       user_id = "user-001",
@@ -78,6 +83,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    const finalDueDate = due_date || (scheduled_at ? scheduled_at.slice(0, 10) : null);
 
     let createdNote: TodayNote | null = null;
     let source = "mock";
@@ -92,7 +99,12 @@ export async function POST(request: NextRequest) {
             title,
             content,
             note_type,
-            due_date: due_date || null,
+            due_date: finalDueDate,
+            scheduled_at: scheduled_at || null,
+            location: location || null,
+            category: category || "WORK",
+            is_todo: Boolean(is_todo),
+            sync_status: sync_status || "LOCAL",
             linked_notice_id: linked_notice_id || null,
             linked_kapt_code: linked_kapt_code || null,
           })
@@ -114,8 +126,13 @@ export async function POST(request: NextRequest) {
         title,
         content: content || "",
         note_type,
-        due_date: due_date || null,
-        linked_notice_id: linked_notice_id || "",
+        due_date: finalDueDate,
+        scheduled_at: scheduled_at || null,
+        location: location || null,
+        category: category || "WORK",
+        is_todo: Boolean(is_todo),
+        sync_status: sync_status || "LOCAL",
+        linked_notice_id: linked_notice_id || null,
         linked_kapt_code: linked_kapt_code || null,
       });
       source = "mock";
