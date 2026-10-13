@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -10,6 +10,7 @@ import {
   Calendar,
   CheckCircle2,
   ChevronRight,
+  Clock,
   ExternalLink,
   FileSpreadsheet,
   FileText,
@@ -24,16 +25,21 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
+  ShoppingCart,
   Sparkles,
   Store,
+  Tag,
   Users,
   Wrench,
 } from "lucide-react";
 import BizOwnershipClaimModal from "@/components/biz/BizOwnershipClaimModal";
 import CleanTrustScoreCard from "@/components/portal/CleanTrustScoreCard";
+import PwaInstallBanner from "@/components/pwa/PwaInstallBanner";
 import type { BizType, BizClaimStatus, BizClaimRequest } from "@/types/biz";
 
-// 모의 데이터 맵 (아파트 & 상점)
+// ============================================================================
+// 모의 데이터 맵 (아파트 & 상점/기업)
+// ============================================================================
 const MOCK_APT_DATABASE: Record<
   string,
   {
@@ -44,6 +50,7 @@ const MOCK_APT_DATABASE: Record<
     heatingType: string;
     address: string;
     dong: string;
+    tel: string;
     ceraScore: number;
     news: Array<{ title: string; source: string; date: string; summary: string }>;
   }
@@ -56,6 +63,7 @@ const MOCK_APT_DATABASE: Record<
     heatingType: "지역난방 (열병합)",
     address: "서울특별시 노원구 동일로227길 26",
     dong: "상계동",
+    tel: "02-938-1400",
     ceraScore: 94,
     news: [
       {
@@ -86,6 +94,7 @@ const MOCK_APT_DATABASE: Record<
     heatingType: "지역난방",
     address: "서울특별시 노원구 중계로 110",
     dong: "중계동",
+    tel: "02-931-0300",
     ceraScore: 91,
     news: [
       {
@@ -158,15 +167,194 @@ const MOCK_STORE_DATABASE: Record<
   },
 };
 
+// ============================================================================
+// t.note 최신 현장 소식 타임라인 데이터
+// ============================================================================
+interface TNoteTimelineEntry {
+  id: string;
+  date: string;
+  author: string;
+  role: string;
+  title: string;
+  summary: string;
+  tag: string;
+}
+
+const APT_TNOTE_TIMELINE: TNoteTimelineEntry[] = [
+  {
+    id: "tnote-apt-01",
+    date: "2026.10.13 15:20",
+    author: "김기전 주임",
+    role: "관리사무소 기전실",
+    title: "승강기 1~4호기 와이어로프 정기 비파괴검사 적합 판정",
+    summary: "한국승강기안전공단 정밀안전점검 완료. CERA 안전 지수 적합 유지 및 K-apt 전자공시 완료.",
+    tag: "시설 점검",
+  },
+  {
+    id: "tnote-apt-02",
+    date: "2026.10.10 11:30",
+    author: "박관리 소장",
+    role: "공인 주택관리사",
+    title: "3년 법정 장기수선계획 정기조정안 CERA 엔진 적정가 시뮬레이션",
+    summary: "옥상 우레탄 방수 및 외벽 재도장 표준단가 산출 완료. 입대의 정기회의 상정 준비.",
+    tag: "장기수선",
+  },
+  {
+    id: "tnote-apt-03",
+    date: "2026.10.05 16:45",
+    author: "이동대표 감사",
+    role: "입주자대표회의",
+    title: "단지 10인 공구 친환경 초음파 식기세척기 검수 및 세대 직배송",
+    summary: "제조사 (주)탑소닉 본사 직공급 검수 통과. 입주민 설치 만족도 98% 달성.",
+    tag: "공동구매",
+  },
+];
+
+const STORE_TNOTE_TIMELINE: TNoteTimelineEntry[] = [
+  {
+    id: "tnote-store-01",
+    date: "2026.10.12 09:30",
+    author: "김로스터 대표",
+    role: "헤드 바리스타",
+    title: "스페셜티 에티오피아 햇원두 입고 및 프로파일 로스팅 완료",
+    summary: "결점두 핸드픽 및 커핑 스코어 87.5점 확인. 상계동 단지 정기배송 1차 출고 시작.",
+    tag: "로스팅 일지",
+  },
+  {
+    id: "tnote-store-02",
+    date: "2026.10.08 14:10",
+    author: "박설비 팀장",
+    role: "제조 파트너스",
+    title: "소상공인 스마트상점 기술보급 국비지원 키오스크 정산 완료",
+    summary: "중기부·소진공 전담 감리 합격. 결제 대기시간 40% 단축 및 무인 주문 테스트 완료.",
+    tag: "정부 지원",
+  },
+  {
+    id: "tnote-store-03",
+    date: "2026.10.02 17:00",
+    author: "매장 총괄",
+    role: "파트너 대표",
+    title: "Today 하이퍼로컬 직거래 소싱 룸 엠버서더 픽 제휴 체결",
+    summary: "노원구 지역 엠버서더 12명과 리퍼럴 제휴 개시. 오프라인 매장 방문 쿠폰 연동.",
+    tag: "제휴 협약",
+  },
+];
+
+// ============================================================================
+// LinkPick 추천샵 (쿠팡 1초 담기 딥링크 상품)
+// ============================================================================
+interface BizLinkPickProduct {
+  id: string;
+  coupangProductId: string;
+  title: string;
+  category: string;
+  badge: string;
+  recommendReason: string;
+  imageEmoji: string;
+  fallbackUrl: string;
+}
+
+const APT_LINKPICK_PRODUCTS: BizLinkPickProduct[] = [
+  {
+    id: "lp-apt-01",
+    coupangProductId: "748291039",
+    title: "아파트 싱크볼 일체형 초음파 식기·과일세척기",
+    category: "친환경 주방 설비",
+    badge: "단지 10인 공구 1위",
+    recommendReason: "주방 잔류 농약 99.9% 세척 및 식기 소독. 단지 입주민 10인 공구 성사 시 특별 B2B 혜택.",
+    imageEmoji: "🧼",
+    fallbackUrl: "https://link.coupang.com/a/748291039",
+  },
+  {
+    id: "lp-apt-02",
+    coupangProductId: "619284102",
+    title: "옥상 탄성 우레탄 방수제 하도/상도 세트 (18kg)",
+    category: "공용시설 보수 자재",
+    badge: "K-apt CERA 규격",
+    recommendReason: "관리사무소 직영 보수 및 장기수선계획 CERA 표준 시공자재 공인 인증 규격품.",
+    imageEmoji: "🏢",
+    fallbackUrl: "https://link.coupang.com/a/619284102",
+  },
+  {
+    id: "lp-apt-03",
+    coupangProductId: "827103941",
+    title: "승강기 및 공용부 500만화소 적외선 보안 CCTV 돔",
+    category: "단지 안전 인프라",
+    badge: "지자체 지원 매칭",
+    recommendReason: "노후 아파트 공용시설물 보수 지자체 매칭 지원사업 승인 규격 방범 카메라.",
+    imageEmoji: "📹",
+    fallbackUrl: "https://link.coupang.com/a/827103941",
+  },
+  {
+    id: "lp-apt-04",
+    coupangProductId: "918274019",
+    title: "제주 산지직송 무농약 고당도 조생감귤 (5kg)",
+    category: "산지직송 친환경 먹거리",
+    badge: "입주민 직거래 특판",
+    recommendReason: "10X 상생 파트너스 연계로 유통 마진 없이 단지 일괄 직배송되는 신선 먹거리.",
+    imageEmoji: "🍊",
+    fallbackUrl: "https://link.coupang.com/a/918274019",
+  },
+];
+
+const STORE_LINKPICK_PRODUCTS: BizLinkPickProduct[] = [
+  {
+    id: "lp-store-01",
+    coupangProductId: "738192041",
+    title: "노원 로스터리 스페셜티 예가체프 당일 로스팅 원두 (1kg)",
+    category: "스페셜티 커피",
+    badge: "단골 인기 1위",
+    recommendReason: "상계동 매장에서 직접 프로파일링 로스팅한 최상급 싱글 오리진 아라비카 원두.",
+    imageEmoji: "☕",
+    fallbackUrl: "https://link.coupang.com/a/738192041",
+  },
+  {
+    id: "lp-store-02",
+    coupangProductId: "748291039",
+    title: "(주)탑소닉 특허 스마트 초음파 세척기 B2B 특판형",
+    category: "매장 위생 설비",
+    badge: "소공인 혁신 기술",
+    recommendReason: "수작업 설거지 노동 80% 절감 및 온수/세제 비용 획기적 절약 상업용 특화 모델.",
+    imageEmoji: "⚙️",
+    fallbackUrl: "https://link.coupang.com/a/748291039",
+  },
+  {
+    id: "lp-store-03",
+    coupangProductId: "519283019",
+    title: "매장 포스·키오스크 프리미엄 무독성 감열지 79x80 (50롤)",
+    category: "매장 운영 소모품",
+    badge: "대용량 B2B 특가",
+    recommendReason: "BPA 프리 친환경 감열지. 노원 상권 소상공인 공동구매 공급단가 적용 상품.",
+    imageEmoji: "🧾",
+    fallbackUrl: "https://link.coupang.com/a/519283019",
+  },
+  {
+    id: "lp-store-04",
+    coupangProductId: "618290341",
+    title: "식약처 인증 식품접객업 매장 살균 소독제 (4L)",
+    category: "안심 위생 방역",
+    badge: "HACCP 기준 충족",
+    recommendReason: "매장 테이블 및 조리 도구 안심 분무 소독. 잔류 화학물질 없는 친환경 살균수.",
+    imageEmoji: "✨",
+    fallbackUrl: "https://link.coupang.com/a/618290341",
+  },
+];
+
+// ============================================================================
+// 비즈홈 메인 콘텐츠 컴포넌트
+// ============================================================================
 function BizHomeContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
+
   const bizId = (params?.bizId as string) || "apt-sanggye14";
+  const refParam = searchParams.get("ref") || "";
 
   const isApt = bizId.startsWith("apt-");
   const bizType: BizType = isApt ? "APT" : bizId.startsWith("corp-") ? "CORP" : "STORE";
 
-  // 기본 정보 추출 (DB 또는 자동 생성 Fallback)
+  // 기본 정보 추출
   const aptData = isApt
     ? MOCK_APT_DATABASE[bizId] || {
         name: decodeURIComponent(bizId.replace("apt-", "")).toUpperCase() + " 단지",
@@ -176,6 +364,7 @@ function BizHomeContent() {
         heatingType: "개별난방",
         address: "서울특별시 노원구 공용단지로 45",
         dong: "상계동",
+        tel: "02-938-1400",
         ceraScore: 92,
         news: [
           {
@@ -209,11 +398,13 @@ function BizHomeContent() {
     : null;
 
   const title = isApt ? aptData?.name || "아파트 비즈 홈" : storeData?.name || "상점 비즈 홈";
+  const telHref = isApt ? `tel:${aptData?.tel || "02-938-1400"}` : `tel:${storeData?.tel || "02-930-1000"}`;
 
-  // 소유권 상태: UNCLAIMED | CLAIM_PENDING | CLAIMED
+  // 상태 관리
   const [claimStatus, setClaimStatus] = useState<BizClaimStatus>("UNCLAIMED");
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
   const [isEstimateModalOpen, setIsEstimateModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // 로컬스토리지 소유권 이전 신청 내역 확인
   useEffect(() => {
@@ -234,8 +425,40 @@ function BizHomeContent() {
     return () => window.removeEventListener("today_biz_claimed", handleClaimEvent);
   }, [bizId]);
 
+  // 쿠팡 앱 1초 장바구니 담기 딥링크 실행 핸들러
+  const handleCoupangCart = (productId: string, fallbackUrl: string, productTitle: string) => {
+    const refCode = refParam || "today_biz";
+    const appScheme = `coupang://product/${productId}?subId=${encodeURIComponent(refCode)}`;
+    const webUrl = fallbackUrl.includes("subId=")
+      ? fallbackUrl
+      : `${fallbackUrl}${fallbackUrl.includes("?") ? "&" : "?"}subId=${encodeURIComponent(refCode)}`;
+
+    setToastMessage(`🛒 [${productTitle}] 쿠팡 장바구니로 1초 이동합니다! (앱 미설치 시 웹으로 이동)`);
+    setTimeout(() => setToastMessage(null), 3000);
+
+    const start = Date.now();
+    window.location.href = appScheme;
+
+    setTimeout(() => {
+      if (Date.now() - start < 2200) {
+        window.open(webUrl, "_blank");
+      }
+    }, 1200);
+  };
+
+  const timelineEntries = isApt ? APT_TNOTE_TIMELINE : STORE_TNOTE_TIMELINE;
+  const linkpickProducts = isApt ? APT_LINKPICK_PRODUCTS : STORE_LINKPICK_PRODUCTS;
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-20 selection:bg-amber-500/20 selection:text-amber-950 font-sans">
+    <div className="min-h-screen bg-white text-slate-900 pb-28 selection:bg-amber-500/20 selection:text-amber-950 font-sans">
+      {/* 토스트 알림 */}
+      {toastMessage && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-full bg-slate-900 text-white text-xs font-normal shadow-xl border border-slate-700 animate-in fade-in slide-in-from-top-2 duration-150 flex items-center gap-2">
+          <span className="flex h-2 w-2 rounded-full bg-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* 상단 네비게이션 헤더 */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -248,20 +471,29 @@ function BizHomeContent() {
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
+
             <div className="flex items-center gap-1.5">
-              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-500 text-white font-medium text-xs">
+              <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-900 text-white font-medium text-xs">
                 {isApt ? "🏢" : "🍽️"}
               </span>
               <h1 className="text-sm font-medium text-slate-900 truncate tracking-tight">
-                {title} <span className="text-slate-400 font-normal">공식 비즈 홈</span>
+                {title} <span className="text-slate-400 font-normal">비즈홈</span>
               </h1>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <a
+              href={telHref}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-medium border border-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="전화 연결"
+            >
+              <Phone className="h-3.5 w-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">전화상담</span>
+            </a>
             <Link
               href="/"
-              className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200 transition-colors"
+              className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200 transition-colors"
             >
               Today. 홈
             </Link>
@@ -271,7 +503,7 @@ function BizHomeContent() {
 
       {/* 미인증 상태 시 소유권 이전 권유 상단 띠배너 */}
       {claimStatus === "UNCLAIMED" && (
-        <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 px-4 py-2.5">
+        <div className="bg-amber-500 text-slate-950 px-4 py-2.5 border-b border-amber-600">
           <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <span className="shrink-0 px-1.5 py-0.5 rounded bg-slate-950 text-amber-400 text-[10px] font-medium">
@@ -301,13 +533,11 @@ function BizHomeContent() {
       )}
 
       {claimStatus === "CLAIM_PENDING" && (
-        <div className="bg-indigo-50 border-b border-indigo-100 text-indigo-900 px-4 py-2">
+        <div className="bg-slate-50 border-b border-slate-200 text-slate-700 px-4 py-2">
           <div className="max-w-4xl mx-auto flex items-center justify-between text-xs font-normal">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-indigo-600 animate-pulse" />
-              <span>
-                소유권 이전 심사 대기 중입니다. 최고관리자 검토 후 관리자 권한이 부여됩니다.
-              </span>
+              <span>소유권 이전 심사 대기 중입니다. 최고관리자 검토 후 관리자 권한이 부여됩니다.</span>
             </div>
             <span className="text-[11px] text-indigo-700 font-medium">심사중 (CLAIM_PENDING)</span>
           </div>
@@ -315,158 +545,81 @@ function BizHomeContent() {
       )}
 
       {/* 메인 컨테이너 */}
-      <main className="max-w-4xl mx-auto px-4 py-4 space-y-4">
+      <main className="max-w-4xl mx-auto px-4 py-5 space-y-5">
         {/* ============================================================== */}
-        {/* [A형: 아파트 비즈 홈 상세]                                      */}
+        {/* [섹션 1: 상단 B2B 비즈홈 메인 카드]                            */}
         {/* ============================================================== */}
-        {isApt && aptData && (
-          <>
-            {/* 단지 기본 스펙 & CERA 지수 요약 카드 */}
-            <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-medium text-slate-900 tracking-tight">
-                      {aptData.name}
-                    </h2>
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium">
-                      CERA 인증 {aptData.ceraScore}점 (AAA)
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 font-normal mt-1 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                    <span>{aptData.address}</span>
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsEstimateModalOpen(true)}
-                    className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
-                  >
-                    <FileSpreadsheet className="h-4 w-4 text-amber-400" />
-                    <span>공인 견적서 신청</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(window.location.href);
-                      alert("비즈 홈 링크가 복사되었습니다!");
-                    }}
-                    className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 transition-colors cursor-pointer"
-                    title="링크 공유"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </button>
-                </div>
+        <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-2xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-medium text-slate-900 tracking-tight">{title}</h2>
+                {isApt ? (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium">
+                    CERA 인증 {aptData?.ceraScore || 94}점 (AAA)
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    인증 회원사
+                  </span>
+                )}
               </div>
-
-              {/* K-apt 공공데이터 4대 스펙 그리드 */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
-                  <p className="text-[10px] text-slate-400 font-normal">총 세대수</p>
-                  <p className="text-sm font-medium text-slate-900 mt-0.5">
-                    {aptData.householdCount.toLocaleString()} 세대
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
-                  <p className="text-[10px] text-slate-400 font-normal">사용승인일</p>
-                  <p className="text-sm font-medium text-slate-900 mt-0.5">{aptData.approvalDate}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
-                  <p className="text-[10px] text-slate-400 font-normal">복도 유형</p>
-                  <p className="text-sm font-medium text-slate-900 mt-0.5">{aptData.hallwayType}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
-                  <p className="text-[10px] text-slate-400 font-normal">난방 방식</p>
-                  <p className="text-sm font-medium text-slate-900 mt-0.5">{aptData.heatingType}</p>
-                </div>
-              </div>
+              <p className="text-xs text-slate-500 font-normal mt-1 flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                <span>{isApt ? aptData?.address : storeData?.address}</span>
+              </p>
             </div>
 
-            {/* 착한아파트 4대 평가 지수 라이브 게이지 임베드 */}
-            <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-xs">
-              <CleanTrustScoreCard
-                currentDong={aptData.dong}
-                initialApartmentName={aptData.name}
-              />
+            {/* 전화상담 & 맞춤 견적서 신청 버튼 그룹 */}
+            <div className="flex items-center gap-2">
+              <a
+                href={telHref}
+                className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Phone className="h-4 w-4 text-emerald-600" />
+                <span>{isApt ? "관리실 전화" : "전화 직통 상담"}</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={() => setIsEstimateModalOpen(true)}
+                className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-amber-400" />
+                <span>📋 맞춤 견적서 신청</span>
+              </button>
             </div>
+          </div>
 
-            {/* 네이버 뉴스 검색 연동 카드: 해당 아파트/동네 실시간 뉴스 */}
-            <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-xs space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <div className="flex items-center gap-1.5">
-                  <Newspaper className="h-4 w-4 text-amber-600" />
-                  <h3 className="text-xs font-medium text-slate-900 tracking-tight">
-                    {aptData.name} 관련 실시간 팩트 뉴스 & 공시
-                  </h3>
-                </div>
-                <span className="text-[10px] text-slate-400 font-normal">네이버 뉴스 API 연동</span>
+          {/* 공공데이터 스펙 그리드 */}
+          {isApt && aptData ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
+                <p className="text-[10px] text-slate-400 font-normal">총 세대수</p>
+                <p className="text-sm font-medium text-slate-900 mt-0.5">
+                  {aptData.householdCount.toLocaleString()} 세대
+                </p>
               </div>
-
-              <div className="space-y-2">
-                {aptData.news.map((n, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-xl bg-slate-50/60 hover:bg-slate-50 transition-colors border border-slate-100"
-                  >
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="font-medium text-slate-800 line-clamp-1">{n.title}</span>
-                      <span className="text-[10px] text-slate-400 shrink-0 ml-2">{n.date}</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 font-normal leading-relaxed line-clamp-2">
-                      {n.summary}
-                    </p>
-                    <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-400">
-                      <span>출처: {n.source}</span>
-                      <span className="text-amber-600 font-medium">원문 보기 ↗</span>
-                    </div>
-                  </div>
-                ))}
+              <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
+                <p className="text-[10px] text-slate-400 font-normal">사용승인일</p>
+                <p className="text-sm font-medium text-slate-900 mt-0.5">{aptData.approvalDate}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
+                <p className="text-[10px] text-slate-400 font-normal">복도 유형</p>
+                <p className="text-sm font-medium text-slate-900 mt-0.5">{aptData.hallwayType}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
+                <p className="text-[10px] text-slate-400 font-normal">난방 방식</p>
+                <p className="text-sm font-medium text-slate-900 mt-0.5">{aptData.heatingType}</p>
               </div>
             </div>
-          </>
-        )}
-
-        {/* ============================================================== */}
-        {/* [B형: 일반 상점/신설 법인 비즈 홈 상세]                        */}
-        {/* ============================================================== */}
-        {!isApt && storeData && (
-          <>
-            <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4 mb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-medium text-slate-900 tracking-tight">
-                      {storeData.name}
-                    </h2>
-                    <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-xs font-medium">
-                      인증 회원사
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 font-normal mt-1 flex items-center gap-1.5">
-                    <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                    <span>{storeData.address}</span>
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <a
-                    href={`tel:${storeData.tel}`}
-                    className="px-3 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors flex items-center gap-1.5"
-                  >
-                    <Phone className="h-3.5 w-3.5 text-amber-400" />
-                    <span>전화 직통 상담</span>
-                  </a>
-                </div>
-              </div>
-
-              {/* 사업자 공공데이터 스펙 */}
+          ) : (
+            storeData && (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
                   <p className="text-[10px] text-slate-400 font-normal">업종/분류</p>
-                  <p className="text-sm font-medium text-slate-900 mt-0.5">{storeData.category}</p>
+                  <p className="text-sm font-medium text-slate-900 mt-0.5 truncate">{storeData.category}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
                   <p className="text-[10px] text-slate-400 font-normal">개업일자</p>
@@ -474,47 +627,196 @@ function BizHomeContent() {
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
                   <p className="text-[10px] text-slate-400 font-normal">인허가 번호</p>
-                  <p className="text-sm font-medium text-slate-900 mt-0.5">{storeData.licenseNo}</p>
+                  <p className="text-sm font-medium text-slate-900 mt-0.5 truncate">{storeData.licenseNo}</p>
                 </div>
                 <div className="p-3 rounded-xl bg-slate-50/70 border border-slate-100">
-                  <p className="text-[10px] text-slate-400 font-normal">대표자 / 문의</p>
+                  <p className="text-[10px] text-slate-400 font-normal">대표자</p>
                   <p className="text-sm font-medium text-slate-900 mt-0.5">{storeData.representative}</p>
                 </div>
               </div>
+            )
+          )}
+        </div>
+
+        {/* ============================================================== */}
+        {/* [섹션 2: 착한아파트 지수 또는 B2B CERA 진단 섹션]              */}
+        {/* ============================================================== */}
+        {isApt && aptData && (
+          <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-2xs">
+            <CleanTrustScoreCard currentDong={aptData.dong} initialApartmentName={aptData.name} />
+          </div>
+        )}
+
+        {/* ============================================================== */}
+        {/* [섹션 3: t.note 최신 현장 소식 타임라인 바인딩]                 */}
+        {/* ============================================================== */}
+        <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-2xs space-y-3.5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-emerald-600" />
+              <h3 className="text-xs font-medium text-slate-900 tracking-tight">
+                t.note 최신 현장 소식 타임라인
+              </h3>
             </div>
+            <span className="text-[10px] text-slate-400 font-normal">공식 업무 일지 실시간 바인딩</span>
+          </div>
 
-            {/* t.note 시공 실적 & 카탈로그 포트폴리오 */}
-            <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-xs space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-                <div className="flex items-center gap-1.5">
-                  <FileText className="h-4 w-4 text-emerald-600" />
-                  <h3 className="text-xs font-medium text-slate-900 tracking-tight">
-                    t.note 인증 시공 실적 및 회원사 카탈로그
-                  </h3>
-                </div>
-                <span className="text-[10px] text-slate-400 font-normal">실시간 업데이트</span>
-              </div>
-
-              <div className="space-y-2">
-                {storeData.portfolio.map((p, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-xl bg-slate-50/60 border border-slate-100 hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between text-[11px] mb-1">
-                      <span className="font-medium text-slate-900">{p.title}</span>
-                      <span className="text-[10px] text-slate-400">{p.date}</span>
+          <div className="space-y-3">
+            {timelineEntries.map((item) => (
+              <div
+                key={item.id}
+                className="relative pl-5 before:absolute before:left-1.5 before:top-2 before:bottom-0 before:w-0.5 before:bg-slate-100 last:before:hidden"
+              >
+                <div className="absolute left-0 top-1.5 h-3 w-3 rounded-full border-2 border-white bg-slate-900" />
+                <div className="p-3.5 rounded-xl bg-slate-50/70 border border-slate-100 hover:bg-slate-50 transition-colors">
+                  <div className="flex flex-wrap items-center justify-between gap-1 text-[11px] mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-slate-900">{item.title}</span>
+                      <span className="px-1.5 py-0.2 rounded bg-slate-200/60 text-slate-600 text-[10px]">
+                        {item.tag}
+                      </span>
                     </div>
-                    <p className="text-[11px] text-slate-600 font-normal leading-relaxed">
-                      {p.summary}
-                    </p>
+                    <span className="text-[10px] text-slate-400">{item.date}</span>
                   </div>
-                ))}
+                  <p className="text-[11px] text-slate-600 font-normal leading-relaxed">
+                    {item.summary}
+                  </p>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-100/60 pt-1.5">
+                    <span>작성자: {item.author} ({item.role})</span>
+                    <span className="text-emerald-700 font-medium">✓ t.note 인증 완료</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* [섹션 4: 하단 LinkPick 추천샵 (쿠팡 1초 담기 딥링크)]           */}
+        {/* ============================================================== */}
+        <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-2xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4 text-amber-500" />
+              <div>
+                <h3 className="text-xs font-medium text-slate-900 tracking-tight">
+                  {isApt ? "단지 공인 추천샵 (LinkPick)" : "사장님이 픽한 추천샵 (LinkPick)"}
+                </h3>
               </div>
             </div>
-          </>
+            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-900 border border-amber-200 text-[10px] font-medium">
+              쿠팡 파트너스 연동
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-500 font-normal leading-relaxed">
+            {isApt
+              ? "단지 관리 및 입주민 공동구매를 위해 관리소와 CERA 엔진이 엄선한 필수 규격 상품입니다."
+              : "매장 대표님이 엄선하여 제휴 공급하는 신뢰도 100% 추천 아이템 리스트입니다."}
+          </p>
+
+          {/* 상품 카드 그리드 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {linkpickProducts.map((prod) => (
+              <div
+                key={prod.id}
+                className="flex flex-col justify-between p-3.5 rounded-xl bg-slate-50/60 border border-slate-100 hover:border-slate-200 transition-colors"
+              >
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white border border-slate-100 text-base shadow-2xs">
+                        {prod.imageEmoji}
+                      </span>
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-normal">{prod.category}</span>
+                        <h4 className="text-xs font-medium text-slate-900 line-clamp-1 leading-snug">
+                          {prod.title}
+                        </h4>
+                      </div>
+                    </div>
+                    <span className="shrink-0 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-100 text-[10px] font-medium">
+                      {prod.badge}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 font-normal leading-relaxed mt-2.5">
+                    {prod.recommendReason}
+                  </p>
+                </div>
+
+                {/* 쿠팡 앱 1초 장바구니 담기 딥링크 버튼 */}
+                <div className="mt-3.5 pt-2.5 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => handleCoupangCart(prod.coupangProductId, prod.fallbackUrl, prod.title)}
+                    className="w-full py-2 px-3 rounded-lg bg-[#E01E26] hover:bg-[#C9181F] text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5" />
+                    <span>🛒 쿠팡 앱 1초 담기</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 공정위 필수 문구 자동 표기 */}
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 text-[11px] text-slate-500 font-normal leading-relaxed">
+            <p className="flex items-center gap-1.5 text-slate-600">
+              <span className="flex h-1.5 w-1.5 rounded-full bg-amber-500" />
+              <span>
+                <strong>공정위 지침 고지</strong>: 이 포스팅은 쿠팡 파트너스 활동의 일환으로 수수료를 제공받습니다.
+              </span>
+            </p>
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* [섹션 5: 네이버 뉴스 실시간 검색 연동 카드 (아파트)]           */}
+        {/* ============================================================== */}
+        {isApt && aptData && (
+          <div className="rounded-2xl bg-white border border-slate-100 p-5 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-1.5">
+                <Newspaper className="h-4 w-4 text-amber-600" />
+                <h3 className="text-xs font-medium text-slate-900 tracking-tight">
+                  {aptData.name} 관련 실시간 팩트 뉴스 & 공시
+                </h3>
+              </div>
+              <span className="text-[10px] text-slate-400 font-normal">네이버 뉴스 API 연동</span>
+            </div>
+
+            <div className="space-y-2">
+              {aptData.news.map((n, idx) => (
+                <div
+                  key={idx}
+                  className="p-3 rounded-xl bg-slate-50/60 hover:bg-slate-50 transition-colors border border-slate-100"
+                >
+                  <div className="flex items-center justify-between text-[11px] mb-1">
+                    <span className="font-medium text-slate-800 line-clamp-1">{n.title}</span>
+                    <span className="text-[10px] text-slate-400 shrink-0 ml-2">{n.date}</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 font-normal leading-relaxed line-clamp-2">
+                    {n.summary}
+                  </p>
+                  <div className="mt-1.5 flex items-center justify-between text-[10px] text-slate-400">
+                    <span>출처: {n.source}</span>
+                    <span className="text-amber-600 font-medium">원문 보기 ↗</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </main>
+
+      {/* 모바일 1-Tap 홈 화면 설치 배너 탑재 */}
+      <PwaInstallBanner
+        bizId={bizId}
+        bizName={title}
+        bizType={bizType}
+        referrerId={refParam}
+      />
 
       {/* 소유권 이전 (Claim) 모달 */}
       <BizOwnershipClaimModal
@@ -528,7 +830,7 @@ function BizHomeContent() {
         }}
       />
 
-      {/* 공인 견적서 신청 모달 */}
+      {/* 공인 견적서 신청 모달 (금액 미표기 원칙 준수) */}
       {isEstimateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-100 shadow-2xl p-5 text-slate-900 space-y-4">
@@ -542,7 +844,7 @@ function BizHomeContent() {
               <button
                 type="button"
                 onClick={() => setIsEstimateModalOpen(false)}
-                className="text-slate-400 hover:text-slate-700"
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 ✕
               </button>
@@ -550,18 +852,31 @@ function BizHomeContent() {
 
             <p className="text-xs text-slate-600 leading-relaxed font-normal">
               K-apt 실거래 및 CERA 엔진 기반 공인 견적서가 생성되어 등록된 이메일과 알림톡으로 발송됩니다.
+              (담합 방지를 위해 임의 견적 금액을 노출하지 않고 실사 리포트로 제공됩니다.)
             </p>
 
-            <div className="space-y-2 text-xs">
+            <div className="space-y-2.5 text-xs">
               <div>
                 <label className="block text-[11px] font-medium text-slate-700 mb-1">
                   신청 항목 선택
                 </label>
-                <select className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white">
+                <select className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs">
                   <option>1. 승강기 전면교체 / 제어반 보수 적정가 리포트</option>
                   <option>2. 옥상 우레탄 방수 및 외벽 재도장 CERA 산출</option>
                   <option>3. 3년 법정 장기수선계획 정기조정 및 장충금 진단</option>
+                  <option>4. 친환경 설비 및 단지 10인 공구 B2B 특판 자재</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                  담당자 성명 및 직책
+                </label>
+                <input
+                  type="text"
+                  placeholder="예: 관리소장 홍길동 / 대표자"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs"
+                />
               </div>
 
               <div>
@@ -571,7 +886,7 @@ function BizHomeContent() {
                 <input
                   type="tel"
                   placeholder="010-0000-0000"
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white"
+                  className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs"
                 />
               </div>
             </div>
@@ -582,9 +897,9 @@ function BizHomeContent() {
                 alert("공인 견적서 신청이 완료되었습니다! 담당 CERA 컨설턴트가 24시간 내 배정됩니다.");
                 setIsEstimateModalOpen(false);
               }}
-              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors"
+              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer"
             >
-              무료 공인 견적서 접수
+              무료 공인 맞춤 견적서 접수
             </button>
           </div>
         </div>
