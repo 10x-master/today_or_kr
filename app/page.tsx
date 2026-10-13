@@ -8,8 +8,11 @@ import {
   CheckCircle2,
   ChevronDown,
   Coffee,
+  Crown,
+  Eye,
   LogOut,
   MapPin,
+  Plus,
   RefreshCw,
   Search,
   Sparkles,
@@ -18,10 +21,9 @@ import {
 } from "lucide-react";
 import KakaoLoginModal from "@/components/auth/KakaoLoginModal";
 import { getCurrentAuthUser, signOutKakao } from "@/lib/auth/kakaoAuth";
-import type { AuthProfile } from "@/types/auth";
+import type { AuthProfile, UserDongPin } from "@/types/auth";
 import ResidentVerifyModal from "@/components/apt/ResidentVerifyModal";
 import HeroProductRolling from "@/components/home/HeroProductRolling";
-import DistrictSearchBar from "@/components/home/DistrictSearchBar";
 import AptAnalysisTab from "@/components/home/AptAnalysisTab";
 import TodayNotesTab from "@/components/home/TodayNotesTab";
 import PwaInstallBanner from "@/components/home/PwaInstallBanner";
@@ -30,13 +32,19 @@ import MyPageTab from "@/components/mobile/tabs/MyPageTab";
 // 모바일 퍼스트 당근마켓 스타일 신규 레이아웃 컴포넌트
 import MobileTopBar from "@/components/layout/MobileTopBar";
 import MobileBottomNav, { type NavTab } from "@/components/layout/MobileBottomNav";
-import DongSelectorSheet from "@/components/layout/DongSelectorSheet";
+import DongPinSheet from "@/components/layout/DongPinSheet";
+import GlobalDongSearchSheet from "@/components/layout/GlobalDongSearchSheet";
 import CategoryBottomSheet from "@/components/layout/CategoryBottomSheet";
 import CompactFeedItem from "@/components/feed/CompactFeedItem";
 import FeedDetailSheet from "@/components/feed/FeedDetailSheet";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DEFAULT_REGION, getRegionByDongName } from "@/lib/demoRegions";
+import {
+  addDongPin,
+  getUserDongPins,
+  isSuperAdmin,
+} from "@/lib/dong/pinManager";
 import {
   mockOfficialNotices,
   mockAdCampaigns,
@@ -81,11 +89,14 @@ export default function Home({ initialDong }: HomeProps = {}) {
   const [selectedRole, setSelectedRole] = useState<TargetRole>("RESIDENT");
   const [selectedCategory, setSelectedCategory] = useState<OfficialNoticeCategory>("ALL");
 
-  // 시트 및 모달 상태
-  const [isDongSelectorOpen, setIsDongSelectorOpen] = useState(false);
+  // 시트 및 모달 상태 (동네 핀 관리 및 전역 검색)
+  const [isDongPinSheetOpen, setIsDongPinSheetOpen] = useState(false);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [isCategorySheetOpen, setIsCategorySheetOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+
+  // 동네 핀 상태
+  const [userPins, setUserPins] = useState<UserDongPin[]>([]);
 
   // 카카오 OAuth & Supabase Auth 사용자 상태
   const [currentUser, setCurrentUser] = useState<AuthProfile | null>(null);
@@ -108,6 +119,24 @@ export default function Home({ initialDong }: HomeProps = {}) {
   const [localEvents, setLocalEvents] = useState<LocalComplexEvent[]>(mockLocalComplexEvents);
   const [selectedEventForVerify, setSelectedEventForVerify] = useState<LocalComplexEvent | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // 피드백 토스트
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+
+  const superAdmin = isSuperAdmin(currentUser);
+
+  // 동네 핀 동기화
+  const syncPins = () => {
+    const pins = getUserDongPins(currentUser?.id || "guest");
+    setUserPins(pins);
+  };
+
+  useEffect(() => {
+    syncPins();
+    const handlePinsChange = () => syncPins();
+    window.addEventListener("today_pins_changed", handlePinsChange);
+    return () => window.removeEventListener("today_pins_changed", handlePinsChange);
+  }, [currentUser]);
 
   // 사용자 로그인 상태 동기화
   useEffect(() => {
@@ -160,6 +189,14 @@ export default function Home({ initialDong }: HomeProps = {}) {
   const cafesForRegion = mockCafePlaces.filter((c) => c.dong === region.dong);
   const displayedCafes: LocalCafePlace[] =
     cafesForRegion.length > 0 ? cafesForRegion : mockCafePlaces;
+
+  // 현재 방문 동네 핀 추가 핸들러
+  const handleAddCurrentDongPin = () => {
+    const res = addDongPin(region.dong, currentUser);
+    setFeedbackToast(res.message);
+    syncPins();
+    setTimeout(() => setFeedbackToast(null), 3000);
+  };
 
   // 북마크 토글 헬퍼
   const handleToggleBookmark = (notice: LocalOfficialNotice) => {
@@ -332,17 +369,19 @@ export default function Home({ initialDong }: HomeProps = {}) {
     }
   };
 
+  const isCurrentDongPinned = userPins.some((p) => p.dong_name === region.dong);
+
   return (
     /* 모바일 앱 컨테이너 고정: max-w-md mx-auto min-h-screen bg-white relative pb-20 shadow-xl overflow-x-hidden border-x border-slate-200/50 */
     <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col bg-white pb-20 shadow-xl overflow-x-hidden border-x border-slate-200/60">
       {/* 듀얼 PWA Web App Manifest 링크 (Today.) */}
       <link rel="manifest" href="/api/manifest/today" />
 
-      {/* 1. 미니멀 상단 네비게이션바 (MobileTopBar: 상계동 ▾, 🔍, 🔔, 👤) */}
+      {/* 1. 미니멀 상단 네비게이션바 (MobileTopBar: [내 동네 ▾], 🔍, 🔔, 👤) */}
       <MobileTopBar
         dongName={region.dong}
-        onOpenDongSelector={() => setIsDongSelectorOpen(true)}
-        onToggleSearch={() => setIsSearchOpen((prev) => !prev)}
+        onOpenDongSelector={() => setIsDongPinSheetOpen(true)}
+        onToggleSearch={() => setIsGlobalSearchOpen(true)}
         onOpenNotifications={() => setIsNotificationOpen(true)}
         onOpenProfile={() => {
           if (currentUser) {
@@ -353,12 +392,12 @@ export default function Home({ initialDong }: HomeProps = {}) {
         }}
         currentUser={currentUser}
         unreadCount={2}
-        isSearchActive={isSearchOpen}
+        isSearchActive={isGlobalSearchOpen}
       />
 
       {/* 사용자 프로필 팝오버 (프로필 아이콘 클릭 시) */}
       {userPopoverOpen && currentUser && (
-        <div className="absolute right-3 top-14 mt-1 w-60 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-3 top-14 mt-1 w-64 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150">
           <div className="flex items-center gap-2.5 border-b border-slate-100 pb-2.5 mb-2.5">
             {currentUser.avatar_url ? (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -373,15 +412,25 @@ export default function Home({ initialDong }: HomeProps = {}) {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-slate-900 truncate">
-                {currentUser.full_name}
-              </p>
+              <div className="flex items-center gap-1">
+                <p className="text-xs font-black text-slate-900 truncate">
+                  {currentUser.full_name}
+                </p>
+                {superAdmin && (
+                  <Crown className="h-3.5 w-3.5 text-amber-600 fill-amber-500 shrink-0" />
+                )}
+              </div>
               <p className="text-[10px] text-slate-400 truncate">
                 {currentUser.email || "카카오 간편인증 계정"}
               </p>
-              <span className="mt-0.5 inline-block rounded bg-amber-50 px-1.5 py-0.2 text-[9px] font-bold text-amber-800 border border-amber-200">
-                인증 입주민
-              </span>
+              <div className="mt-1 flex items-center gap-1">
+                <span className="rounded bg-amber-50 px-1.5 py-0.2 text-[9px] font-bold text-amber-800 border border-amber-200">
+                  {superAdmin ? "👑 최고관리자" : "인증 입주민"}
+                </span>
+                <span className="text-[10px] font-bold text-slate-500">
+                  핀 {userPins.length}개
+                </span>
+              </div>
             </div>
           </div>
 
@@ -460,13 +509,51 @@ export default function Home({ initialDong }: HomeProps = {}) {
         </div>
       )}
 
-      {/* 검색창 슬라이드 다운 (🔍 아이콘 클릭 시 토글) */}
-      {isSearchOpen && (
-        <div className="border-b border-slate-100 bg-slate-50/80 px-4 py-2.5 animate-in slide-in-from-top duration-150">
-          <DistrictSearchBar
-            currentDong={region.dong}
-            className="w-full"
-          />
+      {/* 피드백 알림 배너 */}
+      {feedbackToast && (
+        <div className="mx-4 my-2 flex items-center justify-between rounded-xl bg-amber-500 px-3.5 py-2.5 text-xs font-bold text-white shadow-md animate-in slide-in-from-top-2 z-40">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 shrink-0" />
+            <span>{feedbackToast}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedbackToast(null)}
+            className="text-white/80 hover:text-white"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* 둘러보기(읽기 전용) 모드 배너 (내 핀 목록에 없는 동네를 탐색 중일 때) */}
+      {!isCurrentDongPinned && !superAdmin && (
+        <div className="flex items-center justify-between bg-amber-50/90 px-4 py-2 text-xs border-b border-amber-200/80 animate-in fade-in">
+          <div className="flex items-center gap-1.5 text-amber-950 font-bold">
+            <Eye className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+            <span>'{region.dong}' 둘러보기 모드</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleAddCurrentDongPin}
+            className="flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-slate-800 transition-colors shadow-2xs"
+          >
+            <Plus className="h-3 w-3 text-amber-400" />
+            <span>내 핀에 추가</span>
+          </button>
+        </div>
+      )}
+
+      {/* 최고관리자 활성화 배너 */}
+      {superAdmin && (
+        <div className="flex items-center justify-between bg-amber-100/90 px-4 py-1.5 text-[11px] font-bold text-amber-950 border-b border-amber-300">
+          <div className="flex items-center gap-1">
+            <Crown className="h-3.5 w-3.5 text-amber-600 fill-amber-500" />
+            <span>최고관리자 모드: {region.dong} 전역 제어</span>
+          </div>
+          <Link href="/products" className="text-amber-800 underline text-[10px]">
+            취급제품 관리 →
+          </Link>
         </div>
       )}
 
@@ -677,15 +764,32 @@ export default function Home({ initialDong }: HomeProps = {}) {
         {activeTab === "mypage" && <MyPageTab />}
       </main>
 
-      {/* 2. 행정동 변경 바텀시트 (DongSelectorSheet) */}
-      <DongSelectorSheet
-        isOpen={isDongSelectorOpen}
-        onClose={() => setIsDongSelectorOpen(false)}
-        currentRegion={region}
-        onSelectRegion={(newRegion) => setRegion(newRegion)}
+      {/* 2. 동네 핀 관리 바텀시트 (DongPinSheet) */}
+      <DongPinSheet
+        isOpen={isDongPinSheetOpen}
+        onClose={() => setIsDongPinSheetOpen(false)}
+        currentUser={currentUser}
+        currentDong={region.dong}
+        onSelectDong={(selectedDong) => {
+          setRegion(getRegionByDongName(selectedDong));
+        }}
+        onOpenSearch={() => {
+          setIsDongPinSheetOpen(false);
+          setIsGlobalSearchOpen(true);
+        }}
       />
 
-      {/* 3. 전체 카테고리 그리드 바텀시트 (CategoryBottomSheet) */}
+      {/* 3. 최고관리자 전역 검색 & 일반 사용자 검색/둘러보기 시트 (GlobalDongSearchSheet) */}
+      <GlobalDongSearchSheet
+        isOpen={isGlobalSearchOpen}
+        onClose={() => setIsGlobalSearchOpen(false)}
+        currentUser={currentUser}
+        onSelectDong={(selectedDong) => {
+          setRegion(getRegionByDongName(selectedDong));
+        }}
+      />
+
+      {/* 4. 전체 카테고리 그리드 바텀시트 (CategoryBottomSheet) */}
       <CategoryBottomSheet
         isOpen={isCategorySheetOpen}
         onClose={() => setIsCategorySheetOpen(false)}
@@ -703,7 +807,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
         }}
       />
 
-      {/* 4. 부드러운 상세보기 바텀시트 (FeedDetailSheet) */}
+      {/* 5. 부드러운 상세보기 바텀시트 (FeedDetailSheet) */}
       <FeedDetailSheet
         notice={detailNotice}
         cafe={detailCafe}
@@ -739,7 +843,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
         nextPath="/"
       />
 
-      {/* 5. 하단 네이티브 바텀 네비게이션 ([🏠홈] [💬동네소식] [📅t.note] [📁전체메뉴]) */}
+      {/* 6. 하단 네이티브 바텀 네비게이션 ([🏠홈] [💬동네소식] [📅t.note] [📁전체메뉴]) */}
       <MobileBottomNav
         activeTab={
           activeTab === "home"

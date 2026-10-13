@@ -32,12 +32,17 @@ export default function MobileTopBar({
           type="button"
           onClick={onOpenDongSelector}
           className="group flex items-center gap-1.5 py-1 text-left focus:outline-hidden active:opacity-70 transition-opacity"
-          aria-label="동네 변경"
+          aria-label="내 동네 핀 변경"
         >
           <span className="text-lg font-black tracking-tight text-slate-900 group-hover:text-slate-700">
-            {dongName || "상계동"}
+            {dongName || "내 동네"}
           </span>
           <ChevronDown className="h-4 w-4 text-slate-700 transition-transform group-hover:translate-y-0.5" />
+          {currentUser?.role === "SUPER_ADMIN" && (
+            <span className="ml-0.5 rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-black text-amber-800 border border-amber-300">
+              👑 관리
+            </span>
+          )}
         </button>
 
         {/* 우측: 검색(🔍), 알림(🔔), 프로필/로그인(👤) 미니멀 아이콘 3종 */}

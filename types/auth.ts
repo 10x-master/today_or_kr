@@ -45,13 +45,27 @@ export interface CommissionLedgerEntry {
   createdAt: string;
 }
 
+/** 사용자 동네 핀(티) 타입 */
+export type UserDongPinType = "VERIFIED" | "BONUS";
+
+/** 사용자 동네 핀(티) 인터페이스 */
+export interface UserDongPin {
+  id: string;
+  user_id: string;
+  dong_name: string;
+  pin_type: UserDongPinType;
+  is_primary: boolean;
+  created_at?: string;
+}
+
 /** Supabase Auth 및 카카오 OAuth 연동 프로필 */
 export interface AuthProfile {
   id: string;
   email?: string | null;
   full_name?: string | null;
   avatar_url?: string | null;
-  role?: "USER" | "ADMIN" | string;
+  role?: "USER" | "ADMIN" | "SUPER_ADMIN" | string;
+  activity_score?: number;
   created_at?: string;
   updated_at?: string;
 }
