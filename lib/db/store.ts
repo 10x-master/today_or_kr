@@ -13,6 +13,7 @@ import {
   mockResidentVerifications,
   mockLocalEventApplications,
   mockPlatformProducts,
+  mockLocalAds,
   mockUsers,
 } from "@/lib/db/mockSeed";
 import type {
@@ -40,6 +41,8 @@ import type {
   ResidentVerification,
   LocalEventApplication,
   PlatformProduct,
+  LocalAd,
+  AdStatus,
 } from "@/types/officialNotice";
 import type { AppPwaSetting, AppPwaTarget } from "@/types/pwa";
 
@@ -590,4 +593,71 @@ export function updatePlatformProduct(
   Object.assign(item, updates, { updated_at: new Date().toISOString() });
   return item;
 }
+
+/** 파트너스 비즈보드 광고 목록 조회 */
+export function getLocalAds(filter?: {
+  status?: AdStatus;
+  dong?: string;
+  partnerId?: string;
+}): LocalAd[] {
+  return mockLocalAds.filter((ad) => {
+    if (filter?.status && ad.status !== filter.status) return false;
+    if (filter?.partnerId && ad.partner_id !== filter.partnerId) return false;
+    if (filter?.dong && filter.dong !== "ALL") {
+      if (
+        !ad.target_dongs.includes("ALL") &&
+        !ad.target_dongs.includes(filter.dong) &&
+        ad.registered_dong !== filter.dong
+      ) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+/** 파트너스 비즈보드 신규 광고 신청/생성 */
+export function createLocalAd(
+  newAd: Omit<LocalAd, "id" | "created_at" | "impressions" | "clicks">
+): LocalAd {
+  const ad: LocalAd = {
+    ...newAd,
+    id: `ad-${Date.now()}`,
+    impressions: 0,
+    clicks: 0,
+    created_at: new Date().toISOString(),
+  };
+  mockLocalAds.unshift(ad);
+  return ad;
+}
+
+/** 파트너스 광고 상태 변경 (최고관리자 승인/반려 제어) */
+export function updateLocalAdStatus(
+  id: string,
+  status: AdStatus,
+  rejectReason?: string | null
+): LocalAd | null {
+  const ad = mockLocalAds.find((a) => a.id === id);
+  if (!ad) return null;
+  ad.status = status;
+  if (status === "APPROVED") {
+    ad.is_active = true;
+    ad.reject_reason = null;
+  } else if (status === "REJECTED") {
+    ad.is_active = false;
+    ad.reject_reason = rejectReason || "광고 집행 가이드라인 미준수 사유";
+  }
+  ad.updated_at = new Date().toISOString();
+  return ad;
+}
+
+/** 파트너스 광고 온/오프 일시중지 토글 */
+export function toggleLocalAdActive(id: string, isActive?: boolean): LocalAd | null {
+  const ad = mockLocalAds.find((a) => a.id === id);
+  if (!ad) return null;
+  ad.is_active = isActive !== undefined ? isActive : !ad.is_active;
+  ad.updated_at = new Date().toISOString();
+  return ad;
+}
+
 

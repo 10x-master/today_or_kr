@@ -11,6 +11,7 @@ import type {
   ResidentVerification,
   LocalEventApplication,
   PlatformProduct,
+  LocalAd,
 } from "@/types/officialNotice";
 import type { AppPwaSetting } from "@/types/pwa";
 
@@ -1571,5 +1572,91 @@ export const mockCafePlaces: LocalCafePlace[] = [
     business_hours: "매일 10:00 - 22:00",
   },
 ];
+
+/** 파트너스 비즈보드 광고 목데이터 */
+export const mockLocalAds: LocalAd[] = [
+  {
+    id: "ad-partner-001",
+    partner_id: "partner-nowon-interior",
+    partner_name: "노원 디자인 인테리어 라운지",
+    registered_dong: "상계동",
+    target_dongs: ["상계동", "중계동", "하계동"],
+    main_copy: "상계주공 올수리 3,000만원대 특가",
+    sub_copy: "공간협회 공인 시공 · 3년 무상 A/S 보증",
+    image_url:
+      "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=600&q=80",
+    landing_url: "/products",
+    package_days: 30,
+    status: "APPROVED",
+    is_active: true,
+    impressions: 14280,
+    clicks: 612,
+    start_date: "2026-10-01",
+    end_date: "2026-10-31",
+    created_at: "2026-09-30T10:00:00Z",
+  },
+  {
+    id: "ad-partner-002",
+    partner_id: "partner-sanggye-roastery",
+    partner_name: "노원 로스터리 상계점",
+    registered_dong: "상계동",
+    target_dongs: ["상계동"],
+    main_copy: "단지 주민 게이샤 핸드드립 10% 할인",
+    sub_copy: "당일 로스팅 스페셜티 커피 원두 증정",
+    image_url:
+      "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&q=80",
+    landing_url: "/상계동",
+    package_days: 14,
+    status: "APPROVED",
+    is_active: true,
+    impressions: 8430,
+    clicks: 395,
+    start_date: "2026-10-05",
+    end_date: "2026-10-19",
+    created_at: "2026-10-04T15:20:00Z",
+  },
+  {
+    id: "ad-partner-003",
+    partner_id: "partner-focus-edu",
+    partner_name: "포커스 AI 에듀케이션",
+    registered_dong: "상계동",
+    target_dongs: ["상계동", "중계동"],
+    main_copy: "2026 노원 초중고 AI 코딩 단기 속성반",
+    sub_copy: "협회 공식 공모전 대비반 선착순 10명 접수",
+    image_url:
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80",
+    landing_url: "/상계동",
+    package_days: 7,
+    status: "PENDING",
+    is_active: false,
+    impressions: 0,
+    clicks: 0,
+    start_date: "2026-10-14",
+    end_date: "2026-10-21",
+    created_at: "2026-10-13T09:10:00Z",
+  },
+  {
+    id: "ad-partner-004",
+    partner_id: "partner-miracle-beauty",
+    partner_name: "미라클 뷰티 케어",
+    registered_dong: "중계동",
+    target_dongs: ["중계동"],
+    main_copy: "가장 저렴한 뷰티샵 최저가 보장",
+    sub_copy: "무조건 100% 효과 입증 보장 시술",
+    image_url:
+      "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=600&q=80",
+    landing_url: "/중계동",
+    package_days: 7,
+    status: "REJECTED",
+    is_active: false,
+    impressions: 0,
+    clicks: 0,
+    start_date: "2026-10-10",
+    end_date: "2026-10-17",
+    reject_reason: "과장 광고 및 공정거래 표기 위반 사유 (최저가/무조건 문구 수정 필요)",
+    created_at: "2026-10-10T11:00:00Z",
+  },
+];
+
 
 

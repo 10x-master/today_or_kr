@@ -224,6 +224,19 @@ export default function CategoryBottomSheet({
                 </span>
               </button>
 
+              <Link
+                href="/partners"
+                onClick={onClose}
+                className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-amber-300/80 bg-gradient-to-br from-amber-50 via-white to-amber-100/50 p-3 hover:border-amber-400 transition-all active:scale-95 shadow-2xs"
+              >
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white shadow-2xs text-lg">
+                  🤝
+                </div>
+                <span className="text-[11px] font-black text-amber-950 text-center leading-tight">
+                  파트너스 센터
+                </span>
+              </Link>
+
               {onOpenResidentVerify && (
                 <button
                   type="button"
@@ -231,7 +244,7 @@ export default function CategoryBottomSheet({
                     onClose();
                     onOpenResidentVerify();
                   }}
-                  className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3 hover:bg-emerald-100/60 transition-all active:scale-95 col-span-3 sm:col-span-1"
+                  className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-3 hover:bg-emerald-100/60 transition-all active:scale-95 col-span-2 sm:col-span-1"
                 >
                   <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white shadow-2xs text-lg text-emerald-600">
                     🧾

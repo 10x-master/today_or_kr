@@ -124,6 +124,32 @@ export interface AdCampaign {
   created_at?: string;
 }
 
+/** 파트너스 지역 광고 심사 상태 */
+export type AdStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+/** 파트너스 비즈보드 광고 테이블 local_ads */
+export interface LocalAd {
+  id: string;
+  partner_id?: string | null;
+  partner_name: string;
+  registered_dong: string;
+  target_dongs: string[]; // 예: ["상계동", "중계동"] 또는 ["ALL"]
+  main_copy: string; // 볼드 1줄, 25자 이내
+  sub_copy: string; // 1줄, 35자 이내
+  image_url: string; // 비즈보드 규격 썸네일
+  landing_url: string; // 연결 랜딩 URL
+  package_days: number; // 7, 14, 30
+  status: AdStatus;
+  is_active: boolean; // 광고 온/오프 일시중지 토글
+  impressions: number; // 노출 수
+  clicks: number; // 클릭 수
+  start_date: string; // YYYY-MM-DD
+  end_date: string; // YYYY-MM-DD
+  reject_reason?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
 /** 아파트 단지 AI 교육 신청 테이블 apt_edu_applications */
 export interface AptEduApplication {
   id?: string;

@@ -454,6 +454,14 @@ export default function Home({ initialDong }: HomeProps = {}) {
               <span>📋 내 티노트 (t.note)</span>
               <span className="text-[10px] text-amber-600 font-bold">이동 →</span>
             </Link>
+            <Link
+              href="/partners"
+              onClick={() => setUserPopoverOpen(false)}
+              className="flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-xs font-bold text-amber-900 bg-amber-50/70 hover:bg-amber-100/70 transition-colors border border-amber-200/60"
+            >
+              <span>🤝 파트너스 센터 (비즈보드)</span>
+              <span className="text-[10px] text-amber-700 font-bold">대시보드 →</span>
+            </Link>
             <button
               type="button"
               onClick={async () => {
