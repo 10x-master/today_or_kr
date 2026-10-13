@@ -42,7 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full bg-white antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-white text-zinc-900">
+      <body className="flex min-h-full flex-col bg-slate-100 text-zinc-900 antialiased selection:bg-amber-500/20 selection:text-amber-950">
         <MemberProvider>{children}</MemberProvider>
       </body>
     </html>

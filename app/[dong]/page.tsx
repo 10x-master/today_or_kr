@@ -65,7 +65,13 @@ export default async function DongPage({ params }: DongPageProps) {
   }
 
   return (
-    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+    <Suspense
+      fallback={
+        <div className="mx-auto min-h-screen w-full max-w-md bg-white shadow-xl flex items-center justify-center text-xs text-slate-400">
+          동네 소식을 불러오는 중...
+        </div>
+      }
+    >
       <Home initialDong={decodedDong} />
     </Suspense>
   );
