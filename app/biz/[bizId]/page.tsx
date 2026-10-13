@@ -35,6 +35,7 @@ import {
 import BizOwnershipClaimModal from "@/components/biz/BizOwnershipClaimModal";
 import CleanTrustScoreCard from "@/components/portal/CleanTrustScoreCard";
 import PwaInstallBanner from "@/components/pwa/PwaInstallBanner";
+import QuickShareToolbar from "@/components/note/QuickShareToolbar";
 import type { BizType, BizClaimStatus, BizClaimRequest } from "@/types/biz";
 
 // ============================================================================
@@ -575,6 +576,13 @@ function BizHomeContent() {
 
       {/* 메인 컨테이너 */}
       <main className="max-w-4xl mx-auto px-4 py-5 space-y-5">
+        {/* 1초 LinkPick 초고속 배포 툴바 고정 배치 */}
+        <QuickShareToolbar
+          userId={bizId}
+          userName={title}
+          customUrl={`https://today.or.kr/biz/${bizId}${refParam ? `?ref=${encodeURIComponent(refParam)}` : ""}`}
+        />
+
         {/* ============================================================== */}
         {/* [섹션 1: 상단 B2B 비즈홈 메인 카드]                            */}
         {/* ============================================================== */}

@@ -31,11 +31,11 @@ export interface UserAccountDropdownProps {
 // 6대 관심사 카테고리
 const INTEREST_OPTIONS = [
   { id: "RESTAURANT", label: "요식업", icon: "🍽️" },
-  { id: "MANUFACTURER", label: "소공인 제조", icon: "⚙️" },
-  { id: "STORE_CLOSING", label: "폐업/철거", icon: "🏚️" },
-  { id: "APT_MANAGER", label: "아파트 관리", icon: "🏢" },
+  { id: "MANUFACTURER", label: "소공인제조", icon: "⚙️" },
+  { id: "STORE_CLOSING", label: "폐업철거", icon: "🏚️" },
+  { id: "APT_MANAGER", label: "아파트관리", icon: "🏢" },
   { id: "AMBASSADOR", label: "엠버서더", icon: "👑" },
-  { id: "GROUP_BUY", label: "동네 공구", icon: "🛍️" },
+  { id: "GROUP_BUY", label: "동네공구", icon: "🛍️" },
 ];
 
 export default function UserAccountDropdown({
@@ -237,7 +237,11 @@ export default function UserAccountDropdown({
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-[10px] font-medium">
                   <Crown className="h-3 w-3 text-amber-600" />
-                  👑 엠버서더
+                  👑 투데이 엠버서더
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-[10px] font-medium">
+                  <Star className="h-3 w-3 text-blue-600" />
+                  ⭐ 서포터즈
                 </span>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 text-[10px] font-medium">
                   🏢 아파트 관리소장
@@ -249,13 +253,13 @@ export default function UserAccountDropdown({
             </div>
           </div>
 
-          {/* 2) [핵심 파트너스 & 활동 퀵 메뉴] */}
+          {/* 2) [3대 핵심 퀵 링크: LinkPick 허브, t.note & 캘린더, 비즈홈 공식 페이지] */}
           <div className="py-2.5 border-b border-slate-100 space-y-1">
             <div className="text-[11px] font-medium text-slate-400 px-1 mb-1">
-              활동 & 비즈니스 허브
+              3대 핵심 퀵 링크
             </div>
 
-            {/* 1. [🔗 내 LinkPick 관리] */}
+            {/* 1. [🔗 내 LinkPick 허브] */}
             <Link
               href={`/p/${currentUser.id || "ambassador-01"}`}
               onClick={() => setIsOpen(false)}
@@ -263,14 +267,14 @@ export default function UserAccountDropdown({
             >
               <div className="flex items-center gap-2">
                 <Link2 className="h-4 w-4 text-indigo-600" />
-                <span>🔗 내 LinkPick 관리</span>
+                <span className="font-medium text-slate-800">🔗 내 LinkPick 허브</span>
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-indigo-600 transition-colors">
                 모바일 1-Page →
               </span>
             </Link>
 
-            {/* 2. [📝 t.note & 캘린더] */}
+            {/* 2. [📝 나의 t.note & 캘린더] */}
             <Link
               href="/workspace"
               onClick={() => setIsOpen(false)}
@@ -278,14 +282,14 @@ export default function UserAccountDropdown({
             >
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-amber-600" />
-                <span>📝 t.note & 캘린더</span>
+                <span className="font-medium text-slate-800">📝 나의 t.note & 캘린더</span>
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-amber-600 transition-colors">
-                1초 배포 툴바 →
+                스마트 데스크 →
               </span>
             </Link>
 
-            {/* 3. [💼 비즈 홈 관리] */}
+            {/* 3. [💼 비즈홈 공식 페이지] */}
             <Link
               href="/biz/apt-sanggye14"
               onClick={() => setIsOpen(false)}
@@ -293,25 +297,10 @@ export default function UserAccountDropdown({
             >
               <div className="flex items-center gap-2">
                 <Building className="h-4 w-4 text-emerald-600" />
-                <span>💼 비즈 홈 관리 (아파트/상점)</span>
+                <span className="font-medium text-slate-800">💼 비즈홈 공식 페이지</span>
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-emerald-600 transition-colors">
-                소유권 이전·공고 →
-              </span>
-            </Link>
-
-            {/* 4. [🤝 비즈노트 & 파트너스 센터] */}
-            <Link
-              href="/partners"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
-            >
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-slate-600" />
-                <span>🤝 비즈노트 & 소싱 룸</span>
-              </div>
-              <span className="text-[10px] text-slate-400 group-hover:text-slate-900 transition-colors">
-                제조 회원사 공급 →
+                공식 홈페이지 →
               </span>
             </Link>
           </div>
@@ -406,10 +395,10 @@ export default function UserAccountDropdown({
                 setIsOpen(false);
                 onOpenTerms();
               }}
-              className="text-[11px] text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 cursor-pointer font-normal"
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2 cursor-pointer font-normal"
               title="서비스 기본약관 및 초상권/저작권 법적 면책 전문 확인"
             >
-              이용약관 및 법적 면책 확인
+              [이용약관 및 면책조항]
             </button>
           </div>
         </div>
