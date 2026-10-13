@@ -17,3 +17,23 @@ export interface CivicNotice {
   /** 구청/시청 공식 원문 링크 */
   originUrl: string;
 }
+
+/** 착한아파트(클린트러스트) 4대 평가 지수 스코어카드 모델 */
+export type CleanTrustGrade = "AAA" | "AA" | "A" | "NORMAL";
+
+export interface CleanTrustBreakdown {
+  biddingFairness: number;    // 30점 만점 (K-apt CERA 적정가 편차 분석)
+  reserveFundHealth: number;  // 25점 만점 (장충금 적립 요율 및 목적외 사용 방어)
+  legalCompliance: number;    // 25점 만점 (3년 법정 장기수선계획 정기조정 이행)
+  residentEngagement: number; // 20점 만점 (주민 공구 청원/투표 참여율)
+}
+
+export interface CleanTrustScoreCard {
+  apartmentName: string;
+  totalScore: number; // 100점 만점, 예: 94
+  grade: CleanTrustGrade;
+  breakdown: CleanTrustBreakdown;
+  statusMessage: string;
+  certified?: boolean; // 85점 이상 시 공인 인증 단지
+  updatedAt?: string;
+}

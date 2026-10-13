@@ -44,6 +44,7 @@ import FeedDetailSheet from "@/components/feed/FeedDetailSheet";
 // 신규 엠버서더 쇼츠, 아파트 B2B 컨설팅, 회원사 소싱 룸, 이용약관, 음성 캡처 모달
 import AmbassadorShortsSection from "@/components/portal/AmbassadorShortsSection";
 import AptConsultingSection from "@/components/portal/AptConsultingSection";
+import CleanTrustScoreCard from "@/components/portal/CleanTrustScoreCard";
 import MemberSourcingSection from "@/components/portal/MemberSourcingSection";
 import PortalLiveDesk from "@/components/portal/PortalLiveDesk";
 import TermsModal from "@/components/auth/TermsModal";
@@ -891,8 +892,21 @@ export default function Home({ initialDong }: HomeProps = {}) {
               </div>
             </div>
 
-            {/* 1. 🏢 아파트 회원사 공인 컨설팅 센터 (CERA Engine) */}
-            <AptConsultingSection />
+            {/* 1. 🏢 착한아파트(클린트러스트) 4대 지수 & 공인 컨설팅 센터 (PC 2열 나란히 배치) */}
+            <div className="p-2 sm:p-2.5 bg-slate-50/40 border-b border-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
+                {/* 좌측: CleanTrustScoreCard (착한아파트 지수 라이브 게이지) */}
+                <CleanTrustScoreCard
+                  currentDong={region.dong}
+                  initialApartmentName="상계주공 14단지"
+                />
+
+                {/* 우측: 개편된 AptConsultingSection (3대 패키지 및 견적서 신청 폼) */}
+                <AptConsultingSection
+                  initialApartmentName="상계주공 14단지"
+                />
+              </div>
+            </div>
 
             {/* 2. 📦 회원사 아이템 소싱 룸 (제조 공급 ➔ 엠버서더 중개) */}
             <MemberSourcingSection />
