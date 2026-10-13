@@ -54,8 +54,11 @@ import {
   getMaxSlotsForScore,
 } from "@/lib/dong/pinManager";
 import RealtimeAlertBanner from "@/components/admin/RealtimeAlertBanner";
+import GroupBuyApprovalQueue from "@/components/admin/GroupBuyApprovalQueue";
+import BizClaimReviewQueue from "@/components/admin/BizClaimReviewQueue";
+import BizboardAdOrderModal from "@/components/commerce/BizboardAdOrderModal";
 
-type CrmTab = "users" | "supporters" | "ads" | "claims";
+type CrmTab = "groupbuys" | "claims" | "ads" | "users" | "supporters";
 
 interface SupporterCandidate {
   id: string;
@@ -174,9 +177,10 @@ const mockBizClaims: BizClaimRequest[] = [
 ];
 
 export default function AdminCrmPage() {
-  const [activeTab, setActiveTab] = useState<CrmTab>("users");
+  const [activeTab, setActiveTab] = useState<CrmTab>("groupbuys");
   const [currentUser, setCurrentUser] = useState<AuthProfile | null>(null);
   const [forceAdminMode, setForceAdminMode] = useState(true); // 페어프로그래밍/데모용 최고관리자 강제 활성화
+  const [isAdOrderModalOpen, setIsAdOrderModalOpen] = useState(false);
 
   // 상태 관리: 회원 목록
   const [users, setUsers] = useState<UserProfile[]>(mockUsers);
@@ -220,6 +224,17 @@ export default function AdminCrmPage() {
     } catch {
       setBizClaims(mockBizClaims);
     }
+
+    try {
+      const customAds = localStorage.getItem("today_custom_ads");
+      if (customAds) {
+        const parsed: LocalAd[] = JSON.parse(customAds);
+        setAds((prev) => [
+          ...parsed,
+          ...prev.filter((a) => !parsed.some((p) => p.id === a.id)),
+        ]);
+      }
+    } catch {}
   }, []);
 
   const adminAuthorized = forceAdminMode || isSuperAdmin(currentUser);
@@ -495,60 +510,129 @@ export default function AdminCrmPage() {
         </div>
       </div>
 
-      {/* 3. 3대 탭 스위처 */}
-      <div className="mt-6 flex rounded-2xl bg-slate-200/80 p-1 border border-slate-200">
-        <button
-          type="button"
-          onClick={() => setActiveTab("users")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
-            activeTab === "users"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <Users className="h-4 w-4 text-indigo-600" />
-          <span>👥 회원 등급 &amp; 핀 관리 ({users.length})</span>
-        </button>
+      {/* 3. 3대 핵심 백오피스 통합 탭 스위처 */}
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("groupbuys")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all cursor-pointer ${
+              activeTab === "groupbuys"
+                ? "bg-slate-900 text-white shadow-2xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+            }`}
+          >
+            <FileText className="h-4 w-4 text-emerald-400" />
+            <span>📋 공고/공구 승인함</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                activeTab === "groupbuys" ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
+              }`}
+            >
+              10인 청원
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("claims")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all cursor-pointer ${
+              activeTab === "claims"
+                ? "bg-slate-900 text-white shadow-2xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+            }`}
+          >
+            <Building className="h-4 w-4 text-amber-400" />
+            <span>🏢 비즈홈 소유권 심사</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                activeTab === "claims" ? "bg-white/20 text-white" : "bg-amber-100 text-amber-800"
+              }`}
+            >
+              Claim 심사
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("ads")}
+            className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all cursor-pointer ${
+              activeTab === "ads"
+                ? "bg-slate-900 text-white shadow-2xs"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
+            }`}
+          >
+            <Megaphone className="h-4 w-4 text-rose-400" />
+            <span>📢 비즈보드 광고 주문함</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                activeTab === "ads" ? "bg-white/20 text-white" : "bg-rose-100 text-rose-800"
+              }`}
+            >
+              {ads.length}건
+            </span>
+          </button>
+        </div>
 
         <button
           type="button"
-          onClick={() => setActiveTab("supporters")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
-            activeTab === "supporters"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900"
+          onClick={() => setActiveTab(activeTab === "supporters" ? "users" : "users")}
+          className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium transition-all cursor-pointer ${
+            activeTab === "users" || activeTab === "supporters"
+              ? "bg-slate-200 text-slate-900 font-semibold"
+              : "text-slate-500 hover:text-slate-800"
           }`}
         >
-          <Award className="h-4 w-4 text-amber-600" />
-          <span>⭐ 서포터즈 100점 심사 ({candidates.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("ads")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
-            activeTab === "ads"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <Megaphone className="h-4 w-4 text-rose-600" />
-          <span>📢 비즈보드 광고 ({ads.length})</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("claims")}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
-            activeTab === "claims"
-              ? "bg-white text-slate-900 shadow-sm"
-              : "text-slate-600 hover:text-slate-900"
-          }`}
-        >
-          <Building className="h-4 w-4 text-emerald-600" />
-          <span>🏢 비즈 홈 심사 ({bizClaims.filter((c) => c.status === "PENDING").length}대기)</span>
+          <Users className="h-3.5 w-3.5" />
+          <span>👥 회원 &amp; 서포터즈 관리</span>
         </button>
       </div>
+
+      {/* 회원/서포터즈 하위 탭 토글 바 (해당 탭 활성화 시 노출) */}
+      {(activeTab === "users" || activeTab === "supporters") && (
+        <div className="mt-4 flex items-center gap-2 p-1 bg-slate-100 rounded-xl w-fit text-xs">
+          <button
+            type="button"
+            onClick={() => setActiveTab("users")}
+            className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+              activeTab === "users"
+                ? "bg-white text-slate-900 shadow-2xs"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            👥 회원 등급 &amp; 핀 ({users.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("supporters")}
+            className={`px-3 py-1 rounded-lg font-medium transition-colors cursor-pointer ${
+              activeTab === "supporters"
+                ? "bg-white text-slate-900 shadow-2xs"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            ⭐ 서포터즈 100점 심사 ({candidates.length})
+          </button>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 탭 1: 📋 주민 10인 공구 청원 승인함 */}
+      {/* ========================================================================= */}
+      {activeTab === "groupbuys" && (
+        <div className="mt-6">
+          <GroupBuyApprovalQueue />
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 탭 2: 🏢 비즈홈 소유권 이전(Claim) 심사 대기열 */}
+      {/* ========================================================================= */}
+      {activeTab === "claims" && (
+        <div className="mt-6">
+          <BizClaimReviewQueue />
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 탭 1: 회원 등급 및 동네 핀 관리 */}
@@ -810,10 +894,30 @@ export default function AdminCrmPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* 탭 3: 비즈보드 전역 광고 제어 */}
+      {/* 탭 3: 비즈보드 전역 광고 제어 & 부스트 신청 */}
       {/* ========================================================================= */}
       {activeTab === "ads" && (
         <div className="mt-6 space-y-4">
+          {/* 상단 액션 및 설명 바 */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-slate-100 shadow-2xs">
+            <div>
+              <h3 className="text-sm font-medium text-slate-900">
+                상단 64px 비즈보드 광고 슬롯 및 캠페인 관리
+              </h3>
+              <p className="text-xs text-slate-500 font-normal mt-0.5">
+                동네별 64px 골든 슬롯 광고 주문을 심사하고 실시간 라이브 송출(ON/OFF) 및 노출수를 제어합니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsAdOrderModalOpen(true)}
+              className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors shadow-2xs flex items-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <Megaphone className="h-3.5 w-3.5 text-amber-400" />
+              <span>+ 신규 비즈보드 부스트 신청</span>
+            </button>
+          </div>
+
           {/* 상태 필터 바 */}
           <div className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs">
             <span className="text-xs font-bold text-slate-700">광고 심사 상태:</span>
@@ -979,163 +1083,18 @@ export default function AdminCrmPage() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* 탭 4: 비즈 홈 소유권 이전 심사 (Claim Management)                       */}
-      {/* ========================================================================= */}
-      {activeTab === "claims" && (
-        <div className="mt-6 space-y-4">
-          {/* 상태 필터 바 */}
-          <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex-wrap gap-2">
-            <div className="flex items-center gap-1.5">
-              <Building className="h-4 w-4 text-emerald-600" />
-              <span className="text-xs font-bold text-slate-800">
-                소유권 이전 심사 대기열 ({filteredClaims.length}건)
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              {(["ALL", "PENDING", "APPROVED", "REJECTED"] as const).map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  onClick={() => setClaimFilter(filter)}
-                  className={`rounded-xl px-2.5 py-1 text-xs font-bold transition-all cursor-pointer ${
-                    claimFilter === filter
-                      ? "bg-slate-900 text-white shadow-2xs"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
-                >
-                  {filter === "ALL"
-                    ? "전체"
-                    : filter === "PENDING"
-                    ? "심사 대기"
-                    : filter === "APPROVED"
-                    ? "승인 완료"
-                    : "반려"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 소유권 이전 신청 목록 */}
-          <div className="space-y-3">
-            {filteredClaims.length === 0 ? (
-              <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-400">
-                <Building className="mx-auto h-8 w-8 text-slate-300 mb-2" />
-                <p className="text-xs">심사 대기 중인 소유권 이전 신청이 없습니다.</p>
-              </div>
-            ) : (
-              filteredClaims.map((claim) => (
-                <div
-                  key={claim.id}
-                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs transition-all hover:border-slate-300 space-y-3"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs">
-                        {claim.bizType === "APT" ? "🏢" : "🍽️"}
-                      </span>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="text-sm font-bold text-slate-900 tracking-tight">
-                            {claim.bizTitle}
-                          </h4>
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                              claim.status === "APPROVED"
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : claim.status === "PENDING"
-                                ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                : "bg-rose-50 text-rose-700 border border-rose-200"
-                            }`}
-                          >
-                            {claim.status === "APPROVED"
-                              ? "✅ 승인 완료"
-                              : claim.status === "PENDING"
-                              ? "⏳ 심사 대기"
-                              : "❌ 반려"}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 font-mono">
-                          ID: {claim.bizId} · 접수일: {new Date(claim.submittedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    </div>
-
-                    <Link
-                      href={`/biz/${claim.bizId}`}
-                      target="_blank"
-                      className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-bold"
-                    >
-                      <span>비즈 홈 확인</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-                  </div>
-
-                  {/* 신청자 정보 그리드 */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <span className="text-[10px] text-slate-400 block">신청자 성명</span>
-                      <span className="font-bold text-slate-800">{claim.applicantName}</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <span className="text-[10px] text-slate-400 block">직책</span>
-                      <span className="font-bold text-slate-800">
-                        {claim.applicantRole === "MANAGER"
-                          ? "🏢 관리소장"
-                          : claim.applicantRole === "REPRESENTATIVE"
-                          ? "🍽️ 대표자"
-                          : claim.applicantRole === "COUNCIL"
-                          ? "👥 입대의 임원"
-                          : "대리인"}
-                      </span>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <span className="text-[10px] text-slate-400 block">연락처</span>
-                      <span className="font-bold text-slate-800">{claim.applicantPhone}</span>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                      <span className="text-[10px] text-slate-400 block">증빙 서류</span>
-                      <span className="font-medium text-emerald-700 truncate block">
-                        📄 {claim.proofDocumentName || "증빙서류.pdf"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 심사 액션 바 */}
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
-                    {claim.status !== "APPROVED" && (
-                      <button
-                        type="button"
-                        onClick={() => handleApproveClaim(claim.id)}
-                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs"
-                      >
-                        공식 소유권 승인
-                      </button>
-                    )}
-
-                    {claim.status !== "REJECTED" && (
-                      <button
-                        type="button"
-                        onClick={() => handleRejectClaim(claim.id)}
-                        className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-colors cursor-pointer"
-                      >
-                        신청 반려
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
       {/* 실시간 유저 글 감지 배너 연동 */}
       <RealtimeAlertBanner />
+
+      {/* 비즈보드 광고 부스트 신청 모달 */}
+      <BizboardAdOrderModal
+        isOpen={isAdOrderModalOpen}
+        onClose={() => setIsAdOrderModalOpen(false)}
+        onOrderSubmitted={(newAd) => {
+          setAds((prev) => [newAd, ...prev]);
+          showToast("📢 신규 비즈보드 광고가 등록되었습니다!");
+        }}
+      />
     </div>
   );
 }
