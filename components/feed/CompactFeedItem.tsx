@@ -219,8 +219,38 @@ export default function CompactFeedItem({
       className="group relative w-full border-b border-slate-100 bg-white px-3.5 py-2.5 transition-colors hover:bg-slate-50/70 active:bg-slate-100/70 cursor-pointer select-none"
     >
       <div className="w-full">
-        {/* 상단 1행: 카테고리 미니 배지 + 발행처 + 대상 권역 */}
+        {/* 상단 1행: 트랙 뱃지 4종 + K-apt CERA 적정가 검증 + 카테고리 미니 배지 + 발행처 + 대상 권역 */}
         <div className="flex items-center gap-1.5 mb-1 text-[11px] flex-wrap">
+          {notice.track && (
+            <span
+              className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 font-medium border text-[10px] ${
+                notice.track === "OFFICIAL"
+                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                  : notice.track === "APPROVED_GROUPBUY"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : notice.track === "PETITION"
+                  ? "bg-amber-50 text-amber-700 border-amber-200"
+                  : "bg-slate-100 text-slate-600 border-slate-200"
+              }`}
+            >
+              <span>
+                {notice.track === "OFFICIAL"
+                  ? "🏢 관리사무소 공식"
+                  : notice.track === "APPROVED_GROUPBUY"
+                  ? "✅ 주민 승인 공구"
+                  : notice.track === "PETITION"
+                  ? `🙋 주민 청원 중 (${notice.petition_votes ?? 0}/10명)`
+                  : "📢 Sponsored"}
+              </span>
+            </span>
+          )}
+
+          {notice.cera_report_attached && (
+            <span className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px]">
+              <span>🛡️ CERA 검증</span>
+            </span>
+          )}
+
           <span
             className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 font-medium border ${meta.badgeBg}`}
           >

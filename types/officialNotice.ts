@@ -27,6 +27,75 @@ export const TARGET_ROLE_OPTIONS: TargetRoleMeta[] = [
   { role: "CITIZEN", label: "동네주민", icon: "🏠" },
 ];
 
+export type NoticeTrackType =
+  | "OFFICIAL"            // 관리주체 직발행 - 파란색 뱃지
+  | "PETITION"            // 주민 청원 중 - 노란색 뱃지, 투표 수집 중
+  | "APPROVED_GROUPBUY"   // 주민 10인 달성 및 관리주체 승인 완료 - 녹색 뱃지
+  | "SPONSORED";          // 파트너스 광고 - 회색 뱃지
+
+export type NoticeAuthorRole = "MANAGER" | "RESIDENT" | "AMBASSADOR" | "PARTNER";
+
+export type NoticeApprovalStatus = "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+
+export interface NoticeTrackMeta {
+  track: NoticeTrackType;
+  label: string;
+  icon: string;
+  badgeClass: string;
+  description: string;
+}
+
+export const NOTICE_TRACK_META: Record<NoticeTrackType, NoticeTrackMeta> = {
+  OFFICIAL: {
+    track: "OFFICIAL",
+    label: "관리사무소 공식",
+    icon: "🏢",
+    badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
+    description: "관리사무소 및 입주자대표회의 직발행 공고",
+  },
+  APPROVED_GROUPBUY: {
+    track: "APPROVED_GROUPBUY",
+    label: "주민 승인 공구",
+    icon: "✅",
+    badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    description: "주민 10인 달성 및 관리소장 최종 승인 완료",
+  },
+  PETITION: {
+    track: "PETITION",
+    label: "주민 청원 중",
+    icon: "🙋",
+    badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
+    description: "주민 10인 달성 시 관리소장 승인 큐로 자동 전환",
+  },
+  SPONSORED: {
+    track: "SPONSORED",
+    label: "Sponsored",
+    icon: "📢",
+    badgeClass: "bg-slate-100 text-slate-600 border-slate-200",
+    description: "투데이 인증 파트너사 제휴 특판",
+  },
+};
+
+export interface NoticeItem {
+  id: string;
+  title: string;
+  track: NoticeTrackType;
+  author_role: NoticeAuthorRole;
+  author_name?: string;
+  apartment_name?: string;
+  category?: string;
+  content?: string;
+  petition_votes: number; // 기본값 0, 10 달성 시 PENDING 전환
+  target_votes?: number; // 기본값 10
+  approval_status: NoticeApprovalStatus;
+  cera_report_attached?: boolean; // K-apt CERA 적정가 리포트 연동 여부
+  rejection_reason?: string;
+  created_at?: string;
+  order_url?: string;
+  price_info?: string;
+  supplier?: string;
+}
+
 export interface LocalOfficialNotice {
   id: string;
   district_code: string;
@@ -46,6 +115,12 @@ export interface LocalOfficialNotice {
   related_tags?: string[];
   target_roles?: string[];
   created_at?: string;
+  // 공고 3대 트랙 확장 필드
+  track?: NoticeTrackType;
+  author_role?: NoticeAuthorRole;
+  petition_votes?: number;
+  approval_status?: NoticeApprovalStatus;
+  cera_report_attached?: boolean;
 }
 
 export interface OfficialNoticeCategoryMeta {

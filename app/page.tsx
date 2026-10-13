@@ -45,6 +45,7 @@ import FeedDetailSheet from "@/components/feed/FeedDetailSheet";
 import AmbassadorShortsSection from "@/components/portal/AmbassadorShortsSection";
 import AptConsultingSection from "@/components/portal/AptConsultingSection";
 import MemberSourcingSection from "@/components/portal/MemberSourcingSection";
+import PortalLiveDesk from "@/components/portal/PortalLiveDesk";
 import TermsModal from "@/components/auth/TermsModal";
 import QuickVoiceCaptureModal from "@/components/note/QuickVoiceCaptureModal";
 
@@ -1059,6 +1060,14 @@ export default function Home({ initialDong }: HomeProps = {}) {
 
             {/* 4. 🎬 투데이 엠버서더 쇼츠 갤러리 섹션 */}
             <AmbassadorShortsSection />
+
+            {/* 5. 🏢 아파트 공고 4대 라이브 데스크 (관리주체 직발행 / 주민 청원 10인 승인제 / 파트너스) */}
+            <div className="px-3 pt-1 pb-1">
+              <PortalLiveDesk
+                apartmentName={`${region.dong} 아파트 단지`}
+                isManager={selectedRole === "MANAGER" || superAdmin}
+              />
+            </div>
 
             {/* 메인 뷰포트 컨텐츠 */}
             <main className="flex-1 w-full">
