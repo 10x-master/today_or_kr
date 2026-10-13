@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState } from "react";
 import { AlertTriangle, HeartHandshake, Pin, Plus, Sparkles } from "lucide-react";
 import ComposeModal from "@/components/mobile/ComposeModal";
+import OfficialNoticeFactFeed from "@/components/mobile/OfficialNoticeFactFeed";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
 import {
   FEED_CHANNEL_FILTERS,
@@ -225,6 +226,12 @@ export default function FeedTab({
 
       {!loading && !error && (
         <>
+          {/* 공식 행정 고시 & 로컬 인프라/재개발 팩트 피드 */}
+          <OfficialNoticeFactFeed
+            districtCode={region.code}
+            dongName={`${region.gugun} ${region.dong}`}
+          />
+
           {/* PC/태블릿: 3열 신문형 그리드 */}
           <div className="hidden md:grid md:grid-cols-3 md:gap-6">
             <section>

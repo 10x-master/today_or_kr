@@ -2,6 +2,17 @@ import type { LocalPost, Region } from "@/types/local";
 import type { DonationCampaign, LinkPickProduct } from "@/types/commerce";
 import type { CommissionLedgerEntry, UserProfile } from "@/types/auth";
 import type { CivicNotice } from "@/types/civic";
+import type {
+  AdCampaign,
+  LocalOfficialNotice,
+  WorkLog,
+  TodayNote,
+  LocalComplexEvent,
+  ResidentVerification,
+  LocalEventApplication,
+  PlatformProduct,
+} from "@/types/officialNotice";
+import type { AppPwaSetting } from "@/types/pwa";
 
 /** 법정동코드 기반 샘플 행정동 */
 export const mockRegions: Region[] = [
@@ -1139,3 +1150,320 @@ export const mockDonationCampaigns: DonationCampaign[] = [
     ],
   },
 ];
+
+/** 공식 행정 고시 및 로컬 인프라/재개발 팩트 피드 시범 검증용 시드 데이터 (노원구 상계동) */
+export const mockOfficialNotices: LocalOfficialNotice[] = [
+  {
+    id: "05eeaa03-83f1-4120-9481-09eab757d15a",
+    district_code: "1135010500",
+    category: "REDEVELOP",
+    notice_no: "서울시 노원구 고시 제2026-89호",
+    issuing_agency: "노원구청 주거정비과",
+    title: "상계2구역 주택재개발정비사업 사업시행계획인가 고시",
+    impact_zone: "상계2구역 일원 (총 2,200세대 예정)",
+    summary_1: "상계2구역 주택재개발 정비계획에 따른 사업시행계획 인가 고시 확정.",
+    summary_2: "지하 3층~지상 25층 공동주택 및 정비기반시설 조성 계획 승인.",
+    summary_3: "조합원 분양 신청 절차 및 관리처분 총회 준비 단계 돌입.",
+    details_body:
+      "본 사업시행계획인가는 도시 및 주거환경정비법 제50조에 의거하여 승인 고시되었습니다. 총회 및 감정평가 일정은 조합을 통해 별도 공고됩니다.",
+    contact_info: "노원구청 주거정비과 02-2116-3914",
+    official_link: "https://www.nowon.kr",
+    publish_date: "2026-10-08",
+    view_count: 842,
+    related_tags: ["재개발", "상계2구역", "사업시행인가"],
+    target_roles: ["RESIDENT", "CITIZEN"],
+  },
+  {
+    id: "c6f8384c-402f-42c2-984e-6888d388dde8",
+    district_code: "1135010500",
+    category: "INFRA",
+    notice_no: "국토교통부 고시 제2026-412호",
+    issuing_agency: "국토교통부 광역교통정책과",
+    title: "동북선 경전철 환승 연계 상계역 일대 보행로·버스베이 도로 확장 고시",
+    impact_zone: "상계역 ~ 은행사거리 구간",
+    summary_1: "동북선 경전철 환승 체계 연계 도로망 정비 공사 실시계획 승인.",
+    summary_2: "2026년 11월 본공사 착공, 주간 차선 통제 및 임시 우회로 운영.",
+    summary_3: "출퇴근 시간대 상계로 병목 완화를 위한 보행 동선 전면 개편.",
+    details_body:
+      "공사 기간 중 상계역 1번 출구 앞 버스정류장이 임시 이전 운영됩니다.",
+    contact_info: "국토부 광역교통과 / 노원구 교통행정과",
+    official_link: "https://www.molit.go.kr",
+    publish_date: "2026-10-05",
+    view_count: 1250,
+    related_tags: ["국토부", "동북선", "도로공사"],
+    target_roles: ["ALL"],
+  },
+  {
+    id: "f320abb8-1d40-4841-a325-63e61df5eae8",
+    district_code: "1135010500",
+    category: "EDU",
+    notice_no: "한국AI인테리어공간협회 공고 제2026-01호",
+    issuing_agency: "협회 교육운영국",
+    title: "2026 우리 아파트 단지로 찾아오는 AI 실무 & 디지털 제휴 설명회 공모",
+    impact_zone: "전국 및 노원구 관내 아파트 단지",
+    summary_1: "생성형 AI를 활용한 관리비 절감 실무 및 쿠팡 제휴 복지몰 구축 지원.",
+    summary_2: "입주민 15인 이상 신청 시 본사 전문 오퍼레이터 전액 무상 현장 출장.",
+    summary_3: "수료 단지 대상 전용 링크픽 스토어 개설 및 로컬 컨설턴트 우선 매칭.",
+    details_body:
+      "신청 양식을 작성해 제출하시면 3영업일 내 담당 오퍼레이터가 배정됩니다.",
+    contact_info: "협회 교육지원팀 02-555-0199",
+    official_link: "https://today.or.kr",
+    publish_date: "2026-10-10",
+    view_count: 2100,
+    related_tags: ["AI교육", "쿠팡제휴", "단지공모"],
+    target_roles: ["REP", "MANAGER", "RESIDENT"],
+  },
+  {
+    id: "notice-youth-13center-01",
+    district_code: "1135010500",
+    category: "EDU",
+    notice_no: "노원청년일삶센터 공고 제2026-10호",
+    issuing_agency: "노원청소년일삶센터 (일삶13센터)",
+    title: "[노원구 상계] 2026 청년·청소년 맞춤형 일경험 노원찬스 및 10월 역량강화 프로그램",
+    impact_zone: "노원구 관내 청년 및 청소년 (상계동 일원)",
+    summary_1: "노원구 청년지원 거점 일삶센터 주관 맞춤형 일경험 및 취업 역량강화 과정.",
+    summary_2: "월 44시간 일경험 기회 및 최대 88만원 일경험비 지원, 1:1 진로테라피 운영.",
+    summary_3: "10월 강점 Unboxing 및 자기탐색 심리검사 선착순 접수 중.",
+    details_body:
+      "노원청소년일삶센터(일삶13센터)에서 노원구 청년 및 청소년들의 일과 삶을 잇는 일경험 및 역량강화 프로그램을 운영합니다. 자세한 참여 신청은 센터 홈페이지를 참조해 주세요.",
+    contact_info: "노원청소년일삶센터 02-972-1312",
+    official_link: "https://www.13center.kr",
+    publish_date: "2026-10-12",
+    view_count: 1420,
+    related_tags: ["노원청소년일삶센터", "일경험", "상계동", "청년지원"],
+    target_roles: ["ALL", "RESIDENT", "CITIZEN"],
+  },
+  {
+    id: "notice-junggye-bank-01",
+    district_code: "1135010600",
+    category: "INFRA",
+    notice_no: "노원구 공고 제2026-115호",
+    issuing_agency: "노원구청 교통지도과",
+    title: "[노원구 중계] 중계동 은행사거리 학원가 안심통학로 스마트 교통안전 시설 개선 공고",
+    impact_zone: "중계본동 및 은행사거리 학원가 일원",
+    summary_1: "중계동 은행사거리 어린이보호구역 보행안전 펜스 교체 및 스마트 바닥신호등 구축.",
+    summary_2: "심야 학원 하원 시간대(21~23시) 특별 안심귀가 보안관 순찰 및 불법주정차 단속 강화.",
+    summary_3: "중계주공, 청구아파트 주민 의견수렴 및 2026년 11월 준공 목표.",
+    details_body:
+      "학생 유동인구가 집중되는 중계동 은행사거리 일대의 통학 환경을 개선하기 위한 시설 정비 공사입니다.",
+    contact_info: "노원구청 교통지도과 02-2116-4100",
+    official_link: "https://www.nowon.kr",
+    publish_date: "2026-10-11",
+    view_count: 980,
+    related_tags: ["중계동", "은행사거리", "교통안전", "학원가"],
+    target_roles: ["ALL", "RESIDENT", "CITIZEN"],
+  },
+  {
+    id: "notice-hagye-redev-01",
+    district_code: "1135010300",
+    category: "REDEVELOP",
+    notice_no: "서울시 고시 제2026-142호",
+    issuing_agency: "서울특별시 공공주택과 / 노원구청",
+    title: "[노원구 하계] 하계5단지 노후공공임대 재건축 및 복합문화체육센터 건립 사업인가",
+    impact_zone: "하계5단지 및 하계역 4번 출구 일원",
+    summary_1: "서울시 1호 노후공공임대 재건축 선도사업지 하계5단지 특별건축구역 승인.",
+    summary_2: "최고 35층 1,500세대 고품질 임대주택 및 지역 개방형 수영장·도서관 신축.",
+    summary_3: "하계역 지하철 환승 연계 보행 데크 브릿지 조성 계획 포함.",
+    details_body:
+      "하계5단지 재건축 사업시행계획인가에 따라 입주민 이주 일정 및 주민설명회가 진행됩니다.",
+    contact_info: "서울주택도시공사(SH) / 노원구 재생과 02-2116-3920",
+    official_link: "https://www.i-sh.co.kr",
+    publish_date: "2026-10-09",
+    view_count: 1560,
+    related_tags: ["하계동", "하계5단지", "재건축", "SH공사"],
+    target_roles: ["RESIDENT", "CITIZEN"],
+  },
+];
+
+/** 제휴 스폰서 광고 캠페인 시드 */
+export const mockAdCampaigns: AdCampaign[] = [
+  {
+    id: "826bbd05-309b-4e78-a33f-fb1264d6f005",
+    industry_type: "POLICY_FUND",
+    title: "2026 소상공인·자영업자 저금리 정책자금 특례보증 무료 진단",
+    badge_label: "제휴혜택",
+    benefit_summary: "최대 1억원 한도, 지자체 이차보전 금리 우대 자격 즉시 확인",
+    target_interests: ["소상공인", "정책자금", "동네생활"],
+    cta_button_text: "혜택 확인하기 ↗",
+    is_active: true,
+  },
+];
+
+/** 업무일지 대시보드 시드 */
+export const mockWorkLogs: WorkLog[] = [
+  {
+    id: "work-001",
+    workspace_id: "ws-nowon",
+    author_id: "user-001",
+    title: "노원구 상계동 고시공고 데이터 크롤링 모니터링",
+    content_text: "상계2구역 사업시행계획인가 등 공식 고시 팩트 3건 정상 파싱 확인",
+    due_date: "2026-10-13",
+    status: "DONE",
+    is_alert_enabled: true,
+    alert_time: "08:30",
+    created_at: "2026-10-13T02:00:00Z",
+    updated_at: "2026-10-13T02:30:00Z",
+  },
+  {
+    id: "work-002",
+    workspace_id: "ws-nowon",
+    author_id: "user-001",
+    title: "상계주공 5단지 AI 실무 교육 신청 접수 현장 확인",
+    content_text: "입주자대표회의 15명 사전 서명부 취합 및 강의장 예약",
+    due_date: "2026-10-15",
+    status: "IN_PROGRESS",
+    is_alert_enabled: true,
+    alert_time: "08:30",
+    created_at: "2026-10-13T03:00:00Z",
+    updated_at: "2026-10-13T03:00:00Z",
+  },
+  {
+    id: "work-003",
+    workspace_id: "ws-nowon",
+    author_id: "user-001",
+    title: "소상공인 정책자금 제휴 제휴사 정산 및 클릭률 분석",
+    content_text: "노원구 동네 생활권 피드 3+1 네이티브 광고 성과 리포트 작성",
+    due_date: "2026-10-16",
+    status: "TODO",
+    is_alert_enabled: false,
+    alert_time: "08:30",
+    created_at: "2026-10-13T04:00:00Z",
+    updated_at: "2026-10-13T04:00:00Z",
+  },
+];
+
+/** PWA 앱 설정 및 아이콘 관리 시드 (초기 기본값) */
+export const mockAppPwaSettings: AppPwaSetting[] = [
+  {
+    id: "pwa-main-001",
+    app_target: "TODAY_MAIN",
+    app_name: "Today.",
+    short_name: "Today.",
+    start_url: "/",
+    icon_192_url: "/icons/today-192.png",
+    icon_512_url: "/icons/today-512.png",
+    theme_color: "#FFFFFF",
+    background_color: "#FFFFFF",
+  },
+  {
+    id: "pwa-note-002",
+    app_target: "TODAY_NOTE",
+    app_name: "티노트 (t.note)",
+    short_name: "t.note",
+    start_url: "/workspace",
+    icon_192_url: "/icons/todaynote-192.png",
+    icon_512_url: "/icons/todaynote-512.png",
+    theme_color: "#FFFFFF",
+    background_color: "#FFFFFF",
+  },
+];
+
+/** 티노트/티단노트 고시 스크랩 및 일정 시드 (today_notes) */
+export const mockTodayNotes: TodayNote[] = [
+  {
+    id: "note-001",
+    user_id: "user-001",
+    title: "상계2구역 주택재개발 정비구역 지정 및 정비계획 변경 결정 고시",
+    content: "핵심 요약:\n1. 노원구 상계동 111-206번지 일대 용적률 250% 이하, 최고 35층 2,200세대 신축\n2. 2026년 11월 관리처분계획인가 신청 예정 및 감정평가 일정 안내\n3. 상계역 초역세권 단지 도보 5분 거리\n\n문의 담당부서: 노원구청 도시재생과 (02-2116-3912)",
+    note_type: "SCHEDULE",
+    due_date: "2026-10-12",
+    linked_notice_id: "notice-001",
+    linked_kapt_code: null, // 개인 티노트
+    created_at: "2026-10-12T09:00:00Z",
+    updated_at: "2026-10-12T09:00:00Z",
+  },
+  {
+    id: "note-002",
+    user_id: "user-001",
+    title: "동북선 도시철도(경전철) 상계역 환승 통로 공사 도로점용 및 교통통제",
+    content: "핵심 요약:\n1. 동북선 1공구(상계~왕십리) 상계역 1번 출구 연결통로 개착공사 진행\n2. 2026.11.01 ~ 2027.04.30 (심야 23시~익일 05시 편도 1개 차로 부분통제)\n3. 상계주공5단지 및 상계역 인접 상가 보행 동선 우회로 지정\n\n문의 담당부서: 서울특별시 도시기반시설본부 (02-772-3510)",
+    note_type: "SCHEDULE",
+    due_date: "2026-10-11",
+    linked_notice_id: "notice-002",
+    linked_kapt_code: "A113501050", // 단지 티단노트 (상계주공5단지)
+    created_at: "2026-10-11T14:30:00Z",
+    updated_at: "2026-10-11T14:30:00Z",
+  },
+];
+
+/** 아파트링크 로컬 단지 제휴 이벤트 시드 */
+export const mockLocalComplexEvents: LocalComplexEvent[] = [
+  {
+    id: "evt-001",
+    complex_name: "상계주공 5단지",
+    kapt_code: "A113501050",
+    district_code: "1135010500",
+    title: "[단지 제휴] 상계주공 주민 피트니스 1개월권 & 1:1 PT 무료 체험",
+    badge_label: "단지 전용 혜택",
+    benefit_summary: "상계주공 5단지 입주민 한정! 인증 완료 시 헬스장 1개월 무료 이용권 및 체형분석 PT 1회권 100% 증정",
+    provider_name: "에이치 피트니스 상계점 (상계역 2번 출구)",
+    valid_until: "2026-10-31",
+    remaining_count: 18,
+    image_url: "/icons/today-192.png",
+    is_active: true,
+    created_at: "2026-10-13T00:00:00Z",
+  },
+  {
+    id: "evt-002",
+    complex_name: "상계2구역 조합원",
+    kapt_code: "A113501020",
+    district_code: "1135010500",
+    title: "[정비사업 특별제휴] 상계2구역 감정평가·양도세 1:1 세무사 무료 상담",
+    badge_label: "조합원 전용 혜택",
+    benefit_summary: "관리처분계획인가 대비 1세대 1주택 비과세 및 감정평가 대응 전략 50분 집중 대면 컨설팅",
+    provider_name: "세무법인 정진 노원지사",
+    valid_until: "2026-11-15",
+    remaining_count: 7,
+    image_url: "/icons/today-192.png",
+    is_active: true,
+    created_at: "2026-10-12T00:00:00Z",
+  },
+];
+
+/** 입주민 인증 신청 및 이벤트 응모 목업 저장소 */
+export const mockResidentVerifications: ResidentVerification[] = [];
+export const mockLocalEventApplications: LocalEventApplication[] = [];
+
+/** 취급제품 및 메인 롤링 제품 마스터 시드 (platform_products) */
+export const mockPlatformProducts: PlatformProduct[] = [
+  {
+    id: "prod-topsonic-001",
+    title: "탑소닉 하이엔드 초음파 세척 싱크볼",
+    subtitle: "공동주택 및 프리미엄 인테리어 맞춤형 주방 혁신 설비",
+    category: "INTERIOR",
+    main_image_url:
+      "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=1200&q=80",
+    is_hero_rolling: true,
+    rolling_order: 1,
+    is_public: true,
+    allowed_categories: ["ALL"],
+    min_partner_grade: "ALL",
+    price_info: "대리점·협력사 B2B 특판가 공급",
+    spec_summary:
+      "특허 듀얼 진동자 탑재, 잔류농약 99.9% 세척, 세대 씽크대 원데이 빌트인 시공",
+    contact_phone: "1588-0000",
+    created_at: "2026-10-13T00:00:00Z",
+    updated_at: "2026-10-13T00:00:00Z",
+  },
+  {
+    id: "prod-mckare-002",
+    title: "McKare VSR-20 비접촉 레이더 생체감지 센서",
+    subtitle: "독거노인 고독사 예방 및 시니어 스마트케어 레이더 솔루션",
+    category: "ELECTRONICS",
+    main_image_url:
+      "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&q=80",
+    is_hero_rolling: true,
+    rolling_order: 2,
+    is_public: true,
+    allowed_categories: ["ALL"],
+    min_partner_grade: "ALL",
+    price_info: "지자체 지원금 및 단지 B2G 특판",
+    spec_summary:
+      "카메라 프라이버시 침해 없는 60GHz 밀리미터파 레이더, 호흡/심박/낙상 실시간 감지",
+    contact_phone: "1588-0000",
+    created_at: "2026-10-13T00:00:00Z",
+    updated_at: "2026-10-13T00:00:00Z",
+  },
+];
+
+

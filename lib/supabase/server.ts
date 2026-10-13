@@ -8,19 +8,31 @@ export async function createSupabaseServerClient() {
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
 
-  const cookieStore = await cookies();
-  return createServerClient(url, key, {
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
+  try {
+    const cookieStore = await cookies();
+    return createServerClient(url, key, {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+          } catch {
+            // 라우트 핸들러가 아닌 곳에서 호출되면 쿠키를 쓸 수 없다. 읽기 전용으로 넘어간다.
+          }
+        },
       },
-      setAll(cookiesToSet) {
-        try {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-        } catch {
-          // 라우트 핸들러가 아닌 곳에서 호출되면 쿠키를 쓸 수 없다. 읽기 전용으로 넘어간다.
-        }
+    });
+  } catch {
+    // 빌드 타임 프리렌더링 또는 쿠키 비허용 컨텍스트에서는 쿠키 없이 익명 클라이언트 반환
+    return createServerClient(url, key, {
+      cookies: {
+        getAll() {
+          return [];
+        },
+        setAll() {},
       },
-    },
-  });
+    });
+  }
 }

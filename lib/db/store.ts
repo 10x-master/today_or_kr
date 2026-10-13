@@ -4,6 +4,15 @@ import {
   mockDonationCampaigns,
   mockLinkPickProducts,
   mockLocalPosts,
+  mockOfficialNotices,
+  mockAdCampaigns,
+  mockWorkLogs,
+  mockAppPwaSettings,
+  mockTodayNotes,
+  mockLocalComplexEvents,
+  mockResidentVerifications,
+  mockLocalEventApplications,
+  mockPlatformProducts,
   mockUsers,
 } from "@/lib/db/mockSeed";
 import type {
@@ -21,6 +30,18 @@ import type {
 } from "@/types/commerce";
 import type { CommissionLedgerEntry, UserConsents, UserProfile } from "@/types/auth";
 import type { CivicNotice } from "@/types/civic";
+import type {
+  AdCampaign,
+  LocalOfficialNotice,
+  OfficialNoticeCategory,
+  WorkLog,
+  TodayNote,
+  LocalComplexEvent,
+  ResidentVerification,
+  LocalEventApplication,
+  PlatformProduct,
+} from "@/types/officialNotice";
+import type { AppPwaSetting, AppPwaTarget } from "@/types/pwa";
 
 const AUTO_BLIND_THRESHOLD = 3;
 
@@ -54,6 +75,159 @@ export function getCivicNotices(filter: CivicNoticeFilter = {}): CivicNotice[] {
     return true;
   });
 }
+
+export interface OfficialNoticeFilter {
+  districtCode?: string;
+  category?: OfficialNoticeCategory | string;
+  role?: string;
+}
+
+/** 공식 행정 고시 및 로컬 인프라/재개발 팩트 피드 조회 (목업/로컬 스토어) */
+export function getOfficialNotices(filter: OfficialNoticeFilter = {}): LocalOfficialNotice[] {
+  return mockOfficialNotices.filter((notice) => {
+    if (filter.districtCode) {
+      const isExact = notice.district_code === filter.districtCode;
+      const isPrefixMatch =
+        filter.districtCode.length >= 5 &&
+        notice.district_code.slice(0, 5) === filter.districtCode.slice(0, 5);
+      if (!isExact && !isPrefixMatch) return false;
+    }
+    if (filter.category && filter.category !== "ALL" && notice.category !== filter.category) {
+      return false;
+    }
+    if (filter.role && filter.role !== "ALL" && notice.target_roles) {
+      const hasRole =
+        notice.target_roles.includes("ALL") ||
+        notice.target_roles.includes(filter.role);
+      if (!hasRole) return false;
+    }
+    return true;
+  });
+}
+
+/** 스폰서 제휴 광고 캠페인 조회 */
+export function getAdCampaigns(): AdCampaign[] {
+  return mockAdCampaigns.filter((ad) => ad.is_active !== false);
+}
+
+/** 업무일지 목록 조회 */
+export function getWorkLogs(): WorkLog[] {
+  return [...mockWorkLogs].sort(
+    (a, b) => new Date(b.created_at || "").getTime() - new Date(a.created_at || "").getTime()
+  );
+}
+
+/** 업무일지 생성 */
+export function createWorkLog(title: string, content?: string): WorkLog {
+  const log: WorkLog = {
+    id: `work-${crypto.randomUUID()}`,
+    title,
+    content_text: content || null,
+    status: "TODO",
+    is_alert_enabled: true,
+    alert_time: "08:30",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  mockWorkLogs.unshift(log);
+  return log;
+}
+
+/** 업무일지 상태 변경 */
+export function toggleWorkLogStatus(id: string): WorkLog | null {
+  const log = mockWorkLogs.find((item) => item.id === id);
+  if (!log) return null;
+  log.status = log.status === "DONE" ? "TODO" : "DONE";
+  log.updated_at = new Date().toISOString();
+  return log;
+}
+
+/** PWA 앱 설정 조회 */
+export function getAppPwaSetting(target: AppPwaTarget = "TODAY_MAIN"): AppPwaSetting {
+  const setting = mockAppPwaSettings.find((s) => s.app_target === target);
+  return setting || mockAppPwaSettings[0];
+}
+
+/** 티노트/티단노트(today_notes) 목록 조회 */
+export function getTodayNotes(filter?: { kaptCode?: string | null }): TodayNote[] {
+  return mockTodayNotes.filter((note) => {
+    if (filter?.kaptCode !== undefined) {
+      if (filter.kaptCode === null) {
+        return !note.linked_kapt_code;
+      }
+      return note.linked_kapt_code === filter.kaptCode;
+    }
+    return true;
+  });
+}
+
+/** 티노트/티단노트(today_notes) 생성 */
+export function createTodayNote(
+  input: Omit<TodayNote, "id" | "created_at" | "updated_at">
+): TodayNote {
+  const note: TodayNote = {
+    ...input,
+    id: `note-${crypto.randomUUID()}`,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  mockTodayNotes.unshift(note);
+  return note;
+}
+
+/** 티노트/티단노트(today_notes) 삭제 */
+export function deleteTodayNote(id: string): boolean {
+  const index = mockTodayNotes.findIndex((n) => n.id === id);
+  if (index >= 0) {
+    mockTodayNotes.splice(index, 1);
+    return true;
+  }
+  return false;
+}
+
+/** 로컬 단지 제휴 이벤트 목록 조회 */
+export function getLocalComplexEvents(districtCode?: string): LocalComplexEvent[] {
+  return mockLocalComplexEvents.filter((evt) => {
+    if (evt.is_active === false) return false;
+    if (districtCode && evt.district_code) {
+      const match =
+        evt.district_code === districtCode ||
+        evt.district_code.slice(0, 5) === districtCode.slice(0, 5);
+      if (!match) return false;
+    }
+    return true;
+  });
+}
+
+/** 입주민 인증 신청 등록 */
+export function createResidentVerification(
+  input: ResidentVerification
+): ResidentVerification {
+  const item: ResidentVerification = {
+    ...input,
+    id: input.id || `res-v-${crypto.randomUUID()}`,
+    status: input.status || "PENDING",
+    created_at: new Date().toISOString(),
+  };
+  mockResidentVerifications.unshift(item);
+  return item;
+}
+
+/** 단지 이벤트 응모 등록 */
+export function createLocalEventApplication(
+  input: LocalEventApplication
+): LocalEventApplication {
+  const item: LocalEventApplication = {
+    ...input,
+    id: input.id || `evt-app-${crypto.randomUUID()}`,
+    status: input.status || "PENDING",
+    created_at: new Date().toISOString(),
+  };
+  mockLocalEventApplications.unshift(item);
+  return item;
+}
+
+
 
 export interface CreateLocalPostInput {
   title: string;
@@ -391,3 +565,29 @@ export function getFinancialLeadCandidates(filter: LeadFilter = {}): LeadRecord[
       membershipTier: user.membershipTier,
     }));
 }
+
+/** 취급제품 마스터 목록 조회 (목업/로컬 스토어) */
+export function getPlatformProducts(): PlatformProduct[] {
+  return [...mockPlatformProducts].sort(
+    (a, b) => (a.rolling_order ?? 0) - (b.rolling_order ?? 0)
+  );
+}
+
+/** 메인 최상단 롤링 배너 노출용 제품 목록 조회 */
+export function getHeroRollingProducts(): PlatformProduct[] {
+  return mockPlatformProducts
+    .filter((p) => p.is_hero_rolling && p.is_public !== false)
+    .sort((a, b) => (a.rolling_order ?? 0) - (b.rolling_order ?? 0));
+}
+
+/** 취급제품 정보 업데이트 (목업/로컬 스토어) */
+export function updatePlatformProduct(
+  id: string,
+  updates: Partial<PlatformProduct>
+): PlatformProduct | null {
+  const item = mockPlatformProducts.find((p) => p.id === id);
+  if (!item) return null;
+  Object.assign(item, updates, { updated_at: new Date().toISOString() });
+  return item;
+}
+

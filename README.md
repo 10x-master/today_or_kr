@@ -101,26 +101,41 @@ npx tsc --noEmit
 npm run lint
 ```
 
-## 프로젝트 구조
+```
 
-```
-app/
-  api/
-    feed/                     # Phase 2 - 로컬 피드 & 카카오 웹훅
-    location/reverse-geocode/ # Phase 2 - GPS 역지오코딩
-    commerce/                 # Phase 3 - 링크픽 커머스 & 펀딩
-    auth/register/            # Phase 4 - 카카오 가입 & 추천인 트리
-    mlm/commission/           # Phase 4 - 10X 수당 정산
-    admin/leads/              # Phase 4 - 5대 전문직 리드 DB
-components/                   # 랜딩 페이지 UI 컴포넌트
-lib/
-  db/
-    mockSeed.ts                # 목업 시드 데이터
-    store.ts                   # 인메모리 데이터 레이어
-  geo.ts                       # GPS 거리 계산 / 역지오코딩
-  moderation.ts                # 금칙어 필터링
-types/
-  local.ts                     # 로컬 피드 타입
-  commerce.ts                  # 커머스 & 펀딩 타입
-  auth.ts                      # 인증 & 10단계 추천인 타입
-```
+## Today. & t.note 핵심 모듈 (Core OS)
+
+1. **카카오 1초 간편 로그인 (Kakao OAuth & Supabase Auth)**
+   - `lib/auth/kakaoAuth.ts`, `app/auth/callback/route.ts`
+   - Pure White 모듈러 카드 모달 (`components/auth/KakaoLoginModal.tsx`)
+   - `profiles` 테이블 자동 sync/upsert, 메인 헤더 및 워크스페이스 프로필 연동
+2. **티노트(t.note) & 티단노트(t.단노트) 구글 캘린더 동기화**
+   - `lib/calendar/googleCalendar.ts`, `app/api/auth/google/`
+   - 개인/단지 듀얼 워크스페이스 (`app/workspace/page.tsx`)
+   - 원클릭 구글 캘린더 실시간 일정 생성 및 연동 토큰 관리
+3. **취급제품 쇼룸 및 최고관리자 노출 제어 바**
+   - `app/products/page.tsx`, `components/products/`
+   - 원클릭 공개/비공개 토글, 파트너 최소 등급 및 공급 카테고리 실시간 제어
+4. **한글 행정동 URL 라우팅 및 스마트 검색**
+   - `app/[dong]/page.tsx`, `components/home/DistrictSearchBar.tsx`
+   - 행정동명 직접 접근 (`today.or.kr/[동이름]`) 및 지역별 고시 우선 정렬
+5. **아파트링크 입주민 인증 이벤트 게이트**
+   - `components/apt/ResidentVerifyModal.tsx`, `app/api/resident-verify/`
+   - 아파트아이 앱 캡처 및 관리비 고지서 사진 검증
+
+---
+
+## Vercel 배포 환경변수 체크리스트
+
+Vercel 대시보드 (`Settings` -> `Environment Variables`)에 아래 변수들을 등록합니다:
+
+| 환경변수 키 | 필수 여부 | 설명 |
+| --- | :---: | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | **필수** | Supabase 프로젝트 URL (`https://xxx.supabase.co`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | **필수** | Supabase Anon/Public API Key |
+| `SUPABASE_SERVICE_ROLE_KEY` | 선택 | Supabase Service Role Key (서버측 관리자용) |
+| `KAKAO_CLIENT_ID` | **필수** | 카카오 REST API 키 (카카오 로그인 및 OAuth 연동) |
+| `KAKAO_CLIENT_SECRET` | 선택 | 카카오 Client Secret |
+| `GOOGLE_CLIENT_ID` | **필수** | 구글 Cloud OAuth 2.0 클라이언트 ID |
+| `GOOGLE_CLIENT_SECRET` | **필수** | 구글 Cloud OAuth 2.0 클라이언트 보안 비밀 |
+| `NEXT_PUBLIC_BASE_URL` | 선택 | 프로덕션 도메인 URL (`https://today.or.kr`) |

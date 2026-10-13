@@ -44,3 +44,15 @@ export interface CommissionLedgerEntry {
   amount: number;
   createdAt: string;
 }
+
+/** Supabase Auth 및 카카오 OAuth 연동 프로필 */
+export interface AuthProfile {
+  id: string;
+  email?: string | null;
+  full_name?: string | null;
+  avatar_url?: string | null;
+  role?: "USER" | "ADMIN" | string;
+  created_at?: string;
+  updated_at?: string;
+}
+

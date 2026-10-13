@@ -1,0 +1,62 @@
+import type { Metadata } from "next";
+import { Suspense } from "react";
+import Home from "@/app/page";
+
+export const instant = false;
+
+export function generateStaticParams() {
+  return [
+    { dong: "상계동" },
+    { dong: "중계동" },
+    { dong: "하계동" },
+    { dong: "월계동" },
+    { dong: "공릉동" },
+    { dong: "돌산읍" },
+  ];
+}
+
+interface DongPageProps {
+  params: Promise<{ dong: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: DongPageProps): Promise<Metadata> {
+  const { dong } = await params;
+  let decodedDong = "";
+  try {
+    decodedDong = decodeURIComponent(dong);
+  } catch {
+    decodedDong = dong;
+  }
+
+  return {
+    title: `${decodedDong} 로컬 팩트 피드 | Today.`,
+    description: `${decodedDong}의 공식 행정 고시, 국토부 교통 인프라, 아파트 단지 소식을 실시간으로 확인하세요.`,
+    openGraph: {
+      title: `Today - ${decodedDong} 로컬 팩트 피드`,
+      description: `${decodedDong} 일원의 검증된 행정·인프라 팩트 피드`,
+    },
+  };
+}
+
+export default async function DongPage({ params }: DongPageProps) {
+  const { dong } = await params;
+  let decodedDong = "";
+  try {
+    decodedDong = decodeURIComponent(dong);
+  } catch {
+    decodedDong = dong;
+  }
+
+  // 정적 예약어 또는 리소스 경로 예외 처리
+  if (["favicon.ico", "robots.txt", "sitemap.xml", "icons"].includes(decodedDong)) {
+    return null;
+  }
+
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <Home initialDong={decodedDong} />
+    </Suspense>
+  );
+}
