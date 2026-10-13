@@ -33,10 +33,14 @@ import {
   Users,
   XCircle,
   Zap,
+  Building,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import type { AuthProfile, MembershipTier, UserProfile } from "@/types/auth";
 import type { AdStatus, LocalAd } from "@/types/officialNotice";
 import type { LocalPost } from "@/types/local";
+import type { BizClaimRequest } from "@/types/biz";
 import {
   mockUsers,
   mockLocalAds,
@@ -51,7 +55,7 @@ import {
 } from "@/lib/dong/pinManager";
 import RealtimeAlertBanner from "@/components/admin/RealtimeAlertBanner";
 
-type CrmTab = "users" | "supporters" | "ads";
+type CrmTab = "users" | "supporters" | "ads" | "claims";
 
 interface SupporterCandidate {
   id: string;
@@ -127,6 +131,48 @@ const mockCandidates: SupporterCandidate[] = [
   },
 ];
 
+const mockBizClaims: BizClaimRequest[] = [
+  {
+    id: "claim-001",
+    bizId: "apt-sanggye14",
+    bizTitle: "상계주공 14단지",
+    bizType: "APT",
+    applicantName: "김소장",
+    applicantRole: "MANAGER",
+    applicantPhone: "010-3849-1188",
+    applicantEmail: "sanggye14.mgr@apt.kr",
+    proofDocumentName: "상계주공14단지_관리사무소_고유번호증.pdf",
+    submittedAt: "2026-10-13T10:20:00.000Z",
+    status: "PENDING",
+  },
+  {
+    id: "claim-002",
+    bizId: "store-nowon-roastery",
+    bizTitle: "노원 로스터리 상계점",
+    bizType: "STORE",
+    applicantName: "김노원",
+    applicantRole: "REPRESENTATIVE",
+    applicantPhone: "010-9922-1200",
+    applicantEmail: "nowon.roastery@gmail.com",
+    proofDocumentName: "사업자등록증_스캔본.jpg",
+    submittedAt: "2026-10-12T15:00:00.000Z",
+    status: "APPROVED",
+  },
+  {
+    id: "claim-003",
+    bizId: "corp-topsonic",
+    bizTitle: "(주)탑소닉 테크놀로지",
+    bizType: "CORP",
+    applicantName: "박대표",
+    applicantRole: "REPRESENTATIVE",
+    applicantPhone: "010-5840-7788",
+    applicantEmail: "ceo@topsonic.kr",
+    proofDocumentName: "법인사업자등록증_공장등록증.pdf",
+    submittedAt: "2026-10-11T11:45:00.000Z",
+    status: "APPROVED",
+  },
+];
+
 export default function AdminCrmPage() {
   const [activeTab, setActiveTab] = useState<CrmTab>("users");
   const [currentUser, setCurrentUser] = useState<AuthProfile | null>(null);
@@ -144,6 +190,10 @@ export default function AdminCrmPage() {
   const [ads, setAds] = useState<LocalAd[]>(mockLocalAds);
   const [adFilter, setAdFilter] = useState<"ALL" | AdStatus>("ALL");
 
+  // 상태 관리: 비즈 홈 소유권 이전 심사
+  const [bizClaims, setBizClaims] = useState<BizClaimRequest[]>([]);
+  const [claimFilter, setClaimFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
+
   // 토스트 피드백
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -158,6 +208,18 @@ export default function AdminCrmPage() {
       setCurrentUser(user);
     };
     fetchUser();
+
+    try {
+      const saved = localStorage.getItem("today_biz_claims");
+      if (saved) {
+        setBizClaims(JSON.parse(saved));
+      } else {
+        setBizClaims(mockBizClaims);
+        localStorage.setItem("today_biz_claims", JSON.stringify(mockBizClaims));
+      }
+    } catch {
+      setBizClaims(mockBizClaims);
+    }
   }, []);
 
   const adminAuthorized = forceAdminMode || isSuperAdmin(currentUser);
@@ -246,6 +308,45 @@ export default function AdminCrmPage() {
     );
   };
 
+  // 8. 비즈 홈 소유권 이전 심사 승인 / 반려
+  const handleApproveClaim = (claimId: string) => {
+    setBizClaims((prev) => {
+      const updated = prev.map((c) => {
+        if (c.id === claimId) {
+          try {
+            localStorage.setItem(`today_biz_claim_status_${c.bizId}`, "CLAIMED");
+          } catch {}
+          return { ...c, status: "APPROVED" as const };
+        }
+        return c;
+      });
+      try {
+        localStorage.setItem("today_biz_claims", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    showToast("비즈 홈 소유권 이전이 공식 승인되었습니다.");
+  };
+
+  const handleRejectClaim = (claimId: string) => {
+    setBizClaims((prev) => {
+      const updated = prev.map((c) => {
+        if (c.id === claimId) {
+          try {
+            localStorage.setItem(`today_biz_claim_status_${c.bizId}`, "UNCLAIMED");
+          } catch {}
+          return { ...c, status: "REJECTED" as const };
+        }
+        return c;
+      });
+      try {
+        localStorage.setItem("today_biz_claims", JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+    showToast("소유권 이전 신청이 반려 처리되었습니다.");
+  };
+
   // 필터링된 데이터
   const filteredUsers = users.filter(
     (u) =>
@@ -260,6 +361,10 @@ export default function AdminCrmPage() {
 
   const filteredAds = ads.filter((ad) =>
     adFilter === "ALL" ? true : ad.status === adFilter
+  );
+
+  const filteredClaims = bizClaims.filter((c) =>
+    claimFilter === "ALL" ? true : c.status === claimFilter
   );
 
   return (
@@ -428,7 +533,20 @@ export default function AdminCrmPage() {
           }`}
         >
           <Megaphone className="h-4 w-4 text-rose-600" />
-          <span>📢 비즈보드 전역 광고 제어 ({ads.length})</span>
+          <span>📢 비즈보드 광고 ({ads.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("claims")}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition-all ${
+            activeTab === "claims"
+              ? "bg-white text-slate-900 shadow-sm"
+              : "text-slate-600 hover:text-slate-900"
+          }`}
+        >
+          <Building className="h-4 w-4 text-emerald-600" />
+          <span>🏢 비즈 홈 심사 ({bizClaims.filter((c) => c.status === "PENDING").length}대기)</span>
         </button>
       </div>
 
@@ -857,6 +975,161 @@ export default function AdminCrmPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 탭 4: 비즈 홈 소유권 이전 심사 (Claim Management)                       */}
+      {/* ========================================================================= */}
+      {activeTab === "claims" && (
+        <div className="mt-6 space-y-4">
+          {/* 상태 필터 바 */}
+          <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-xs flex-wrap gap-2">
+            <div className="flex items-center gap-1.5">
+              <Building className="h-4 w-4 text-emerald-600" />
+              <span className="text-xs font-bold text-slate-800">
+                소유권 이전 심사 대기열 ({filteredClaims.length}건)
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1">
+              {(["ALL", "PENDING", "APPROVED", "REJECTED"] as const).map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setClaimFilter(filter)}
+                  className={`rounded-xl px-2.5 py-1 text-xs font-bold transition-all cursor-pointer ${
+                    claimFilter === filter
+                      ? "bg-slate-900 text-white shadow-2xs"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  {filter === "ALL"
+                    ? "전체"
+                    : filter === "PENDING"
+                    ? "심사 대기"
+                    : filter === "APPROVED"
+                    ? "승인 완료"
+                    : "반려"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 소유권 이전 신청 목록 */}
+          <div className="space-y-3">
+            {filteredClaims.length === 0 ? (
+              <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-400">
+                <Building className="mx-auto h-8 w-8 text-slate-300 mb-2" />
+                <p className="text-xs">심사 대기 중인 소유권 이전 신청이 없습니다.</p>
+              </div>
+            ) : (
+              filteredClaims.map((claim) => (
+                <div
+                  key={claim.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs transition-all hover:border-slate-300 space-y-3"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs">
+                        {claim.bizType === "APT" ? "🏢" : "🍽️"}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-sm font-bold text-slate-900 tracking-tight">
+                            {claim.bizTitle}
+                          </h4>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              claim.status === "APPROVED"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : claim.status === "PENDING"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : "bg-rose-50 text-rose-700 border border-rose-200"
+                            }`}
+                          >
+                            {claim.status === "APPROVED"
+                              ? "✅ 승인 완료"
+                              : claim.status === "PENDING"
+                              ? "⏳ 심사 대기"
+                              : "❌ 반려"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 font-mono">
+                          ID: {claim.bizId} · 접수일: {new Date(claim.submittedAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`/biz/${claim.bizId}`}
+                      target="_blank"
+                      className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800 font-bold"
+                    >
+                      <span>비즈 홈 확인</span>
+                      <ExternalLink className="h-3 w-3" />
+                    </Link>
+                  </div>
+
+                  {/* 신청자 정보 그리드 */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <span className="text-[10px] text-slate-400 block">신청자 성명</span>
+                      <span className="font-bold text-slate-800">{claim.applicantName}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <span className="text-[10px] text-slate-400 block">직책</span>
+                      <span className="font-bold text-slate-800">
+                        {claim.applicantRole === "MANAGER"
+                          ? "🏢 관리소장"
+                          : claim.applicantRole === "REPRESENTATIVE"
+                          ? "🍽️ 대표자"
+                          : claim.applicantRole === "COUNCIL"
+                          ? "👥 입대의 임원"
+                          : "대리인"}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <span className="text-[10px] text-slate-400 block">연락처</span>
+                      <span className="font-bold text-slate-800">{claim.applicantPhone}</span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <span className="text-[10px] text-slate-400 block">증빙 서류</span>
+                      <span className="font-medium text-emerald-700 truncate block">
+                        📄 {claim.proofDocumentName || "증빙서류.pdf"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 심사 액션 바 */}
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                    {claim.status !== "APPROVED" && (
+                      <button
+                        type="button"
+                        onClick={() => handleApproveClaim(claim.id)}
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                      >
+                        공식 소유권 승인
+                      </button>
+                    )}
+
+                    {claim.status !== "REJECTED" && (
+                      <button
+                        type="button"
+                        onClick={() => handleRejectClaim(claim.id)}
+                        className="px-3.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        신청 반려
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

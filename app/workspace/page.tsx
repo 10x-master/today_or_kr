@@ -52,6 +52,7 @@ import CompactFeedItem from "@/components/feed/CompactFeedItem";
 import { getUserDongPins } from "@/lib/dong/pinManager";
 import RealtimeAlertBanner from "@/components/admin/RealtimeAlertBanner";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
+import TNoteCalendarDesk from "@/components/note/TNoteCalendarDesk";
 
 type NoteViewMode = "personal" | "complex";
 
@@ -672,6 +673,15 @@ export default function WorkspacePage() {
           </div>
         </div>
       )}
+
+      {/* 1. t.note 스마트 데스크: LinkPick 1초 초고속 배포 툴바 & 구글 캘린더 연동 */}
+      <div className="mt-4">
+        <TNoteCalendarDesk
+          userId={currentUser?.id || "ambassador-01"}
+          userName={currentUser?.full_name || "김민수 엠버서더"}
+          dong="상계동"
+        />
+      </div>
 
       {/* 2. 상단 탭 스위처: [👤 내 티노트] vs [🏢 단지 티단노트] */}
       <div className="mt-4 flex rounded-2xl bg-slate-200/80 p-1 border border-slate-200">

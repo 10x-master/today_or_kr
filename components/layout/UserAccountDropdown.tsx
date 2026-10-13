@@ -235,21 +235,16 @@ export default function UserAccountDropdown({
 
               {/* 공식 등급 뱃지 표시부 */}
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                {isSuperAdmin ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-[10px] font-medium">
-                    <Crown className="h-3 w-3 text-amber-600" />
-                    👑 투데이 엠버서더 (최고관리자)
-                  </span>
-                ) : (
-                  <>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-[10px] font-medium">
-                      👑 투데이 엠버서더
-                    </span>
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-normal">
-                      ⭐ 서포터즈
-                    </span>
-                  </>
-                )}
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-[10px] font-medium">
+                  <Crown className="h-3 w-3 text-amber-600" />
+                  👑 엠버서더
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 text-[10px] font-medium">
+                  🏢 아파트 관리소장
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-normal">
+                  ⚙️ 제조 회원사
+                </span>
               </div>
             </div>
           </div>
@@ -257,8 +252,25 @@ export default function UserAccountDropdown({
           {/* 2) [핵심 파트너스 & 활동 퀵 메뉴] */}
           <div className="py-2.5 border-b border-slate-100 space-y-1">
             <div className="text-[11px] font-medium text-slate-400 px-1 mb-1">
-              활동 & 파트너스 센터
+              활동 & 비즈니스 허브
             </div>
+
+            {/* 1. [🔗 내 LinkPick 관리] */}
+            <Link
+              href={`/p/${currentUser.id || "ambassador-01"}`}
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-indigo-600" />
+                <span>🔗 내 LinkPick 관리</span>
+              </div>
+              <span className="text-[10px] text-slate-400 group-hover:text-indigo-600 transition-colors">
+                모바일 1-Page →
+              </span>
+            </Link>
+
+            {/* 2. [📝 t.note & 캘린더] */}
             <Link
               href="/workspace"
               onClick={() => setIsOpen(false)}
@@ -266,38 +278,40 @@ export default function UserAccountDropdown({
             >
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-amber-600" />
-                <span>📝 나의 t.note</span>
+                <span>📝 t.note & 캘린더</span>
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-amber-600 transition-colors">
-                일기·쇼츠 원고함 →
+                1초 배포 툴바 →
               </span>
             </Link>
 
+            {/* 3. [💼 비즈 홈 관리] */}
             <Link
-              href="/partners"
+              href="/biz/apt-sanggye14"
               onClick={() => setIsOpen(false)}
               className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
             >
               <div className="flex items-center gap-2">
-                <Briefcase className="h-4 w-4 text-emerald-600" />
-                <span>💼 비즈노트 & 파트너스 연결</span>
+                <Building className="h-4 w-4 text-emerald-600" />
+                <span>💼 비즈 홈 관리 (아파트/상점)</span>
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-emerald-600 transition-colors">
-                제조 회원사 공급 센터 →
+                소유권 이전·공고 →
               </span>
             </Link>
 
+            {/* 4. [🤝 비즈노트 & 파트너스 센터] */}
             <Link
               href="/partners"
               onClick={() => setIsOpen(false)}
               className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
             >
               <div className="flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-indigo-600" />
-                <span>🔗 LinkPick 리퍼럴 관리</span>
+                <Briefcase className="h-4 w-4 text-slate-600" />
+                <span>🤝 비즈노트 & 소싱 룸</span>
               </div>
-              <span className="text-[10px] text-slate-400 group-hover:text-indigo-600 transition-colors">
-                추천인 링크 현황 →
+              <span className="text-[10px] text-slate-400 group-hover:text-slate-900 transition-colors">
+                제조 회원사 공급 →
               </span>
             </Link>
           </div>
