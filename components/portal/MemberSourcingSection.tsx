@@ -15,8 +15,10 @@ import {
   Building,
   CheckCircle2,
   FileSpreadsheet,
+  Crown,
 } from "lucide-react";
 import CatalogAutoParserModal from "@/components/partners/CatalogAutoParserModal";
+import AmbassadorPickKitModal from "@/components/portal/AmbassadorPickKitModal";
 
 export interface SourcingItem {
   id: string;
@@ -82,6 +84,8 @@ export default function MemberSourcingSection() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeCallItem, setActiveCallItem] = useState<SourcingItem | null>(null);
   const [bulkSuccessToast, setBulkSuccessToast] = useState<string | null>(null);
+  const [selectedAmbassadorItem, setSelectedAmbassadorItem] = useState<SourcingItem | null>(null);
+  const [isAmbassadorKitOpen, setIsAmbassadorKitOpen] = useState(false);
 
   // 공급 폼 등록 상태
   const [newTitle, setNewTitle] = useState("");
@@ -237,34 +241,25 @@ export default function MemberSourcingSection() {
               <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
-                  onClick={() => handleCopyLinkPickAndScript(item)}
-                  className={`flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-medium transition-colors cursor-pointer ${
-                    copiedId === item.id
-                      ? "bg-emerald-600 text-white"
-                      : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200/80"
-                  }`}
-                  title="LinkPick 주소와 15초 쇼츠 대본을 복사합니다"
+                  onClick={() => setActiveCallItem(item)}
+                  className="flex items-center gap-1 rounded-lg bg-slate-100 hover:bg-slate-200 px-2 py-1 text-[11px] font-medium text-slate-800 transition-colors cursor-pointer"
+                  title="회원사 직통 전화 및 상담 주문폼 링크"
                 >
-                  {copiedId === item.id ? (
-                    <>
-                      <Check className="h-3 w-3" />
-                      <span>복사 완료!</span>
-                    </>
-                  ) : (
-                    <>
-                      <LinkIcon className="h-3 w-3 text-indigo-600" />
-                      <span>LinkPick 담기 & 대본 복사</span>
-                    </>
-                  )}
+                  <PhoneCall className="h-3 w-3 text-slate-700" />
+                  <span>회원사 직거래 상담</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setActiveCallItem(item)}
-                  className="flex items-center gap-1 rounded-lg bg-slate-900 hover:bg-slate-800 px-2 py-1 text-[11px] font-medium text-white transition-colors cursor-pointer"
+                  onClick={() => {
+                    setSelectedAmbassadorItem(item);
+                    setIsAmbassadorKitOpen(true);
+                  }}
+                  className="flex items-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 px-2 py-1 text-[11px] font-medium text-slate-950 transition-colors cursor-pointer shadow-2xs"
+                  title="15초 쇼츠 대본, AI 영상 프롬프트, 리퍼럴 딥링크 배포 킷 열기"
                 >
-                  <PhoneCall className="h-3 w-3 text-amber-400" />
-                  <span>직거래 상담</span>
+                  <Crown className="h-3 w-3 text-slate-950" />
+                  <span>👑 엠버서더 픽 & 쇼츠 킷</span>
                 </button>
               </div>
             </div>
@@ -523,6 +518,13 @@ export default function MemberSourcingSection() {
         onClose={() => setIsAutoParserModalOpen(false)}
         onImportItems={handleImportBulkItems}
         defaultManufacturer={newManufacturer || "투데이 제휴 회원사"}
+      />
+
+      {/* 6. 엠버서더 1-Click 쇼츠 스크립트 & 리퍼럴 딥링크 배포 킷 모달 */}
+      <AmbassadorPickKitModal
+        isOpen={isAmbassadorKitOpen}
+        onClose={() => setIsAmbassadorKitOpen(false)}
+        item={selectedAmbassadorItem}
       />
     </section>
   );
