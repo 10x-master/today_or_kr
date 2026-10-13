@@ -49,6 +49,9 @@ import MemberSourcingSection from "@/components/portal/MemberSourcingSection";
 import PortalLiveDesk from "@/components/portal/PortalLiveDesk";
 import TermsModal from "@/components/auth/TermsModal";
 import QuickVoiceCaptureModal from "@/components/note/QuickVoiceCaptureModal";
+import PersonaRoleSelector from "@/components/portal/PersonaRoleSelector";
+import GovPolicyFundWidget from "@/components/portal/GovPolicyFundWidget";
+import type { UserPersona } from "@/types/persona";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DEFAULT_REGION, getRegionByDongName } from "@/lib/demoRegions";
@@ -147,6 +150,38 @@ export default function Home({ initialDong }: HomeProps = {}) {
   const [bizBoardIndex, setBizBoardIndex] = useState(0);
   const [quickMemoText, setQuickMemoText] = useState("");
   const [quickMemoSavedToast, setQuickMemoSavedToast] = useState(false);
+
+  // 6대 역할별 페르소나 및 우측 스테이지 뷰 상태
+  const [currentPersona, setCurrentPersona] = useState<UserPersona>("RESTAURANT");
+  const [rightStageView, setRightStageView] = useState<"POLICY_RADAR" | "APT_CONSULTING">("POLICY_RADAR");
+
+  // 페르소나 로컬스토리지 동기화 및 이벤트 리스너
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("today_user_persona") as UserPersona | null;
+      if (saved) {
+        setCurrentPersona(saved);
+        if (saved === "APT_MANAGER") {
+          setRightStageView("APT_CONSULTING");
+        }
+      }
+    } catch {}
+
+    const handlePersonaChange = (e: Event) => {
+      const customEvent = e as CustomEvent<UserPersona>;
+      if (customEvent.detail) {
+        setCurrentPersona(customEvent.detail);
+        if (customEvent.detail === "APT_MANAGER") {
+          setRightStageView("APT_CONSULTING");
+        } else {
+          setRightStageView("POLICY_RADAR");
+        }
+      }
+    };
+
+    window.addEventListener("today_persona_changed", handlePersonaChange);
+    return () => window.removeEventListener("today_persona_changed", handlePersonaChange);
+  }, []);
 
   // 동네 핀 상태
   const [userPins, setUserPins] = useState<UserDongPin[]>([]);
@@ -892,7 +927,22 @@ export default function Home({ initialDong }: HomeProps = {}) {
               </div>
             </div>
 
-            {/* 1. 🏢 착한아파트(클린트러스트) 4대 지수 & 공인 컨설팅 센터 (PC 2열 나란히 배치) */}
+            {/* 2순위: 6대 역할별 다이내믹 페르소나 셀렉터 */}
+            <div className="px-3 pt-1 pb-1">
+              <PersonaRoleSelector
+                activePersona={currentPersona}
+                onSelectPersona={(persona) => {
+                  setCurrentPersona(persona);
+                  if (persona === "APT_MANAGER") {
+                    setRightStageView("APT_CONSULTING");
+                  } else {
+                    setRightStageView("POLICY_RADAR");
+                  }
+                }}
+              />
+            </div>
+
+            {/* 3순위: 상단 2열 스테이지 (좌측: CleanTrustScoreCard / 우측: GovPolicyFundWidget or AptConsultingSection) */}
             <div className="p-2 sm:p-2.5 bg-slate-50/40 border-b border-slate-100">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
                 {/* 좌측: CleanTrustScoreCard (착한아파트 지수 라이브 게이지) */}
@@ -901,10 +951,50 @@ export default function Home({ initialDong }: HomeProps = {}) {
                   initialApartmentName="상계주공 14단지"
                 />
 
-                {/* 우측: 개편된 AptConsultingSection (3대 패키지 및 견적서 신청 폼) */}
-                <AptConsultingSection
-                  initialApartmentName="상계주공 14단지"
-                />
+                {/* 우측: 페르소나 연동 정책자금 레이더 or 아파트 B2B 컨설팅 */}
+                <div className="flex flex-col h-full space-y-2">
+                  <div className="flex items-center justify-between px-0.5">
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setRightStageView("POLICY_RADAR")}
+                        className={`px-2.5 py-1 text-xs rounded-lg transition-colors flex items-center gap-1.5 ${
+                          rightStageView === "POLICY_RADAR"
+                            ? "bg-slate-900 text-white font-medium"
+                            : "text-slate-600 hover:text-slate-900 bg-white border border-slate-200"
+                        }`}
+                      >
+                        <span>🏛️ 중기부·소진공 정책자금</span>
+                        {currentPersona !== "APT_MANAGER" && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRightStageView("APT_CONSULTING")}
+                        className={`px-2.5 py-1 text-xs rounded-lg transition-colors flex items-center gap-1.5 ${
+                          rightStageView === "APT_CONSULTING"
+                            ? "bg-slate-900 text-white font-medium"
+                            : "text-slate-600 hover:text-slate-900 bg-white border border-slate-200"
+                        }`}
+                      >
+                        <span>🏢 아파트 B2B 컨설팅</span>
+                        {currentPersona === "APT_MANAGER" && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        )}
+                      </button>
+                    </div>
+                    <span className="text-[10px] text-slate-400">
+                      {currentPersona === "APT_MANAGER" ? "관리소장 집중 모드" : "맞춤 지원사업 연동"}
+                    </span>
+                  </div>
+
+                  {rightStageView === "POLICY_RADAR" ? (
+                    <GovPolicyFundWidget persona={currentPersona} />
+                  ) : (
+                    <AptConsultingSection initialApartmentName="상계주공 14단지" />
+                  )}
+                </div>
               </div>
             </div>
 
