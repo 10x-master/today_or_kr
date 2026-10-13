@@ -41,8 +41,10 @@ import CategoryBottomSheet from "@/components/layout/CategoryBottomSheet";
 import CompactFeedItem from "@/components/feed/CompactFeedItem";
 import FeedDetailSheet from "@/components/feed/FeedDetailSheet";
 
-// 신규 엠버서더 쇼츠, 이용약관, 음성 캡처 모달
+// 신규 엠버서더 쇼츠, 아파트 B2B 컨설팅, 회원사 소싱 룸, 이용약관, 음성 캡처 모달
 import AmbassadorShortsSection from "@/components/portal/AmbassadorShortsSection";
+import AptConsultingSection from "@/components/portal/AptConsultingSection";
+import MemberSourcingSection from "@/components/portal/MemberSourcingSection";
 import TermsModal from "@/components/auth/TermsModal";
 import QuickVoiceCaptureModal from "@/components/note/QuickVoiceCaptureModal";
 
@@ -882,7 +884,13 @@ export default function Home({ initialDong }: HomeProps = {}) {
               </div>
             </div>
 
-            {/* 2. 4분할 포털 보드: 📢 공지·고시 / 🏢 아파트입찰·민원 / 🗣️ 블라인드고민 / 🛍️ 특판·공구 */}
+            {/* 1. 🏢 아파트 회원사 공인 컨설팅 센터 (CERA Engine) */}
+            <AptConsultingSection />
+
+            {/* 2. 📦 회원사 아이템 소싱 룸 (제조 공급 ➔ 엠버서더 중개) */}
+            <MemberSourcingSection />
+
+            {/* 3. 4분할 포털 보드: 📢 공지·고시 / 🏢 아파트입찰·민원 / 🗣️ 블라인드고민 / 🛍️ 특판·공구 */}
             <div className="p-2.5 sm:p-3 bg-slate-50/60 border-b border-slate-100">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
@@ -1043,7 +1051,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
               </div>
             </div>
 
-            {/* 3. 🎬 투데이 엠버서더 쇼츠 갤러리 섹션 */}
+            {/* 4. 🎬 투데이 엠버서더 쇼츠 갤러리 섹션 */}
             <AmbassadorShortsSection />
 
             {/* 메인 뷰포트 컨텐츠 */}
