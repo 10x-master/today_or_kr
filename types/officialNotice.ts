@@ -4,6 +4,7 @@
 
 export type OfficialNoticeCategory =
   | "ALL"
+  | "CAFE"      // ☕ 동네카페
   | "REDEVELOP" // 재개발·실거래
   | "INFRA"     // 국토부·교통
   | "EDU"       // 단지 AI교육 공모
@@ -59,6 +60,13 @@ export const OFFICIAL_NOTICE_CATEGORIES: Record<
   string,
   OfficialNoticeCategoryMeta
 > = {
+  CAFE: {
+    label: "동네카페",
+    icon: "☕",
+    badgeBg: "bg-amber-50 text-amber-800 border-amber-200",
+    badgeText: "text-amber-800",
+    borderColor: "border-amber-300",
+  },
   REDEVELOP: {
     label: "재개발·실거래",
     icon: "🏢",

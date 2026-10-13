@@ -1,4 +1,4 @@
-import type { LocalPost, Region } from "@/types/local";
+import type { LocalCafePlace, LocalPost, Region } from "@/types/local";
 import type { DonationCampaign, LinkPickProduct } from "@/types/commerce";
 import type { CommissionLedgerEntry, UserProfile } from "@/types/auth";
 import type { CivicNotice } from "@/types/civic";
@@ -1463,6 +1463,112 @@ export const mockPlatformProducts: PlatformProduct[] = [
     contact_phone: "1588-0000",
     created_at: "2026-10-13T00:00:00Z",
     updated_at: "2026-10-13T00:00:00Z",
+  },
+];
+
+/** 동네 카페 추천 목데이터 (상계동 4곳 및 인근/타 지역) */
+export const mockCafePlaces: LocalCafePlace[] = [
+  {
+    id: "cafe-sanggye-001",
+    name: "노원 로스터리 상계점",
+    dong: "상계동",
+    category: "ROASTERY",
+    signature_menu: "시그니처 게이샤 싱글오리진 핸드드립 & 수제 솔티드 카라멜 라떼",
+    discount_benefit: "상계주공 입주민 음료 전 메뉴 10% 현장 할인",
+    address: "서울 노원구 상계로 120 상계주공5단지 상가 102호",
+    rating: 4.9,
+    image_url:
+      "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=800&q=80",
+    naver_map_url: "https://map.naver.com/p/search/노원로스터리상계",
+    kakao_map_url: "https://map.kakao.com/?q=상계동로스터리카페",
+    description:
+      "직접 생두를 로스팅하는 스페셜티 커피 전문점. 매주 새로운 싱글오리진 원두 라인업을 선보입니다.",
+    business_hours: "매일 08:30 - 21:00",
+    phone: "02-930-1020",
+  },
+  {
+    id: "cafe-sanggye-002",
+    name: "포레스트 베이커리 & 브런치",
+    dong: "상계동",
+    category: "BAKERY_CAFE",
+    signature_menu: "천연발효 사워도우 & 밤 페이스트리, 수제 잠봉뵈르",
+    discount_benefit: "단지 주민 인증 시 아메리카노 무료 사이즈업",
+    address: "서울 노원구 동일로 1356 2층",
+    rating: 4.8,
+    image_url:
+      "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=80",
+    naver_map_url: "https://map.naver.com/p/search/상계동베이커리카페",
+    kakao_map_url: "https://map.kakao.com/?q=상계동베이커리카페",
+    description:
+      "유기농 밀가루와 프랑스산 고메버터로 매일 아침 구워내는 프리미엄 베이커리 브런치 카페.",
+    business_hours: "화~일 09:00 - 20:30 (월 휴무)",
+    phone: "02-938-5544",
+  },
+  {
+    id: "cafe-sanggye-003",
+    name: "포커스 스터디 & 미팅 라운지",
+    dong: "상계동",
+    category: "STUDY",
+    signature_menu: "콜드브루 디카페인 & 집중력 강화 피치 블렌딩 티",
+    discount_benefit: "동네 주민 회의실/미팅룸 예약 시 20% 특별 우대",
+    address: "서울 노원구 노해로 488 3층",
+    rating: 4.7,
+    image_url:
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80",
+    naver_map_url: "https://map.naver.com/p/search/상계동스터디카페",
+    kakao_map_url: "https://map.kakao.com/?q=상계동스터디카페",
+    description:
+      "조용한 집중 공간과 단지 소모임/동대표 회의가 가능한 프라이빗 미팅룸 구비.",
+    business_hours: "24시간 무인/유인 복합 운영",
+    phone: "02-931-8890",
+  },
+  {
+    id: "cafe-sanggye-004",
+    name: "동네마루 마을 북카페",
+    dong: "상계동",
+    category: "COMMUNITY",
+    signature_menu: "친환경 대추쌍화차 & 수제 딸기 젤라또 라떼",
+    discount_benefit: "아파트 관리비 고지서 지참 시 수제 쿠키 1개 증정",
+    address: "서울 노원구 상계로 174 상계마을나눔센터 1층",
+    rating: 4.9,
+    image_url:
+      "https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=800&q=80",
+    naver_map_url: "https://map.naver.com/p/search/상계마을나눔센터",
+    kakao_map_url: "https://map.kakao.com/?q=상계마을나눔센터",
+    description:
+      "동네 주민들이 함께 운영하는 마을 사랑방. 지역 문화 강좌 및 벼룩시장 나눔터 운영.",
+    business_hours: "평일 10:00 - 19:00 (주말 11:00 - 18:00)",
+    phone: "02-935-7700",
+  },
+  {
+    id: "cafe-junggye-001",
+    name: "카페 아뜰리에 중계",
+    dong: "중계동",
+    category: "DESSERT",
+    signature_menu: "피스타치오 딸기 타르트 & 바닐라빈 아인슈페너",
+    discount_benefit: "중계동 아파트 주민 1인 1음료 시 디저트 10% 할인",
+    address: "서울 노원구 중계로 190 은행사거리 인근",
+    rating: 4.8,
+    image_url:
+      "https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=800&q=80",
+    naver_map_url: "https://map.naver.com/p/search/중계동은행사거리카페",
+    description: "매일 한정 수량 구워내는 수제 타르트와 프랑스 정통 구움과자 전문 디저트 샵.",
+    business_hours: "매일 11:00 - 21:00",
+  },
+  {
+    id: "cafe-dolsan-001",
+    name: "돌산 오션뷰 로스터스",
+    dong: "돌산읍",
+    category: "ROASTERY",
+    signature_menu: "여수 돌산 갓 솔트 라떼 & 바다 에스프레소",
+    discount_benefit: "여수 시민 및 단지 주민 신분증 확인 시 15% 할인",
+    address: "전남 여수시 돌산읍 강남해안로 78",
+    rating: 4.9,
+    image_url:
+      "https://images.unsplash.com/photo-1507133750040-4a8f57021571?w=800&q=80",
+    naver_map_url: "https://map.naver.com/p/search/여수돌산오션뷰카페",
+    description: "여수 바다가 한눈에 내려다보이는 해안 절경 스페셜티 로스터리 카페.",
+    business_hours: "매일 10:00 - 22:00",
   },
 ];
 

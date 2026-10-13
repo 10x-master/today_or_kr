@@ -65,3 +65,29 @@ export interface LocalPost {
   commentCount: number;
   createdAt: string;
 }
+
+/** 동네 카페 추천 카테고리 */
+export type CafeCategory =
+  | "ROASTERY"    // 로스팅 전문
+  | "BAKERY_CAFE" // 베이커리 카페
+  | "STUDY"       // 스터디·미팅
+  | "DESSERT"     // 디저트 맛집
+  | "COMMUNITY";  // 주민 커뮤니티
+
+/** 동네 카페 장소 정보 인터페이스 */
+export interface LocalCafePlace {
+  id: string;
+  name: string;
+  dong: string;
+  category: CafeCategory;
+  signature_menu: string;
+  discount_benefit?: string;
+  address: string;
+  rating: number;
+  image_url: string;
+  naver_map_url?: string;
+  kakao_map_url?: string;
+  description?: string;
+  business_hours?: string;
+  phone?: string;
+}

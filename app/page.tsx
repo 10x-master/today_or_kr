@@ -21,6 +21,7 @@ import TodayCardDetail from "@/components/home/TodayCardDetail";
 import SponsoredCard from "@/components/home/SponsoredCard";
 import LocalEventCard from "@/components/home/LocalEventCard";
 import ResidentVerifyModal from "@/components/apt/ResidentVerifyModal";
+import CafeCard from "@/components/places/CafeCard";
 import HeroProductRolling from "@/components/home/HeroProductRolling";
 import DistrictSearchBar from "@/components/home/DistrictSearchBar";
 import AptAnalysisTab from "@/components/home/AptAnalysisTab";
@@ -31,8 +32,13 @@ import MyPageTab from "@/components/mobile/tabs/MyPageTab";
 import BottomTabBar, { type MobileTab } from "@/components/mobile/BottomTabBar";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { DEMO_REGIONS, DEFAULT_REGION, getRegionByDongName } from "@/lib/demoRegions";
-import { mockOfficialNotices, mockAdCampaigns, mockLocalComplexEvents } from "@/lib/db/mockSeed";
-import type { Region } from "@/types/local";
+import {
+  mockOfficialNotices,
+  mockAdCampaigns,
+  mockLocalComplexEvents,
+  mockCafePlaces,
+} from "@/lib/db/mockSeed";
+import type { LocalCafePlace, Region } from "@/types/local";
 import type {
   AdCampaign,
   LocalComplexEvent,
@@ -45,6 +51,7 @@ import { TARGET_ROLE_OPTIONS } from "@/types/officialNotice";
 
 const CATEGORY_CHIPS: Array<{ id: OfficialNoticeCategory; label: string; icon: string }> = [
   { id: "ALL", label: "전체", icon: "✨" },
+  { id: "CAFE", label: "동네카페", icon: "☕" },
   { id: "REDEVELOP", label: "재개발·실거래", icon: "🏢" },
   { id: "INFRA", label: "국토부·교통", icon: "🏗️" },
   { id: "EDU", label: "단지 AI교육 공모", icon: "🎓" },
@@ -132,6 +139,11 @@ export default function Home({ initialDong }: HomeProps = {}) {
       // 로컬스토리지 오류 무시
     }
   }, []);
+
+  // 행정동별 추천 카페 필터링 (해당 동네 우선, 없으면 전체 지원)
+  const cafesForRegion = mockCafePlaces.filter((c) => c.dong === region.dong);
+  const displayedCafes: LocalCafePlace[] =
+    cafesForRegion.length > 0 ? cafesForRegion : mockCafePlaces;
 
   const handleToggleBookmark = (notice: LocalOfficialNotice) => {
     setBookmarkedNotices((prev) => {
@@ -577,8 +589,10 @@ export default function Home({ initialDong }: HomeProps = {}) {
               <div className="flex items-center gap-1">
                 <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
                 <span className="font-semibold text-slate-800">{region.dong}</span>
-                <span>공식 팩트 피드</span>
-                <span className="font-bold text-indigo-600">({notices.length}건)</span>
+                <span>{selectedCategory === "CAFE" ? "동네 카페 추천" : "공식 팩트 피드"}</span>
+                <span className="font-bold text-indigo-600">
+                  ({selectedCategory === "CAFE" ? displayedCafes.length : notices.length}건)
+                </span>
               </div>
 
               <button
@@ -591,51 +605,110 @@ export default function Home({ initialDong }: HomeProps = {}) {
               </button>
             </div>
 
-            {loading && (
-              <div className="py-16 text-center text-xs text-slate-400">
-                공식 행정 고시 데이터를 불러오는 중...
-              </div>
-            )}
-
-            {!loading && notices.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-slate-200 py-16 text-center text-xs text-slate-400">
-                선택하신 조건에 해당하는 고시·공고 데이터가 없습니다.
-              </div>
-            )}
-
-            {/* 피드 렌더링 + 3+1 네이티브 스폰서드 카드 룰 + 4~5번째 단지 제휴 이벤트 카드 */}
-            {!loading && notices.length > 0 && (
+            {/* 카테고리가 동네카페(CAFE)인 경우 카페 피드 전용 렌더링 */}
+            {selectedCategory === "CAFE" ? (
               <div className="space-y-4">
-                {notices.map((notice, index) => {
-                  const isThirdItem = index === 2; // 3번째 아이템 뒤
-                  const isLastItemUnderThree = notices.length < 3 && index === notices.length - 1;
-                  const isFourthItem = index === 3; // 4번째 아이템 뒤 (4~5번째 위치)
-                  const isFallbackEventSlot = notices.length < 4 && index === notices.length - 1;
+                {/* 동네카페 상단 안내 카드 */}
+                <div className="rounded-2xl border border-amber-200/90 bg-gradient-to-r from-amber-50 via-white to-amber-50/50 p-4 shadow-2xs">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-base">☕</span>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      {region.dong} 입주민 추천 카페 & 단지 제휴 혜택
+                    </h3>
+                  </div>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    로스팅 스페셜티부터 베이커리 브런치, 스터디 미팅 라운지까지. 우리 아파트 입주민 혜택을 확인하고 t.note 모임 일정으로 원클릭 저장하세요.
+                  </p>
+                </div>
 
-                  return (
-                    <Fragment key={notice.id}>
-                      <TodayCard
-                        notice={notice}
-                        onSelect={setSelectedNotice}
-                        viewMode={viewMode}
-                      />
-
-                      {/* 3번째 아이템 뒤에 스폰서드 카드 1건 자동 삽입 (3+1 룰) */}
-                      {(isThirdItem || isLastItemUnderThree) && adCampaign && (
-                        <SponsoredCard campaign={adCampaign} />
-                      )}
-
-                      {/* 고시 피드 중간(4~5번째)에 로컬 단지 이벤트 카드 배치 */}
-                      {(isFourthItem || (isFallbackEventSlot && !isThirdItem)) && localEvents.length > 0 && (
-                        <LocalEventCard
-                          event={localEvents[0]}
-                          onSelect={setSelectedEvent}
-                        />
-                      )}
-                    </Fragment>
-                  );
-                })}
+                {/* 카페 카드 그리드 / 리스트 */}
+                <div
+                  className={
+                    viewMode === "card"
+                      ? "grid grid-cols-1 sm:grid-cols-2 gap-4"
+                      : "space-y-3"
+                  }
+                >
+                  {displayedCafes.map((cafe) => (
+                    <CafeCard key={cafe.id} cafe={cafe} viewMode={viewMode} />
+                  ))}
+                </div>
               </div>
+            ) : (
+              <>
+                {loading && (
+                  <div className="py-16 text-center text-xs text-slate-400">
+                    공식 행정 고시 데이터를 불러오는 중...
+                  </div>
+                )}
+
+                {!loading && notices.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-slate-200 py-16 text-center text-xs text-slate-400">
+                    선택하신 조건에 해당하는 고시·공고 데이터가 없습니다.
+                  </div>
+                )}
+
+                {/* 피드 렌더링 + 3+1 네이티브 스폰서드 카드 룰 + 4~5번째 단지 제휴 이벤트 카드 + 추천 카페 슬롯 */}
+                {!loading && notices.length > 0 && (
+                  <div className="space-y-4">
+                    {notices.map((notice, index) => {
+                      const isSecondItem = index === 1; // 2번째 아이템 뒤 (추천 카페 프리뷰)
+                      const isThirdItem = index === 2; // 3번째 아이템 뒤
+                      const isLastItemUnderThree = notices.length < 3 && index === notices.length - 1;
+                      const isFourthItem = index === 3; // 4번째 아이템 뒤 (4~5번째 위치)
+                      const isFallbackEventSlot = notices.length < 4 && index === notices.length - 1;
+
+                      return (
+                        <Fragment key={notice.id}>
+                          <TodayCard
+                            notice={notice}
+                            onSelect={setSelectedNotice}
+                            viewMode={viewMode}
+                          />
+
+                          {/* 2번째 아이템 뒤: 전체 피드 내 동네 카페 추천 하이라이트 */}
+                          {isSecondItem && displayedCafes.length > 0 && (
+                            <div className="my-2 rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 via-white to-amber-50/40 p-3.5 shadow-2xs">
+                              <div className="flex items-center justify-between pb-2 mb-2 border-b border-amber-100">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-sm">☕</span>
+                                  <span className="text-xs font-bold text-slate-900">
+                                    {region.dong} 추천 동네카페 & 입주민 할인
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedCategory("CAFE")}
+                                  className="text-[11px] font-bold text-amber-800 hover:text-amber-950 transition-colors"
+                                >
+                                  전체보기 ({displayedCafes.length}) →
+                                </button>
+                              </div>
+                              <CafeCard
+                                cafe={displayedCafes[0]}
+                                viewMode="list"
+                              />
+                            </div>
+                          )}
+
+                          {/* 3번째 아이템 뒤에 스폰서드 카드 1건 자동 삽입 (3+1 룰) */}
+                          {(isThirdItem || isLastItemUnderThree) && adCampaign && (
+                            <SponsoredCard campaign={adCampaign} />
+                          )}
+
+                          {/* 고시 피드 중간(4~5번째)에 로컬 단지 이벤트 카드 배치 */}
+                          {(isFourthItem || (isFallbackEventSlot && !isThirdItem)) && localEvents.length > 0 && (
+                            <LocalEventCard
+                              event={localEvents[0]}
+                              onSelect={setSelectedEvent}
+                            />
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
