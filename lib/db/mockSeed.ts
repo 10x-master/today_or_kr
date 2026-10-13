@@ -15,6 +15,34 @@ import type {
 } from "@/types/officialNotice";
 import type { AppPwaSetting } from "@/types/pwa";
 
+/** 상대 시간 계산 헬퍼 (예: '방금 전', '12분 전', '2시간 전', '어제', '3일 전') */
+export function formatRelativeTime(dateString?: string): string {
+  if (!dateString) return "방금 전";
+  // Next.js 16 SSR/Prerender 환경에서 unstable value new Date() 방지
+  if (typeof window === "undefined") {
+    return "15분 전";
+  }
+  try {
+    const now = new Date();
+    const past = new Date(dateString);
+    const diffMs = now.getTime() - past.getTime();
+    if (diffMs < 0) return "방금 전";
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+
+    if (diffSec < 60) return "방금 전";
+    if (diffMin < 60) return `${diffMin}분 전`;
+    if (diffHour < 24) return `${diffHour}시간 전`;
+    if (diffDay === 1) return "어제";
+    if (diffDay < 7) return `${diffDay}일 전`;
+    return `${past.getMonth() + 1}월 ${past.getDate()}일`;
+  } catch {
+    return "방금 전";
+  }
+}
+
 /** 법정동코드 기반 샘플 행정동 */
 export const mockRegions: Region[] = [
   {
@@ -26,12 +54,44 @@ export const mockRegions: Region[] = [
     lng: 127.0774,
   },
   {
+    sido: "서울특별시",
+    gugun: "노원구",
+    dong: "중계동",
+    code: "1135010400",
+    lat: 37.6496,
+    lng: 127.0768,
+  },
+  {
+    sido: "서울특별시",
+    gugun: "노원구",
+    dong: "하계동",
+    code: "1135010500",
+    lat: 37.6364,
+    lng: 127.0682,
+  },
+  {
     sido: "전라남도",
     gugun: "여수시",
     dong: "돌산읍",
     code: "4613025000",
     lat: 34.6797,
     lng: 127.7483,
+  },
+  {
+    sido: "서울특별시",
+    gugun: "강남구",
+    dong: "역삼동",
+    code: "1168010100",
+    lat: 37.5006,
+    lng: 127.0365,
+  },
+  {
+    sido: "경기도",
+    gugun: "성남시 분당구",
+    dong: "정자동",
+    code: "4113510300",
+    lat: 37.3664,
+    lng: 127.1082,
   },
 ];
 
@@ -96,6 +156,74 @@ export const mockCommissionLedger: CommissionLedgerEntry[] = [];
 
 /** 블라인드 스타일 하이퍼로컬 커뮤니티 피드 샘플 (지자체 공지 ~ 주민 잡담/번개까지) */
 export const mockLocalPosts: LocalPost[] = [
+  {
+    id: "post-inf-001",
+    region: sanggyeDong,
+    category: "talk",
+    title: "🔥 [인플루언서 수배] 노원/도봉 맛집·카페 숏폼 크리에이터 5인 급구 (원고료 15만원+체험권)",
+    content:
+      "상계동/노원역 로컬 제휴 매장 릴스·쇼츠 촬영 가능하신 동네 인플루언서 5분 모십니다. 팔로워 1천명 이상이면 누구나 지원 가능하며 당일 10X 포인트로 정산됩니다. 지원은 댓글 남겨주세요!",
+    images: [],
+    sourceChannel: "mobile_web",
+    author: { id: "user-partner-01", name: "10X로컬파트너스", isPartner: true, badge: "공식 파트너", role: "biz" },
+    reportCount: 0,
+    isBlinded: false,
+    viewCount: 642,
+    likeCount: 88,
+    commentCount: 42,
+    createdAt: "2026-10-13T19:45:00.000Z", // 15분 전
+  },
+  {
+    id: "post-inf-002",
+    region: sanggyeDong,
+    category: "talk",
+    title: "💰 [수익인증] t.note 링크픽 제휴 2주차 수당 128만원 정산 완료 인증합니다",
+    content:
+      "아파트 입주민 톡방이랑 동네 소통방에 링크픽 상품 블록 공유했는데 2주 만에 커미션 1,284,000원 입금됐네요. 카카오 1초 로그인하고 정산 계좌 연결해두길 진짜 잘했습니다. 서포터즈 점수 100점 채우면 요율 더 올라간다고 하네요.",
+    images: [],
+    sourceChannel: "mobile_web",
+    author: { id: "user-pro-01", name: "상계주공서포터즈", isPartner: false, badge: "우수 서포터즈", role: "user" },
+    reportCount: 0,
+    isBlinded: false,
+    viewCount: 1240,
+    likeCount: 154,
+    commentCount: 68,
+    createdAt: "2026-10-13T19:12:00.000Z", // 48분 전
+  },
+  {
+    id: "post-inf-003",
+    region: sanggyeDong,
+    category: "meetup",
+    title: "📢 [지역 서포터즈 모집] 상계·중계 10X 로컬 앰버서더 1기 모집 (월 활동비 30만원)",
+    content:
+      "우리 동네 숨은 행정 고시·입주민 할인 혜택 발굴하고 동네 핀 활성화해주실 주민 서포터즈를 선발합니다. 활동 점수 100점 달성 시 최고관리자 자동 심사 승인 및 비즈보드 광고 무료 지원 혜택을 드립니다.",
+    images: [],
+    sourceChannel: "mobile_web",
+    author: { id: "admin-01", name: "투데이운영팀", isPartner: true, badge: "최고관리자", role: "gov" },
+    reportCount: 0,
+    isBlinded: false,
+    viewCount: 915,
+    likeCount: 112,
+    commentCount: 31,
+    createdAt: "2026-10-13T18:00:00.000Z", // 2시간 전
+  },
+  {
+    id: "post-inf-004",
+    region: sanggyeDong,
+    category: "talk",
+    title: "💸 [소상공인 후기] 당근 비즈니스보다 전환율 3배 높네요.. 비즈보드 3일 만에 문의 42건 달성",
+    content:
+      "상계역 근처 로스팅 카페 운영 중인데 비즈보드 지역 타겟팅 광고 돌리고 3일 만에 주민인증 쿠폰 42명 사용했습니다. 클릭률 8.4% 나오네요. 동네 핀 꽂힌 주민들한테만 노출되니 효율이 확실합니다.",
+    images: [],
+    sourceChannel: "mobile_web",
+    author: { id: "user-cafe-01", name: "노원블루카페", isPartner: true, badge: "인증 파트너", role: "biz" },
+    reportCount: 0,
+    isBlinded: false,
+    viewCount: 780,
+    likeCount: 95,
+    commentCount: 24,
+    createdAt: "2026-10-13T15:00:00.000Z", // 5시간 전
+  },
   {
     id: "post-002",
     region: dolsanEup,

@@ -357,15 +357,19 @@ export default function Home({ initialDong }: HomeProps = {}) {
     fetchData();
   }, [region.dong, region.code, selectedCategory, selectedRole]);
 
-  // 바텀 네비게이션 탭 전환 핸들러
+  // 바텀 네비게이션 탭 전환 핸들러 (5대 탭: 이웃, 톡, 피드, 혜택, 더보기)
   const handleNavChange = (tab: NavTab) => {
-    if (tab === "home") {
+    if (tab === "neighbors" || tab === "home") {
       setActiveTab("home");
       setSelectedCategory("ALL");
+    } else if (tab === "talk") {
+      setActiveTab("feed");
     } else if (tab === "feed") {
       setActiveTab("feed");
-    } else if (tab === "notes") {
+    } else if (tab === "benefits" || tab === "notes") {
       setActiveTab("notes");
+    } else if (tab === "more" || tab === "menu") {
+      setIsCategorySheetOpen(true);
     }
   };
 
@@ -851,20 +855,21 @@ export default function Home({ initialDong }: HomeProps = {}) {
         nextPath="/"
       />
 
-      {/* 6. 하단 네이티브 바텀 네비게이션 ([🏠홈] [💬동네소식] [📅t.note] [📁전체메뉴]) */}
+      {/* 6. 하단 네이티브 5대 탭 바텀 네비게이션 ([이웃] [톡] [피드] [혜택] [더보기]) */}
       <MobileBottomNav
         activeTab={
           activeTab === "home"
-            ? "home"
+            ? "neighbors"
             : activeTab === "feed"
             ? "feed"
             : activeTab === "notes"
-            ? "notes"
-            : "home"
+            ? "benefits"
+            : "neighbors"
         }
         onChangeTab={handleNavChange}
         onOpenCategorySheet={() => setIsCategorySheetOpen(true)}
         notesCount={bookmarkedIds.length}
+        unreadTalkCount={2}
       />
     </div>
   );

@@ -21,19 +21,36 @@ import {
   User,
   Users,
   MapPin,
+  Sparkles,
+  Compass,
 } from "lucide-react";
 import KakaoLoginModal from "@/components/auth/KakaoLoginModal";
 import { getCurrentAuthUser, signOutKakao } from "@/lib/auth/kakaoAuth";
-import type { AuthProfile } from "@/types/auth";
+import type { AuthProfile, UserDongPin } from "@/types/auth";
 import PwaInstallBanner from "@/components/home/PwaInstallBanner";
 import InstallAppButton from "@/components/common/InstallAppButton";
 import VoiceTaskInput, { type ParsedVoiceTask } from "@/components/workspace/VoiceTaskInput";
 import TodayCardDetail from "@/components/home/TodayCardDetail";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { mockOfficialNotices, mockTodayNotes, mockWorkLogs } from "@/lib/db/mockSeed";
+import {
+  mockOfficialNotices,
+  mockTodayNotes,
+  mockWorkLogs,
+  mockLocalPosts,
+  mockCafePlaces,
+  mockLocalComplexEvents,
+} from "@/lib/db/mockSeed";
 import type { LocalOfficialNotice, TodayNote, WorkLog } from "@/types/officialNotice";
 import { saveNoteWithCalendarSync } from "@/lib/calendar/googleSync";
 import type { NoteCategory, ParsedNoteData } from "@/types/note";
+import type { LocalCafePlace, LocalPost } from "@/types/local";
+import type { LinkPickProduct } from "@/types/commerce";
+import DongPinMapModal from "@/components/map/DongPinMapModal";
+import QuickVoiceCaptureModal from "@/components/note/QuickVoiceCaptureModal";
+import LinkBlockToggle from "@/components/linkpick/LinkBlockToggle";
+import CompactFeedItem from "@/components/feed/CompactFeedItem";
+import { getUserDongPins } from "@/lib/dong/pinManager";
+import RealtimeAlertBanner from "@/components/admin/RealtimeAlertBanner";
 
 type NoteViewMode = "personal" | "complex";
 
@@ -50,10 +67,17 @@ export default function WorkspacePage() {
   const [parsedTask, setParsedTask] = useState<ParsedNoteData | null>(null);
   const [creating, setCreating] = useState(false);
 
+  // 동네 핀 & 관심사 큐레이션 및 모달 상태
+  const [userPins, setUserPins] = useState<UserDongPin[]>([]);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [isQuickCaptureOpen, setIsQuickCaptureOpen] = useState(false);
+  const [selectedInterestTag, setSelectedInterestTag] = useState<string>("ALL");
+
   // 티노트/티단노트 (today_notes) 연동 상태
   const [todayNotes, setTodayNotes] = useState<TodayNote[]>(mockTodayNotes);
   const [allNotices, setAllNotices] = useState<LocalOfficialNotice[]>(mockOfficialNotices);
   const [selectedNotice, setSelectedNotice] = useState<LocalOfficialNotice | null>(null);
+  const [selectedPost, setSelectedPost] = useState<LocalPost | null>(null);
 
   // 구글 캘린더 OAuth 연동 상태
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -92,6 +116,23 @@ export default function WorkspacePage() {
       sub?.unsubscribe();
     };
   }, []);
+
+  // 동네 핀 상태 동기화 (로컬스토리지 및 워프 이벤트)
+  useEffect(() => {
+    const pins = getUserDongPins(currentUser?.id || "guest");
+    setUserPins(pins);
+
+    const handlePinsChange = () => {
+      const updated = getUserDongPins(currentUser?.id || "guest");
+      setUserPins(updated);
+    };
+    window.addEventListener("today_pins_changed", handlePinsChange);
+    window.addEventListener("today_admin_warp", handlePinsChange);
+    return () => {
+      window.removeEventListener("today_pins_changed", handlePinsChange);
+      window.removeEventListener("today_admin_warp", handlePinsChange);
+    };
+  }, [currentUser]);
 
   // 관심 고시 스크랩 (today_notes) 로컬스토리지 연동
   const [savedNotes, setSavedNotes] = useState<LocalOfficialNotice[]>([]);
@@ -443,6 +484,77 @@ export default function WorkspacePage() {
   const inProgressCount = logs.filter((l) => l.status === "IN_PROGRESS").length;
   const doneCount = logs.filter((l) => l.status === "DONE").length;
 
+  // 📍 핀 지역 x 관심사 태그 교집합 큐레이션 계산
+  const pinnedDongNames =
+    userPins.length > 0 ? userPins.map((p) => p.dong_name) : ["상계동"];
+
+  const curatedPosts = mockLocalPosts.filter((post) => {
+    const isDongMatched = pinnedDongNames.some(
+      (d) => post.region.dong.includes(d) || d.includes(post.region.dong)
+    );
+    if (!isDongMatched) return false;
+
+    if (selectedInterestTag === "ALL") return true;
+    if (selectedInterestTag === "TALK") return post.category === "talk" || post.category === "meetup";
+    if (selectedInterestTag === "PROOF") {
+      return (
+        post.title.includes("수익") ||
+        post.title.includes("인증") ||
+        post.title.includes("정산") ||
+        post.content.includes("수익")
+      );
+    }
+    if (selectedInterestTag === "BENEFIT") {
+      return (
+        post.title.includes("수배") ||
+        post.title.includes("혜택") ||
+        post.content.includes("혜택") ||
+        post.content.includes("활동비")
+      );
+    }
+    return false;
+  });
+
+  const curatedNotices = allNotices.filter((notice) => {
+    const isDongMatched = pinnedDongNames.some(
+      (d) =>
+        (notice.impact_zone && (notice.impact_zone.includes(d) || d.includes(notice.impact_zone))) ||
+        notice.title.includes(d) ||
+        (notice.related_tags && notice.related_tags.some((tag) => tag.includes(d) || d.includes(tag)))
+    );
+    if (!isDongMatched) return false;
+
+    if (selectedInterestTag === "ALL" || selectedInterestTag === "NOTICE") return true;
+    if (selectedInterestTag === "INFRA") {
+      return (
+        notice.category === "REDEVELOP" ||
+        notice.category === "INFRA" ||
+        notice.title.includes("재건축") ||
+        notice.title.includes("공사") ||
+        notice.title.includes("도로")
+      );
+    }
+    if (selectedInterestTag === "BENEFIT") {
+      return (
+        notice.category === "SUBSIDY" ||
+        notice.title.includes("보조금") ||
+        notice.title.includes("지원")
+      );
+    }
+    return false;
+  });
+
+  const curatedCafes = mockCafePlaces.filter((cafe) => {
+    const isDongMatched = pinnedDongNames.some(
+      (d) => cafe.dong.includes(d) || d.includes(cafe.dong)
+    );
+    if (!isDongMatched) return false;
+
+    if (selectedInterestTag === "ALL" || selectedInterestTag === "CAFE") return true;
+    if (selectedInterestTag === "BENEFIT") return !!cafe.discount_benefit;
+    return false;
+  });
+
   return (
     <div className="mx-auto min-h-screen w-full max-w-4xl bg-slate-50 px-4 py-8 sm:px-6">
       {/* 듀얼 PWA Web App Manifest 링크 (t.note) */}
@@ -664,6 +776,54 @@ export default function WorkspacePage() {
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 shadow-xs">
               <p className="text-xs text-emerald-700">완료 보고</p>
               <p className="mt-1 text-2xl font-bold text-emerald-900">{doneCount}건</p>
+            </div>
+          </div>
+
+          {/* ⚡ 2-Tap 퀵 캡처 & 📍 동네 핀 관리 바로가기 바 */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 rounded-2xl border border-indigo-100 bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/60 p-4 shadow-2xs">
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+              <span className="text-[11px] font-bold text-slate-500 shrink-0">내 동네 핀:</span>
+              {userPins.map((pin) => (
+                <span
+                  key={pin.id}
+                  className={`inline-flex items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-bold shrink-0 transition-all ${
+                    pin.is_primary
+                      ? "bg-indigo-600 text-white shadow-2xs"
+                      : "bg-white border border-slate-200 text-slate-700"
+                  }`}
+                >
+                  <MapPin className="h-3 w-3" />
+                  {pin.dong_name}
+                  {pin.is_primary && <span className="text-[10px] opacity-80">(대표)</span>}
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={() => setIsMapModalOpen(true)}
+                className="inline-flex items-center gap-1 rounded-xl border border-dashed border-indigo-300 bg-indigo-50/80 px-2.5 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors shrink-0"
+              >
+                <Plus className="h-3 w-3" />
+                핀 추가 ({userPins.length}/5)
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsMapModalOpen(true)}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 active:scale-95 transition-all"
+              >
+                <Compass className="h-3.5 w-3.5 text-indigo-600" />
+                <span>📍 지도 핀 꽂기</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsQuickCaptureOpen(true)}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:from-indigo-700 hover:to-purple-700 active:scale-95 transition-all"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-amber-300 animate-pulse" />
+                <span>⚡ 2-Tap 퀵 캡처</span>
+              </button>
             </div>
           </div>
 
@@ -905,6 +1065,146 @@ export default function WorkspacePage() {
               </div>
             )}
           </div>
+
+          {/* ========================================================================= */}
+          {/* 📍 핀 지역 x 관심사 태그 교집합 큐레이션 피드 */}
+          {/* ========================================================================= */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 pb-3.5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="flex items-center gap-1.5 text-sm font-bold text-slate-900">
+                    <Compass className="h-4 w-4 text-indigo-600" />
+                    내 핀 지역 맞춤 큐레이션 피드
+                  </h2>
+                  <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2 py-0.5 text-[10px] font-bold text-indigo-700">
+                    {curatedPosts.length + curatedNotices.length + curatedCafes.length}개 발견
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  내가 꽂은 동네 핀 [{pinnedDongNames.join(", ")}] x 관심사 태그 교집합 고밀도 피드
+                </p>
+              </div>
+
+              {/* 관심사 태그 필터 칩 */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                {[
+                  { id: "ALL", label: "전체" },
+                  { id: "TALK", label: "💬 동네톡·수배" },
+                  { id: "INFRA", label: "🏢 인프라·행정" },
+                  { id: "BENEFIT", label: "🎁 입주민 혜택" },
+                  { id: "PROOF", label: "💰 수익 인증" },
+                  { id: "CAFE", label: "☕ 로컬 카페" },
+                ].map((tag) => (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => setSelectedInterestTag(tag.id)}
+                    className={`rounded-xl px-2.5 py-1 text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      selectedInterestTag === tag.id
+                        ? "bg-slate-900 text-white shadow-2xs"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {tag.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 피드 아이템 렌더링 */}
+            <div className="mt-3.5 divide-y divide-slate-100">
+              {curatedPosts.length === 0 &&
+              curatedNotices.length === 0 &&
+              curatedCafes.length === 0 ? (
+                <div className="py-10 text-center text-xs text-slate-400">
+                  선택하신 핀 지역과 관심사 태그에 해당하는 피드가 없습니다.
+                  <br />
+                  상단의 <span className="font-bold text-indigo-600">[📍 지도 핀 꽂기]</span>로 새로운 동네를 추가해보세요.
+                </div>
+              ) : (
+                <>
+                  {/* 포스트 렌더링 */}
+                  {curatedPosts.map((post) => (
+                    <CompactFeedItem
+                      key={post.id}
+                      post={post}
+                      onClick={() => setSelectedPost(post)}
+                    />
+                  ))}
+
+                  {/* 고시 렌더링 */}
+                  {curatedNotices.map((notice) => (
+                    <CompactFeedItem
+                      key={notice.id}
+                      notice={notice}
+                      onClick={() => setSelectedNotice(notice)}
+                    />
+                  ))}
+
+                  {/* 로컬 카페 렌더링 */}
+                  {curatedCafes.map((cafe) => (
+                    <div
+                      key={cafe.id}
+                      className="py-3 flex items-center justify-between gap-3 hover:bg-slate-50/80 px-2 rounded-xl transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="rounded bg-amber-100 text-amber-800 px-1.5 py-0.5 text-[10px] font-bold">
+                            ☕ {cafe.dong}
+                          </span>
+                          <h4 className="text-xs font-bold text-slate-900 truncate">
+                            {cafe.name}
+                          </h4>
+                          <span className="text-[11px] text-amber-500 font-bold shrink-0">
+                            ★ {cafe.rating}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-slate-600 line-clamp-1">
+                          시그니처: {cafe.signature_menu}
+                        </p>
+                        {cafe.discount_benefit && (
+                          <span className="mt-1 inline-flex items-center gap-1 rounded bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 text-[10px] font-bold">
+                            🎁 {cafe.discount_benefit}
+                          </span>
+                        )}
+                      </div>
+
+                      <a
+                        href={cafe.naver_map_url || `https://map.naver.com/v5/search/${encodeURIComponent(cafe.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-1"
+                      >
+                        <span>길찾기</span>
+                        <ExternalLink className="h-3 w-3 text-slate-400" />
+                      </a>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 🔗 티노트 x 링크픽 제휴 상품 블록 (인포크링크 스타일) */}
+          {/* ========================================================================= */}
+          <LinkBlockToggle
+            onSaveToNote={(prod) => {
+              const newNote: TodayNote = {
+                id: `note-link-${Date.now()}`,
+                user_id: currentUser?.id || "guest",
+                title: `[링크픽 제휴] ${prod.title}`,
+                content: `제휴 링크: ${prod.affiliateUrl}\n판매가: ${prod.price ? prod.price.toLocaleString() + "원" : "특가"}`,
+                note_type: "TASK",
+                due_date: null,
+                category: "WORK",
+                created_at: new Date().toISOString(),
+              };
+              setTodayNotes((prev) => [newNote, ...prev]);
+              setSyncToast(`✓ '${prod.title}' 제휴 블록이 티노트에 저장되었습니다.`);
+            }}
+          />
 
           {/* 관심 고시 스크랩 섹션 (today_notes 연동) */}
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
@@ -1285,6 +1585,91 @@ export default function WorkspacePage() {
         }}
         nextPath="/workspace"
       />
+
+      {/* 동네 핀 꽂기 (역지오코딩 & 행정동 추출) 모달 */}
+      <DongPinMapModal
+        isOpen={isMapModalOpen}
+        onClose={() => setIsMapModalOpen(false)}
+        currentUser={currentUser}
+        onPinAdded={(dong) => {
+          setUserPins(getUserDongPins(currentUser?.id || "guest"));
+          setSyncToast(`📍 ${dong} 핀이 등록되었습니다.`);
+        }}
+      />
+
+      {/* 티노트 2-Tap 퀵 캡처 (500KB 사진 압축 + STT 음성) 모달 */}
+      <QuickVoiceCaptureModal
+        isOpen={isQuickCaptureOpen}
+        onClose={() => setIsQuickCaptureOpen(false)}
+        userId={currentUser?.id}
+        kaptCode={activeTab === "complex" ? kaptCode : null}
+        onSuccess={(note) => {
+          setTodayNotes((prev) => [note, ...prev]);
+          setSyncToast("⚡ 2-Tap 퀵 캡처 일정이 티노트에 저장되었습니다!");
+        }}
+      />
+
+      {/* 포스트 상세 열람 모달 */}
+      {selectedPost && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="rounded-lg bg-indigo-50 px-2 py-0.5 text-xs font-bold text-indigo-700">
+                  {selectedPost.region.dong}
+                </span>
+                <span className="text-xs text-slate-500">
+                  {selectedPost.author.name} ({selectedPost.author.badge || "주민"})
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedPost(null)}
+                className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                {selectedPost.title}
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-slate-700 whitespace-pre-wrap">
+                {selectedPost.content}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-100 pt-3">
+              <span>조회 {selectedPost.viewCount} • 공감 {selectedPost.likeCount} • 댓글 {selectedPost.commentCount}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const newNote: TodayNote = {
+                    id: `note-post-${Date.now()}`,
+                    user_id: currentUser?.id || "guest",
+                    title: selectedPost.title,
+                    content: selectedPost.content,
+                    note_type: "MEMO",
+                    due_date: null,
+                    category: "WORK",
+                    created_at: new Date().toISOString(),
+                  };
+                  setTodayNotes((prev) => [newNote, ...prev]);
+                  setSelectedPost(null);
+                  setSyncToast("✓ 게시글이 티노트에 저장되었습니다.");
+                }}
+                className="rounded-xl bg-indigo-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-indigo-700 cursor-pointer"
+              >
+                티노트에 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 실시간 유저 글 감지 배너 */}
+      <RealtimeAlertBanner />
     </div>
   );
 }

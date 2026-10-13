@@ -54,7 +54,7 @@ export function getDefaultPins(userId: string = "guest"): UserDongPin[] {
       dong_name: "상계동",
       pin_type: "VERIFIED",
       is_primary: true,
-      created_at: new Date().toISOString(),
+      created_at: "2026-10-13T00:00:00.000Z",
     },
     {
       id: `pin-${userId}-junggye`,
@@ -62,7 +62,7 @@ export function getDefaultPins(userId: string = "guest"): UserDongPin[] {
       dong_name: "중계동",
       pin_type: "VERIFIED",
       is_primary: false,
-      created_at: new Date().toISOString(),
+      created_at: "2026-10-13T00:00:00.000Z",
     },
   ];
 }
@@ -213,4 +213,97 @@ export function setPrimaryDongPin(pinId: string, userId: string = "guest"): User
   }));
   saveUserDongPins(updated, userId);
   return updated;
+}
+
+/** 전국 주요 행정동·읍·면 사전 데이터 */
+export const NATIONWIDE_DONGS: Array<{
+  sido: string;
+  gugun: string;
+  dong: string;
+  lat: number;
+  lng: number;
+}> = [
+  { sido: "서울특별시", gugun: "노원구", dong: "상계동", lat: 37.6598, lng: 127.0774 },
+  { sido: "서울특별시", gugun: "노원구", dong: "중계동", lat: 37.6496, lng: 127.0768 },
+  { sido: "서울특별시", gugun: "노원구", dong: "하계동", lat: 37.6364, lng: 127.0682 },
+  { sido: "서울특별시", gugun: "노원구", dong: "공릉동", lat: 37.6258, lng: 127.0728 },
+  { sido: "서울특별시", gugun: "노원구", dong: "월계동", lat: 37.6225, lng: 127.0583 },
+  { sido: "서울특별시", gugun: "강남구", dong: "역삼동", lat: 37.5006, lng: 127.0365 },
+  { sido: "서울특별시", gugun: "강남구", dong: "대치동", lat: 37.4946, lng: 127.0628 },
+  { sido: "서울특별시", gugun: "서초구", dong: "반포동", lat: 37.5042, lng: 127.0051 },
+  { sido: "서울특별시", gugun: "마포구", dong: "상암동", lat: 37.5776, lng: 126.8916 },
+  { sido: "서울특별시", gugun: "송파구", dong: "잠실동", lat: 37.5133, lng: 127.0982 },
+  { sido: "경기도", gugun: "성남시 분당구", dong: "정자동", lat: 37.3664, lng: 127.1082 },
+  { sido: "경기도", gugun: "고양시 일산동구", dong: "마두동", lat: 37.6521, lng: 126.7774 },
+  { sido: "경기도", gugun: "수원시 영통구", dong: "이의동", lat: 37.2965, lng: 127.0475 },
+  { sido: "경기도", gugun: "파주시", dong: "문산읍", lat: 37.8589, lng: 126.7842 },
+  { sido: "인천광역시", gugun: "연수구", dong: "송도동", lat: 37.3888, lng: 126.6534 },
+  { sido: "전라남도", gugun: "여수시", dong: "돌산읍", lat: 34.6797, lng: 127.7483 },
+  { sido: "부산광역시", gugun: "해운대구", dong: "우동", lat: 35.1631, lng: 129.1384 },
+  { sido: "대구광역시", gugun: "수성구", dong: "범어동", lat: 35.8588, lng: 128.6254 },
+  { sido: "제주특별자치도", gugun: "서귀포시", dong: "안덕면", lat: 33.2505, lng: 126.3314 },
+  { sido: "강원특별자치도", gugun: "춘천시", dong: "신북읍", lat: 37.9348, lng: 127.7532 },
+];
+
+/**
+ * 전국 동/읍/면 검색 헬퍼
+ */
+export function searchAllDongs(query: string) {
+  const clean = query.trim().toLowerCase();
+  if (!clean) return NATIONWIDE_DONGS.slice(0, 8);
+  return NATIONWIDE_DONGS.filter(
+    (d) =>
+      d.dong.toLowerCase().includes(clean) ||
+      d.gugun.toLowerCase().includes(clean) ||
+      d.sido.toLowerCase().includes(clean)
+  );
+}
+
+/**
+ * 최고관리자 전역 검색 워프 또는 사용자 동네 핀 즉시 전환
+ */
+export function warpToDong(
+  dongName: string,
+  user?: AuthProfile | null
+): { success: boolean; message: string; pin?: UserDongPin } {
+  const userId = user?.id || "guest";
+  const superAdmin = isSuperAdmin(user);
+  const cleanDong = dongName.trim();
+
+  // 최고관리자는 슬롯 제한 없이 전역 전국 동네 워프 즉시 허용
+  if (superAdmin) {
+    const currentPins = getUserDongPins(userId);
+    let targetPin = currentPins.find((p) => p.dong_name === cleanDong);
+
+    if (!targetPin) {
+      targetPin = {
+        id: `pin-${userId}-${Date.now()}`,
+        user_id: userId,
+        dong_name: cleanDong,
+        pin_type: "VERIFIED",
+        is_primary: true,
+        created_at: new Date().toISOString(),
+      };
+      saveUserDongPins([targetPin, ...currentPins], userId);
+    } else {
+      setPrimaryDongPin(targetPin.id, userId);
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("today_admin_warp", {
+          detail: { dongName: cleanDong, userId },
+        })
+      );
+    }
+
+    return {
+      success: true,
+      message: `[최고관리자] ${cleanDong}(으)로 전역 워프 완료 (슬롯 무제한).`,
+      pin: targetPin,
+    };
+  }
+
+  // 일반 사용자는 기존 addDongPin 슬롯 정책 준수
+  return addDongPin(cleanDong, user);
 }
