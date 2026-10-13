@@ -219,8 +219,14 @@ export default function Home({ initialDong }: HomeProps = {}) {
       sub = data.subscription;
     }
 
+    const handleOpenLoginModal = () => {
+      setIsLoginModalOpen(true);
+    };
+    window.addEventListener("today_open_login_modal", handleOpenLoginModal);
+
     return () => {
       window.removeEventListener("today_auth_changed", handleAuthChange);
+      window.removeEventListener("today_open_login_modal", handleOpenLoginModal);
       sub?.unsubscribe();
     };
   }, []);
@@ -1232,6 +1238,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
                   }}
                   onRemoveBookmark={handleRemoveBookmark}
                   onNavigateFeed={() => setActiveTab("feed")}
+                  apartmentName={`${region.dong} 아파트 단지`}
                 />
               )}
 

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import CatalogAutoParserModal from "@/components/partners/CatalogAutoParserModal";
 import AmbassadorPickKitModal from "@/components/portal/AmbassadorPickKitModal";
+import GroupBuyVoteButton from "@/components/commerce/GroupBuyVoteButton";
 
 export interface SourcingItem {
   id: string;
@@ -232,7 +233,15 @@ export default function MemberSourcingSection() {
               {item.description}
             </p>
 
-            {/* 하단 액션 버튼 2종: [내 LinkPick에 담기 & 쇼츠 스크립트 복사], [회원사 직거래 상담 연결] */}
+            {/* 단지 공동구매 요청(투표) 및 실시간 신청 집계 게이지 바 */}
+            <GroupBuyVoteButton
+              itemId={item.id}
+              itemTitle={item.title}
+              apartmentName="상계주공 14단지"
+              orderFormUrl={item.orderFormUrl}
+            />
+
+            {/* 하단 액션 버튼 2종: [회원사 직거래 상담], [엠버서더 픽 & 쇼츠 킷] */}
             <div className="flex items-center justify-between pt-1 border-t border-slate-200/50 gap-2 text-xs">
               <span className="text-[10px] font-normal text-slate-400 truncate">
                 중개 수익: <strong className="font-medium text-slate-700">{item.commissionAmount}</strong>
