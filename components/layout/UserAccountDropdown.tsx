@@ -253,10 +253,10 @@ export default function UserAccountDropdown({
             </div>
           </div>
 
-          {/* 2) [3대 핵심 퀵 링크: LinkPick 허브, t.note & 캘린더, 비즈홈 공식 페이지] */}
+          {/* 2) [4대 핵심 퀵 링크: LinkPick 허브, t.note 데스크, 비즈홈, 관리자 CRM] */}
           <div className="py-2.5 border-b border-slate-100 space-y-1">
             <div className="text-[11px] font-medium text-slate-400 px-1 mb-1">
-              3대 핵심 퀵 링크
+              핵심 퀵 링크
             </div>
 
             {/* 1. [🔗 내 LinkPick 허브] */}
@@ -274,18 +274,18 @@ export default function UserAccountDropdown({
               </span>
             </Link>
 
-            {/* 2. [📝 나의 t.note & 캘린더] */}
+            {/* 2. [📝 t.note 스마트 데스크 & 캘린더] */}
             <Link
-              href="/workspace"
+              href="/note"
               onClick={() => setIsOpen(false)}
               className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
             >
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-amber-600" />
-                <span className="font-medium text-slate-800">📝 나의 t.note & 캘린더</span>
+                <span className="font-medium text-slate-800">📝 t.note 스마트 데스크 & 캘린더</span>
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-amber-600 transition-colors">
-                스마트 데스크 →
+                1초 배포·OSMU →
               </span>
             </Link>
 
@@ -300,7 +300,22 @@ export default function UserAccountDropdown({
                 <span className="font-medium text-slate-800">💼 비즈홈 공식 페이지</span>
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-emerald-600 transition-colors">
-                공식 홈페이지 →
+                아파트·상점 →
+              </span>
+            </Link>
+
+            {/* 4. [🛡️ 관리자 CRM 승인 대기열] */}
+            <Link
+              href="/admin/crm"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-rose-600" />
+                <span className="font-medium text-slate-800">🛡️ 관리자 CRM (승인 3종)</span>
+              </div>
+              <span className="text-[10px] text-slate-400 group-hover:text-rose-600 transition-colors">
+                청원·클레임·광고 →
               </span>
             </Link>
           </div>

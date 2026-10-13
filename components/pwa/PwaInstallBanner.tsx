@@ -168,7 +168,7 @@ export default function PwaInstallBanner({
       {/* 하단 고정 1-Tap 설치 플로팅 배너 (부드러운 슬라이드 업) */}
       <aside
         aria-label="홈 화면 1-Tap 앱 설치"
-        className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-6 sm:w-[420px] z-40 animate-in slide-in-from-bottom-5 duration-300"
+        className="fixed bottom-18 sm:bottom-6 left-3 right-3 sm:left-auto sm:right-6 sm:w-[420px] z-45 animate-in slide-in-from-bottom-5 duration-300"
       >
         <div className="rounded-2xl bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-xl p-3.5 text-slate-900 transition-all">
           <div className="flex items-center justify-between gap-3">

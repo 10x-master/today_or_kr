@@ -455,7 +455,7 @@ function BizHomeContent() {
     return () => window.removeEventListener("today_biz_claimed", handleClaimEvent);
   }, [bizId]);
 
-  // 쿠팡 앱 1초 장바구니 담기 딥링크 실행 핸들러
+  // 쿠팡 앱 1초 장바구니 담기 딥링크 실행 핸들러 (모바일 앱 스킴 + 웹 폴백 무결성)
   const handleCoupangCart = (productId: string, fallbackUrl: string, productTitle: string) => {
     const refCode = refParam || "today_biz";
     const appScheme = `coupang://product/${productId}?subId=${encodeURIComponent(refCode)}`;
@@ -463,15 +463,32 @@ function BizHomeContent() {
       ? fallbackUrl
       : `${fallbackUrl}${fallbackUrl.includes("?") ? "&" : "?"}subId=${encodeURIComponent(refCode)}`;
 
-    setToastMessage(`🛒 [${productTitle}] 쿠팡 장바구니로 1초 이동합니다! (앱 미설치 시 웹으로 이동)`);
+    setToastMessage(`🛒 [${productTitle}] 쿠팡으로 1초 연결합니다! (앱 미설치 시 웹으로 자동 이동)`);
     setTimeout(() => setToastMessage(null), 3000);
 
     const start = Date.now();
-    window.location.href = appScheme;
+    let hasHidden = false;
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        hasHidden = true;
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange, { once: true });
+
+    // 모바일 딥링크 시도
+    try {
+      window.location.href = appScheme;
+    } catch {
+      window.location.href = webUrl;
+      return;
+    }
+
+    // 앱 미설치 시 1.2초 후 웹 폴백 (앱이 열려서 브라우저가 백그라운드로 전환된 경우 폴백 스킵)
     setTimeout(() => {
-      if (Date.now() - start < 2200) {
-        window.open(webUrl, "_blank");
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (!hasHidden && Date.now() - start < 2500) {
+        window.location.href = webUrl;
       }
     }, 1200);
   };
