@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronDown, Search, Bell, User as UserIcon } from "lucide-react";
+import { ChevronDown, Search, Bell } from "lucide-react";
 import type { AuthProfile } from "@/types/auth";
+import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 
 interface MobileTopBarProps {
   dongName: string;
@@ -9,6 +10,7 @@ interface MobileTopBarProps {
   onToggleSearch: () => void;
   onOpenNotifications: () => void;
   onOpenProfile: () => void;
+  onOpenTerms?: () => void;
   currentUser: AuthProfile | null;
   unreadCount?: number;
   isSearchActive?: boolean;
@@ -20,6 +22,7 @@ export default function MobileTopBar({
   onToggleSearch,
   onOpenNotifications,
   onOpenProfile,
+  onOpenTerms,
   currentUser,
   unreadCount = 2,
   isSearchActive = false,
@@ -79,31 +82,17 @@ export default function MobileTopBar({
             )}
           </button>
 
-          {/* 프로필 / 간편 로그인 아이콘 */}
-          <button
-            type="button"
-            onClick={onOpenProfile}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-slate-700 hover:bg-slate-100 transition-colors active:scale-95 overflow-hidden"
-            title={currentUser ? `${currentUser.full_name || "입주민"} 프로필` : "카카오 간편 로그인"}
-            aria-label="프로필"
-          >
-            {currentUser?.avatar_url ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={currentUser.avatar_url}
-                alt={currentUser.full_name || "프로필"}
-                className="h-7 w-7 rounded-full object-cover ring-1 ring-amber-300"
-              />
-            ) : currentUser ? (
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-[11px] font-bold text-amber-900">
-                {currentUser.full_name?.slice(0, 1) || "U"}
-              </div>
-            ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-amber-100 hover:text-amber-800 transition-colors">
-                <UserIcon className="h-4 w-4" />
-              </div>
-            )}
-          </button>
+          {/* 구글 스타일 통합 계정 드롭다운 (원형 아바타 & 팝오버) */}
+          <UserAccountDropdown
+            currentUser={currentUser}
+            onOpenLogin={onOpenProfile}
+            onOpenTerms={() => {
+              if (onOpenTerms) onOpenTerms();
+              else window.dispatchEvent(new CustomEvent("today_open_terms_modal"));
+            }}
+            triggerStyle="icon_only"
+            align="right"
+          />
         </div>
       </div>
     </header>

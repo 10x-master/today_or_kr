@@ -51,6 +51,7 @@ import LinkBlockToggle from "@/components/linkpick/LinkBlockToggle";
 import CompactFeedItem from "@/components/feed/CompactFeedItem";
 import { getUserDongPins } from "@/lib/dong/pinManager";
 import RealtimeAlertBanner from "@/components/admin/RealtimeAlertBanner";
+import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 
 type NoteViewMode = "personal" | "complex";
 
@@ -615,66 +616,13 @@ export default function WorkspacePage() {
             Today. 홈
           </Link>
 
-          {/* 카카오 1초 간편 로그인 / 프로필 표시 */}
-          {currentUser ? (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setUserPopoverOpen(!userPopoverOpen)}
-                className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50 transition-colors cursor-pointer"
-                title="내 정보"
-              >
-                {currentUser.avatar_url ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={currentUser.avatar_url}
-                    alt={currentUser.full_name || "프로필"}
-                    className="h-4 w-4 rounded-full object-cover ring-1 ring-amber-300"
-                  />
-                ) : (
-                  <User className="h-3.5 w-3.5 text-amber-600" />
-                )}
-                <span className="max-w-[70px] truncate">{currentUser.full_name || "입주민"}</span>
-              </button>
-
-              {userPopoverOpen && (
-                <div className="absolute right-0 top-full mt-2 w-52 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="border-b border-slate-100 pb-2 mb-2">
-                    <p className="text-xs font-bold text-slate-900 truncate">
-                      {currentUser.full_name}
-                    </p>
-                    <p className="text-[10px] text-slate-400 truncate">
-                      {currentUser.email || "카카오 계정 연동"}
-                    </p>
-                    <span className="mt-1 inline-block rounded bg-amber-50 px-1.5 py-0.2 text-[9px] font-bold text-amber-700 border border-amber-200">
-                      카카오 1초 인증
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await signOutKakao();
-                      setCurrentUser(null);
-                      setUserPopoverOpen(false);
-                    }}
-                    className="flex w-full items-center justify-between rounded-xl px-2 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                  >
-                    <span>로그아웃</span>
-                    <LogOut className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setIsLoginModalOpen(true)}
-              className="flex items-center gap-1 rounded-xl bg-[#FEE500] hover:bg-[#FDD800] active:scale-95 px-3 py-1.5 text-xs font-bold text-[#191919] shadow-2xs transition-all cursor-pointer"
-              title="카카오 1초 간편 로그인"
-            >
-              <span>💬 1초 로그인</span>
-            </button>
-          )}
+          {/* 🌟 구글 스타일 통합 계정 드롭다운 */}
+          <UserAccountDropdown
+            currentUser={currentUser}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            onOpenTerms={() => window.dispatchEvent(new CustomEvent("today_open_terms_modal"))}
+            align="right"
+          />
         </div>
       </div>
 

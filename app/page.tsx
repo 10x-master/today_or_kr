@@ -51,6 +51,7 @@ import TermsModal from "@/components/auth/TermsModal";
 import QuickVoiceCaptureModal from "@/components/note/QuickVoiceCaptureModal";
 import PersonaRoleSelector from "@/components/portal/PersonaRoleSelector";
 import GovPolicyFundWidget from "@/components/portal/GovPolicyFundWidget";
+import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 import type { UserPersona } from "@/types/persona";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -261,9 +262,15 @@ export default function Home({ initialDong }: HomeProps = {}) {
     };
     window.addEventListener("today_open_login_modal", handleOpenLoginModal);
 
+    const handleOpenTermsModal = () => {
+      setIsTermsModalOpen(true);
+    };
+    window.addEventListener("today_open_terms_modal", handleOpenTermsModal);
+
     return () => {
       window.removeEventListener("today_auth_changed", handleAuthChange);
       window.removeEventListener("today_open_login_modal", handleOpenLoginModal);
+      window.removeEventListener("today_open_terms_modal", handleOpenTermsModal);
       sub?.unsubscribe();
     };
   }, []);
@@ -638,14 +645,6 @@ export default function Home({ initialDong }: HomeProps = {}) {
                 <span>🤝 비즈보드 파트너스</span>
                 <span className="text-[10px] text-amber-600 font-medium">광고</span>
               </Link>
-              <button
-                type="button"
-                onClick={() => setIsTermsModalOpen(true)}
-                className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-slate-600 hover:bg-slate-50 font-normal transition-colors cursor-pointer text-left"
-              >
-                <span>📜 초상권·면책 이용약관</span>
-                <span className="text-[10px] text-rose-600 font-medium">필수</span>
-              </button>
               <Link
                 href="/workspace"
                 className="flex items-center justify-between rounded-lg px-2 py-1 text-slate-600 hover:bg-slate-50 font-normal transition-colors"
@@ -653,6 +652,14 @@ export default function Home({ initialDong }: HomeProps = {}) {
                 <span>📋 t.note 워크스페이스</span>
                 <span className="text-[10px] text-slate-400">바로가기</span>
               </Link>
+              <button
+                type="button"
+                onClick={() => setIsTermsModalOpen(true)}
+                className="flex w-full items-center justify-between rounded-lg px-2 py-1 text-slate-400 hover:text-slate-600 font-normal text-[11px] transition-colors cursor-pointer text-left"
+              >
+                <span>이용약관 및 법적 면책</span>
+                <span className="text-[10px] text-slate-400">안내</span>
+              </button>
             </div>
           </aside>
 
@@ -715,102 +722,16 @@ export default function Home({ initialDong }: HomeProps = {}) {
                   <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin text-amber-600" : ""}`} />
                   <span>새로고침</span>
                 </button>
+
+                {/* 🌟 구글 스타일 통합 계정 드롭다운 (PC 모드) */}
+                <UserAccountDropdown
+                  currentUser={currentUser}
+                  onOpenLogin={() => setIsLoginModalOpen(true)}
+                  onOpenTerms={() => setIsTermsModalOpen(true)}
+                  align="right"
+                />
               </div>
             </div>
-
-            {/* 사용자 프로필 팝오버 (모바일 프로필 아이콘 클릭 시) */}
-            {userPopoverOpen && currentUser && (
-              <div className="absolute right-3 top-14 mt-1 w-64 rounded-xl border border-slate-100 bg-white p-3 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center gap-2.5 border-b border-slate-100 pb-2 mb-2">
-                  {currentUser.avatar_url ? (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={currentUser.avatar_url}
-                      alt={currentUser.full_name || "프로필"}
-                      className="h-9 w-9 rounded-full object-cover ring-1 ring-amber-300"
-                    />
-                  ) : (
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-sm font-medium text-amber-900">
-                      {currentUser.full_name?.slice(0, 1) || "U"}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1">
-                      <p className="text-xs font-medium text-slate-900 truncate">
-                        {currentUser.full_name}
-                      </p>
-                      {superAdmin && (
-                        <Crown className="h-3.5 w-3.5 text-amber-600 fill-amber-500 shrink-0" />
-                      )}
-                    </div>
-                    <p className="text-[10px] text-slate-400 truncate">
-                      {currentUser.email || "카카오 간편인증 계정"}
-                    </p>
-                    <div className="mt-1 flex items-center gap-1">
-                      <span className="rounded bg-amber-50 px-1.5 py-0.2 text-[9px] font-medium text-amber-800">
-                        {superAdmin ? "👑 최고관리자" : "인증 입주민"}
-                      </span>
-                      <span className="text-[10px] font-normal text-slate-500">
-                        핀 {userPins.length}개
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-0.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab("mypage");
-                      setUserPopoverOpen(false);
-                    }}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <span>👤 10X 마이페이지</span>
-                    <span className="text-[10px] text-slate-400">보기 →</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsTermsModalOpen(true);
-                      setUserPopoverOpen(false);
-                    }}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <span>📜 이용약관 & 초상권 면책</span>
-                    <span className="text-[10px] text-rose-600 font-medium">확인 →</span>
-                  </button>
-                  <Link
-                    href="/workspace"
-                    onClick={() => setUserPopoverOpen(false)}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-normal text-slate-700 hover:bg-slate-50 transition-colors"
-                  >
-                    <span>📋 내 티노트 (t.note)</span>
-                    <span className="text-[10px] text-amber-600 font-medium">이동 →</span>
-                  </Link>
-                  <Link
-                    href="/partners"
-                    onClick={() => setUserPopoverOpen(false)}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-normal text-amber-900 bg-amber-50/70 hover:bg-amber-100/70 transition-colors"
-                  >
-                    <span>🤝 파트너스 센터 (비즈보드)</span>
-                    <span className="text-[10px] text-amber-700 font-medium">대시보드 →</span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await signOutKakao();
-                      setCurrentUser(null);
-                      setUserPopoverOpen(false);
-                    }}
-                    className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-xs font-normal text-rose-600 hover:bg-rose-50 transition-colors"
-                  >
-                    <span>로그아웃</span>
-                    <LogOut className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* 실시간 알림 팝오버 (🔔 아이콘 터치 시) */}
             {isNotificationOpen && (
