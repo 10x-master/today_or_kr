@@ -12,6 +12,8 @@ import {
   Sparkles,
   BarChart3,
   HelpCircle,
+  Shield,
+  Coins,
 } from "lucide-react";
 import type { CleanTrustScoreCard as CleanTrustScoreCardType } from "@/types/civic";
 
@@ -21,7 +23,7 @@ export interface CleanTrustScoreCardProps {
   onOpenConsultingModal?: () => void;
 }
 
-// 행정동/단지별 실시간 공동주택 안심 케어 & 자산 수호 진단 데이터
+// 행정동/단지별 실시간 공동주택 안심 케어 & 자산 수호 진단 데이터 (법적 안심 딕셔너리 적용)
 const COMPLEX_SCORE_DATA: Record<string, CleanTrustScoreCardType> = {
   "상계주공 14단지": {
     apartmentName: "상계주공 14단지",
@@ -34,7 +36,7 @@ const COMPLEX_SCORE_DATA: Record<string, CleanTrustScoreCardType> = {
       legalCompliance: 24, // 지자체 행정 점검 안심도 (25점 만점)
       residentEngagement: 18, // 입주민 상생 소통 지수 (20점 만점)
     },
-    statusMessage: "지자체 점검 사전 방어율 94%를 달성한 자산 수호 우수 단지입니다.",
+    statusMessage: "공동주택관리법 제29조 기준 행정 지적 선제 방어 및 자산 가치 보전 우수 단지입니다.",
     updatedAt: "2026.10 K-apt 실거래 기준",
   },
   "상계주공 16단지": {
@@ -48,7 +50,7 @@ const COMPLEX_SCORE_DATA: Record<string, CleanTrustScoreCardType> = {
       legalCompliance: 23,
       residentEngagement: 17,
     },
-    statusMessage: "K-apt 실거래 대비 투명한 예산 집행과 체계적 안심 관리 단지입니다.",
+    statusMessage: "동일 세대 평균 대비 알뜰한 관리비 집행 및 미래 대규모 수선 준비도가 우수합니다.",
     updatedAt: "2026.10 K-apt 실거래 기준",
   },
   "중계그린 1단지": {
@@ -62,7 +64,7 @@ const COMPLEX_SCORE_DATA: Record<string, CleanTrustScoreCardType> = {
       legalCompliance: 21,
       residentEngagement: 16,
     },
-    statusMessage: "💡 단지 맞춤형 지자체 지원금(최대 3,000만원) 신청이 가능한 항목입니다.",
+    statusMessage: "💡 단지 맞춤형 지자체 시설보수 지원금 수혜 가능 항목 2건 확인 (최대 3,000만원 매칭)",
     updatedAt: "2026.09 K-apt 실거래 기준",
   },
   "하계장미 아파트": {
@@ -76,7 +78,7 @@ const COMPLEX_SCORE_DATA: Record<string, CleanTrustScoreCardType> = {
       legalCompliance: 24,
       residentEngagement: 17,
     },
-    statusMessage: "지자체 점검 사전 방어율 91%의 안심 자산 수호 공인 단지입니다.",
+    statusMessage: "승강기·도색 등 장기 공사 시 주민 분담금 예방 및 입주민 소통 활성화 공인 단지입니다.",
     updatedAt: "2026.10 K-apt 실거래 기준",
   },
 };
@@ -92,7 +94,7 @@ export default function CleanTrustScoreCard({
   const data = COMPLEX_SCORE_DATA[selectedApt] || COMPLEX_SCORE_DATA["상계주공 14단지"];
 
   const handleDownload = () => {
-    setDownloadToast(`✓ [${data.apartmentName}] 전문가 1장 안심 가이드 리포트가 다운로드되었습니다.`);
+    setDownloadToast(`✓ [${data.apartmentName}] 전문가 1장 안심 리포트가 다운로드되었습니다.`);
     setTimeout(() => {
       setDownloadToast(null);
     }, 2500);
@@ -104,6 +106,12 @@ export default function CleanTrustScoreCard({
   const strokeDashoffset = circumference - (data.totalScore / 100) * circumference;
 
   const isCareTarget = data.totalScore < 85 || data.grade === "CARE";
+  const tierLabel =
+    data.totalScore >= 90
+      ? "🏆 안심 관리 1등급"
+      : data.totalScore >= 80
+      ? "🏆 안심 관리 2등급"
+      : "🛡️ 안심 케어 관리 등급";
 
   return (
     <div className="h-full rounded-2xl bg-white p-3.5 border border-slate-100 flex flex-col justify-between space-y-3 font-sans">
@@ -136,31 +144,31 @@ export default function CleanTrustScoreCard({
           </div>
         </div>
 
-        {/* 등급별 안심 솔루션 뱃지 */}
+        {/* 상단 안심 뱃지 ("🏆 안심 관리 1등급" + "지자체 점검 사전 방어율 94%") */}
         {!isCareTarget ? (
           <div className="flex items-center justify-between rounded-lg bg-emerald-50/80 border border-emerald-200/80 px-2.5 py-1 text-[11px] text-emerald-800">
             <span className="flex items-center gap-1 font-medium">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
-              <span>안심 관리 등급 ({data.grade}) · 자산 수호 공인 단지</span>
+              <span>{tierLabel} ({data.grade})</span>
             </span>
-            <span className="text-[10px] text-emerald-700 font-medium">
-              사전 방어율 {data.totalScore}%
+            <span className="text-[10px] text-emerald-700 font-semibold">
+              지자체 점검 사전 방어율 {data.totalScore}%
             </span>
           </div>
         ) : (
           <div className="flex items-center justify-between rounded-lg bg-amber-50/90 border border-amber-200 px-2.5 py-1 text-[11px] text-amber-900">
             <span className="flex items-center gap-1 font-medium">
               <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
-              <span>안심 관리 등급 (CARE) · 지자체 매칭 지원 대상</span>
+              <span>{tierLabel} (CARE)</span>
             </span>
-            <span className="text-[10px] text-amber-800 font-medium">
-              사전 방어율 {data.totalScore}%
+            <span className="text-[10px] text-amber-800 font-semibold">
+              지자체 점검 사전 방어율 {data.totalScore}%
             </span>
           </div>
         )}
       </div>
 
-      {/* 2. 도넛형 종합 게이지: 지자체 점검 사전 방어율 & 안심 상태 요약 */}
+      {/* 2. 도넛형 종합 게이지: 지자체 점검 사전 방어율 시각화 */}
       <div className="flex items-center gap-3.5 bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
         {/* SVG 원형 프로그레스 도넛 게이지 */}
         <div className="relative flex items-center justify-center shrink-0 w-22 h-22">
@@ -196,9 +204,9 @@ export default function CleanTrustScoreCard({
             />
           </svg>
 
-          {/* 중앙 지자체 점검 사전 방어율 수치 */}
+          {/* 중앙 방어율 수치 (점수 단독 표기 배제) */}
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-            <span className="text-xl font-medium tracking-tight text-slate-900 leading-none">
+            <span className="text-xl font-bold tracking-tight text-slate-900 leading-none">
               {data.totalScore}%
             </span>
             <span className="text-[9px] font-normal text-slate-400 mt-0.5">
@@ -207,11 +215,11 @@ export default function CleanTrustScoreCard({
           </div>
         </div>
 
-        {/* 종합 판정 메시지 및 솔루션 안내 */}
+        {/* 종합 판정 메시지 및 솔루션 기회 안내 */}
         <div className="min-w-0 space-y-1">
           <div className="flex items-center gap-1.5">
             <span className="rounded bg-slate-900 text-white px-1.5 py-0.5 text-[10px] font-medium">
-              안심 관리 등급 ({data.grade})
+              {tierLabel}
             </span>
             <span className="text-[10px] text-slate-400 font-normal">
               {data.updatedAt}
@@ -227,9 +235,14 @@ export default function CleanTrustScoreCard({
           </p>
 
           {isCareTarget ? (
-            <p className="text-[10.5px] text-amber-800 font-medium bg-amber-50/70 px-1.5 py-0.5 rounded border border-amber-200/60 inline-block">
-              ⚠️ 행정 권장 보완 항목이 발견되었습니다 ➔ 전문가 가이드 확인
-            </p>
+            <div className="p-2 rounded-lg bg-amber-50/70 border border-amber-200/70 text-[10.5px] text-amber-900 leading-tight space-y-0.5">
+              <p className="font-semibold">
+                💡 단지 맞춤형 지자체 시설보수 지원금 수혜 가능 항목 2건 확인
+              </p>
+              <p className="text-amber-800 font-normal">
+                🛡️ 행정 권장 보완 가이드라인 확인 ➔ [전문가 1장 안심 리포트 다운로드]
+              </p>
+            </div>
           ) : (
             <p className="text-[10.5px] text-slate-400 font-normal">
               K-apt 실거래 예산 분석과 CERA 표준 단가 안심 교차 검증 완료
@@ -238,18 +251,21 @@ export default function CleanTrustScoreCard({
         </div>
       </div>
 
-      {/* 3. 4대 세부 안심 지표 바 (긍정적/자산보호 프레임 개편) */}
-      <div className="space-y-1.5 text-xs">
-        {/* 1) K-apt 실거래 예산 적정성 (30점 기준) */}
+      {/* 3. 4대 세부 지표 명칭 및 긍정적 안내 카피 (법적 안심 딕셔너리) */}
+      <div className="space-y-2 text-xs">
+        {/* 1) K-apt 실거래 예산 적정성 */}
         <div className="space-y-0.5">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-600 font-normal">
+            <span className="text-slate-800 font-medium">
               1. K-apt 실거래 예산 적정성
             </span>
-            <span className="text-slate-800 font-medium text-[10.5px]">
+            <span className="text-slate-600 font-medium text-[10.5px]">
               {data.breakdown.biddingFairness} / 30
             </span>
           </div>
+          <p className="text-[10px] text-slate-400 font-normal">
+            동일 세대 평균 대비 알뜰한 관리비 집행 분석
+          </p>
           <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
             <div
               className="h-full rounded-full bg-emerald-500 transition-all duration-300"
@@ -258,16 +274,19 @@ export default function CleanTrustScoreCard({
           </div>
         </div>
 
-        {/* 2) 미래 대규모 수선 준비도 (25점 기준) */}
+        {/* 2) 미래 대규모 수선 준비도 */}
         <div className="space-y-0.5">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-600 font-normal">
+            <span className="text-slate-800 font-medium">
               2. 미래 대규모 수선 준비도
             </span>
-            <span className="text-slate-800 font-medium text-[10.5px]">
+            <span className="text-slate-600 font-medium text-[10.5px]">
               {data.breakdown.reserveFundHealth} / 25
             </span>
           </div>
+          <p className="text-[10px] text-slate-400 font-normal">
+            승강기·도색 등 장기 공사 시 주민 분담금 예방
+          </p>
           <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
             <div
               className="h-full rounded-full bg-indigo-500 transition-all duration-300"
@@ -276,16 +295,19 @@ export default function CleanTrustScoreCard({
           </div>
         </div>
 
-        {/* 3) 지자체 행정 점검 안심도 (25점 기준) */}
+        {/* 3) 지자체 행정 점검 안심도 */}
         <div className="space-y-0.5">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-600 font-normal">
+            <span className="text-slate-800 font-medium">
               3. 지자체 행정 점검 안심도
             </span>
-            <span className="text-slate-800 font-medium text-[10.5px]">
+            <span className="text-slate-600 font-medium text-[10.5px]">
               {data.breakdown.legalCompliance} / 25
             </span>
           </div>
+          <p className="text-[10px] text-slate-400 font-normal">
+            공동주택관리법 제29조 기준 행정 지적 선제 방어
+          </p>
           <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
             <div
               className="h-full rounded-full bg-blue-500 transition-all duration-300"
@@ -294,16 +316,19 @@ export default function CleanTrustScoreCard({
           </div>
         </div>
 
-        {/* 4) 입주민 상생 소통 지수 (20점 기준) */}
+        {/* 4) 입주민 상생 소통 지수 */}
         <div className="space-y-0.5">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-600 font-normal">
+            <span className="text-slate-800 font-medium">
               4. 입주민 상생 소통 지수
             </span>
-            <span className="text-slate-800 font-medium text-[10.5px]">
+            <span className="text-slate-600 font-medium text-[10.5px]">
               {data.breakdown.residentEngagement} / 20
             </span>
           </div>
+          <p className="text-[10px] text-slate-400 font-normal">
+            단지 공구 및 시설 개선 제안 참여율
+          </p>
           <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
             <div
               className="h-full rounded-full bg-amber-500 transition-all duration-300"
@@ -321,7 +346,7 @@ export default function CleanTrustScoreCard({
           className="flex-1 flex items-center justify-center gap-1 rounded-xl bg-slate-900 hover:bg-slate-800 py-2 text-xs font-medium text-white transition-colors cursor-pointer shadow-xs"
         >
           <FileDown className="h-3.5 w-3.5 text-amber-400" />
-          <span>전문가 1장 안심 가이드 다운로드</span>
+          <span>전문가 1장 안심 리포트 다운로드</span>
         </button>
 
         {onOpenConsultingModal && (
@@ -330,7 +355,7 @@ export default function CleanTrustScoreCard({
             onClick={onOpenConsultingModal}
             className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 py-2 px-2.5 text-xs font-normal text-slate-700 transition-colors cursor-pointer"
           >
-            <span>맞춤 지원금·견적 문의</span>
+            <span>단지 맞춤형 지자체 지원금 신청</span>
           </button>
         )}
       </div>
