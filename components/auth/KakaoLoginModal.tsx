@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { CheckCircle2, ShieldCheck, Sparkles, X, Calendar, ArrowRight, Loader2 } from "lucide-react";
 import { signInWithKakao, simulateDemoLogin, DEMO_KAKAO_USER } from "@/lib/auth/kakaoAuth";
 import type { AuthProfile } from "@/types/auth";
@@ -195,7 +196,15 @@ export default function KakaoLoginModal({
 
           {/* 하단 안심 안내문구 */}
           <p className="mt-4 text-center text-[11px] text-slate-400">
-            로그인 시 서비스 이용약관 및 개인정보 처리방침에 동의하는 것으로 간주됩니다.
+            로그인 시{" "}
+            <Link
+              href="/terms"
+              onClick={onClose}
+              className="text-slate-600 font-bold underline hover:text-slate-900 transition-colors"
+            >
+              서비스 이용약관 및 초상권 면책 규정
+            </Link>
+            에 동의하는 것으로 간주됩니다.
           </p>
         </div>
       </div>

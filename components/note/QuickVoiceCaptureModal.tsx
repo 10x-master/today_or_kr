@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Trash2,
   Volume2,
+  AlertTriangle,
 } from "lucide-react";
 import { parseKoreanNaturalLanguage } from "@/lib/note/parser";
 import { saveNoteWithCalendarSync } from "@/lib/calendar/googleSync";
@@ -279,6 +280,14 @@ export default function QuickVoiceCaptureModal({
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto">
+          {/* 상시 초상권 안전 경고문 배너 */}
+          <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-3 text-xs text-rose-900 flex items-start gap-2 shadow-2xs">
+            <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+            <p className="text-[11px] leading-relaxed">
+              <strong>⚠️ 초상권 준수 고지:</strong> 타인의 얼굴이나 차량 번호판 등 초상권을 침해하는 미디어는 무통보 삭제되며, 모든 법적 책임은 작성자에게 있습니다.
+            </p>
+          </div>
+
           {/* 음성 인식 버튼 & 실시간 파형 피드백 */}
           <div className="flex flex-col items-center justify-center rounded-2xl border border-indigo-100 bg-gradient-to-b from-indigo-50/50 to-white p-5 text-center">
             <button
