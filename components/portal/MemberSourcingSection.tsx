@@ -14,7 +14,9 @@ import {
   Send,
   Building,
   CheckCircle2,
+  FileSpreadsheet,
 } from "lucide-react";
+import CatalogAutoParserModal from "@/components/partners/CatalogAutoParserModal";
 
 export interface SourcingItem {
   id: string;
@@ -75,8 +77,11 @@ const MOCK_SOURCING_ITEMS: SourcingItem[] = [
 export default function MemberSourcingSection() {
   const [items, setItems] = useState<SourcingItem[]>(MOCK_SOURCING_ITEMS);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isAutoParserModalOpen, setIsAutoParserModalOpen] = useState(false);
+  const [registerTab, setRegisterTab] = useState<"single" | "bulk">("single");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [activeCallItem, setActiveCallItem] = useState<SourcingItem | null>(null);
+  const [bulkSuccessToast, setBulkSuccessToast] = useState<string | null>(null);
 
   // 공급 폼 등록 상태
   const [newTitle, setNewTitle] = useState("");
@@ -98,6 +103,15 @@ export default function MemberSourcingSection() {
     setTimeout(() => {
       setCopiedId(null);
     }, 2500);
+  };
+
+  // 일괄 등록 콜백 (CatalogAutoParserModal에서 완료 시)
+  const handleImportBulkItems = (newItems: SourcingItem[]) => {
+    setItems((prev) => [...newItems, ...prev]);
+    setBulkSuccessToast(`✓ ${newItems.length}개 상품이 소싱 룸에 일괄 적재되었습니다.`);
+    setTimeout(() => {
+      setBulkSuccessToast(null);
+    }, 3500);
   };
 
   // 신규 제조 회원사 아이템 등록
@@ -149,15 +163,38 @@ export default function MemberSourcingSection() {
           </h2>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsRegisterModalOpen(true)}
-          className="flex items-center gap-1 rounded-lg bg-amber-50 hover:bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-900 transition-colors cursor-pointer"
-        >
-          <Plus className="h-3.5 w-3.5 text-amber-700" />
-          <span>제조 회원사 공급 폼 등록</span>
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setIsAutoParserModalOpen(true)}
+            className="flex items-center gap-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 px-2 py-1 text-[11px] font-medium text-indigo-700 transition-colors cursor-pointer"
+            title="엑셀, PDF, 전단지 파일로 수십 개 상품 자동 추출"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5 text-indigo-600" />
+            <span>파일 일괄 등록 (AI)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setRegisterTab("single");
+              setIsRegisterModalOpen(true);
+            }}
+            className="flex items-center gap-1 rounded-lg bg-amber-50 hover:bg-amber-100 px-2 py-1 text-[11px] font-medium text-amber-900 transition-colors cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5 text-amber-700" />
+            <span>공급 폼 등록</span>
+          </button>
+        </div>
       </div>
+
+      {/* 일괄 적재 토스트 알림 */}
+      {bulkSuccessToast && (
+        <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-1.5 text-xs text-emerald-800 font-medium flex items-center gap-1.5 animate-in fade-in">
+          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+          <span>{bulkSuccessToast}</span>
+        </div>
+      )}
 
       {/* 2. 소싱 아이템 3종 콤팩트 카드 리스트 */}
       <div className="space-y-1.5">
@@ -308,7 +345,7 @@ export default function MemberSourcingSection() {
       {/* 4. 신규 제조 회원사 공급 폼 등록 모달 */}
       {isRegisterModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="relative w-full max-w-md rounded-2xl bg-white p-4.5 text-slate-900 shadow-2xl space-y-3.5 border border-slate-100">
+          <div className="relative w-full max-w-md rounded-2xl bg-white p-4.5 text-slate-900 shadow-2xl space-y-3 border border-slate-100">
             <button
               type="button"
               onClick={() => setIsRegisterModalOpen(false)}
@@ -327,6 +364,32 @@ export default function MemberSourcingSection() {
               <p className="text-[11px] font-normal text-slate-500 mt-0.5">
                 제조/유통사가 공급가를 직접 설정하고 유통 엠버서더에게 판매 중개 수수료를 제공합니다.
               </p>
+            </div>
+
+            {/* 등록 방식 탭 분기 (직접 1건 등록 vs 파일로 일괄 등록) */}
+            <div className="flex border-b border-slate-100 text-xs">
+              <button
+                type="button"
+                onClick={() => setRegisterTab("single")}
+                className={`pb-1.5 px-2.5 font-medium border-b-2 transition-colors cursor-pointer ${
+                  registerTab === "single"
+                    ? "border-amber-500 text-amber-900"
+                    : "border-transparent text-slate-400 hover:text-slate-600"
+                }`}
+              >
+                ✏️ 직접 1건 등록
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegisterModalOpen(false);
+                  setIsAutoParserModalOpen(true);
+                }}
+                className="pb-1.5 px-2.5 font-medium border-b-2 border-transparent text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <FileSpreadsheet className="h-3 w-3" />
+                <span>📄 파일로 일괄 등록 (엑셀/카탈로그/PDF)</span>
+              </button>
             </div>
 
             {registerSuccess ? (
@@ -453,6 +516,14 @@ export default function MemberSourcingSection() {
           </div>
         </div>
       )}
+
+      {/* 5. 엑셀/PDF/AI 카탈로그 자동 파서 모달 */}
+      <CatalogAutoParserModal
+        isOpen={isAutoParserModalOpen}
+        onClose={() => setIsAutoParserModalOpen(false)}
+        onImportItems={handleImportBulkItems}
+        defaultManufacturer={newManufacturer || "투데이 제휴 회원사"}
+      />
     </section>
   );
 }
