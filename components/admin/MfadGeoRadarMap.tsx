@@ -38,6 +38,12 @@ import {
   FolderPlus,
   Layers,
   ChevronRight,
+  Settings,
+  Mic,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Share2,
 } from "lucide-react";
 import type {
   MfadGeoTarget,
@@ -59,7 +65,7 @@ interface MfadGeoRadarMapProps {
   className?: string;
 }
 
-// 4대 카테고리 설정 (아이콘 없는 순수 텍스트 라벨)
+// 4대 카테고리 라벨
 const CATEGORY_CONFIG: Record<
   MfadCategory,
   { label: string; focus: string }
@@ -94,13 +100,15 @@ export default function MfadGeoRadarMap({
   currentUser = null,
   className = "",
 }: MfadGeoRadarMapProps) {
-  // 1. 프로젝트 및 타깃 데이터 초기화
+  // 1. 프로젝트 및 타깃 데이터 상태
   const [projects, setProjects] = useState<CrmProject[]>(DEFAULT_PROJECTS);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([
     "t-refund",
     "water-purifier",
     "table-order",
   ]);
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState<boolean>(false);
+  const [isProjectManageModalOpen, setIsProjectManageModalOpen] = useState<boolean>(false);
 
   const [targets, setTargets] = useState<MfadGeoTarget[]>(() => {
     return initialTargets.map((item, idx) => {
@@ -136,10 +144,13 @@ export default function MfadGeoRadarMap({
   const [selectedTarget, setSelectedTarget] = useState<MfadGeoTarget | null>(null);
   const [hoveredTarget, setHoveredTarget] = useState<MfadGeoTarget | null>(null);
 
-  // 프로젝트 등록 모달 상태
-  const [isProjectModalOpen, setIsProjectModalOpen] = useState<boolean>(false);
+  // 신규 프로젝트 등록 입력 상태
   const [newProjectName, setNewProjectName] = useState<string>("");
   const [newProjectFile, setNewProjectFile] = useState<File | null>(null);
+
+  // 구글 드라이브 음성/사진 백업 모달 상태
+  const [isGoogleDriveModalOpen, setIsGoogleDriveModalOpen] = useState<boolean>(false);
+  const [googleDriveInput, setGoogleDriveInput] = useState<string>("");
 
   // 인라인 전화번호 편집 상태
   const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
@@ -148,8 +159,12 @@ export default function MfadGeoRadarMap({
   // CRM 상세 카드 내 입력 상태
   const [newTimelineMemo, setNewTimelineMemo] = useState<string>("");
   const [scheduledDateInput, setScheduledDateInput] = useState<string>("");
+  const [isScheduleOpen, setIsScheduleOpen] = useState<boolean>(false);
 
-  // 권한 격리 상태 (최고 관리자 vs 로컬 Today 서포터즈)
+  // 상단 관심도 높은순 정렬 토글 상태
+  const [isSortByRating, setIsSortByRating] = useState<boolean>(false);
+
+  // 권한 격리 상태
   const [userRole, setUserRole] = useState<MfadUserRole>("HQ_ADMIN");
   const [supporterDistrict, setSupporterDistrict] = useState<string>("분당구");
   const [unmaskPermission, setUnmaskPermission] = useState<boolean>(false);
@@ -176,8 +191,10 @@ export default function MfadGeoRadarMap({
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  // 엑셀 파일 인풋 ref
+  // 엑셀 파일 인풋 refs
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const projectSpecificFileInputRef = useRef<HTMLInputElement>(null);
+  const [targetUploadProjectId, setTargetUploadProjectId] = useState<string | null>(null);
 
   // 피드백 및 카카오 지도 상태
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -193,87 +210,28 @@ export default function MfadGeoRadarMap({
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // 프로젝트 체크박스 토글
-  const handleToggleProject = (projectId: string) => {
-    setSelectedProjectIds((prev) => {
-      if (prev.includes(projectId)) {
-        if (prev.length === 1) return prev; // 최소 1개 유지
-        return prev.filter((id) => id !== projectId);
-      }
-      return [...prev, projectId];
+  // 현재 DB에 존재하는 업종 목록만 동적 추출
+  const availableCategories = useMemo(() => {
+    const set = new Set<MfadCategory>();
+    targets.forEach((t) => {
+      if (t.category) set.add(t.category);
     });
-  };
+    return Array.from(set);
+  }, [targets]);
 
-  // 신규 프로젝트 등록 핸들러
-  const handleCreateProject = async () => {
-    const trimmed = newProjectName.trim();
-    if (!trimmed) {
-      showToast("⚠️ 프로젝트명을 입력해 주세요.");
-      return;
+  // 상단 헤더 동네명 계산
+  const currentLocationTitle = useMemo(() => {
+    if (selectedDistrict === "ALL" && selectedDong === "ALL") {
+      return "수도권 전역";
     }
-
-    const newProjId = `proj-${Date.now()}`;
-    const newProject: CrmProject = {
-      id: newProjId,
-      name: trimmed,
-      color: "#2563eb",
-    };
-
-    let importedTargets: MfadGeoTarget[] = [];
-
-    // 첨부된 엑셀/CSV 파일 파싱
-    if (newProjectFile) {
-      try {
-        const buffer = await newProjectFile.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rawRows: any[] = XLSX.utils.sheet_to_json(sheet);
-
-        importedTargets = rawRows.map((r, idx) => ({
-          id: `tgt-${newProjId}-${idx + 1}`,
-          project_id: newProjId,
-          project_name: trimmed,
-          target_name: String(r["정식 상호명"] || r["상호명"] || `가맹점_${idx + 1}`),
-          category: "RESTAURANT",
-          road_address: String(r["도로명 주소"] || r["주소"] || "서울특별시 강남구 테헤란로 152"),
-          dong: String(r["행정동"] || r["동"] || "역삼동"),
-          district: String(r["관할 자치구"] || r["구"] || "강남구"),
-          lat: 37.498 + (Math.random() - 0.5) * 0.05,
-          lng: 127.03 + (Math.random() - 0.5) * 0.05,
-          contact_number: String(r["연락처"] || r["전화번호"] || ""),
-          representative_name: String(r["대표자명"] || "대표자"),
-          visit_status: "UNVISITED",
-          metadata: {
-            estimated_refund: Number(r["추정 누수 금액 (원)"] || r["누수금액"] || 3500000),
-            leakage_cause: String(r["초과 수수료 발생 사유"] || r["메모"] || "신규 도입 프로모션 요율 정합성 검토 대상"),
-            leakage_detail: "자체 DB 업로드를 통한 가맹점 정합성 분석 진행 중",
-            primary_leak_code: "LEAK_01",
-            biz_reg_no: "101-81-00000",
-            monthly_card_sales: 30000000,
-            applied_rate: 2.1,
-            statutory_rate: 1.1,
-            annual_leak_estimate: 1200000,
-            three_year_recovery: 3500000,
-          },
-        }));
-      } catch (e) {
-        console.error("Project file parsing error", e);
-      }
+    if (selectedDistrict !== "ALL" && selectedDong === "ALL") {
+      return `${selectedDistrict} 전역`;
     }
-
-    setProjects((prev) => [...prev, newProject]);
-    setSelectedProjectIds((prev) => [...prev, newProjId]);
-    if (importedTargets.length > 0) {
-      setTargets((prev) => [...importedTargets, ...prev]);
-      showToast(`📂 [${trimmed}] 프로젝트 등록 완료 (${importedTargets.length}개 가맹점 DB 탑재)`);
-    } else {
-      showToast(`📂 [${trimmed}] 프로젝트가 성공적으로 등록되었습니다.`);
+    if (selectedDistrict !== "ALL" && selectedDong !== "ALL") {
+      return `${selectedDistrict} ${selectedDong}`;
     }
-
-    setIsProjectModalOpen(false);
-    setNewProjectName("");
-    setNewProjectFile(null);
-  };
+    return selectedDong;
+  }, [selectedDistrict, selectedDong]);
 
   // 자치구(District) 목록 추출
   const districts = useMemo(() => {
@@ -309,7 +267,182 @@ export default function MfadGeoRadarMap({
     }
   }, [userRole, supporterDistrict]);
 
-  // 필터링된 타깃 목록 (프로젝트 다중 선택 필터 포함)
+  // 프로젝트 체크박스 토글
+  const handleToggleProject = (projectId: string) => {
+    setSelectedProjectIds((prev) => {
+      if (prev.includes(projectId)) {
+        if (prev.length === 1) return prev; // 최소 1개 유지
+        return prev.filter((id) => id !== projectId);
+      }
+      return [...prev, projectId];
+    });
+  };
+
+  // 신규 프로젝트 등록 핸들러
+  const handleCreateProject = async () => {
+    const trimmed = newProjectName.trim();
+    if (!trimmed) {
+      showToast("⚠️ 프로젝트명을 입력해 주세요.");
+      return;
+    }
+
+    const newProjId = `proj-${Date.now()}`;
+    const newProject: CrmProject = {
+      id: newProjId,
+      name: trimmed,
+      color: "#2563eb",
+    };
+
+    let importedTargets: MfadGeoTarget[] = [];
+
+    if (newProjectFile) {
+      try {
+        const buffer = await newProjectFile.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rawRows: any[] = XLSX.utils.sheet_to_json(sheet);
+
+        importedTargets = rawRows.map((r, idx) => ({
+          id: `tgt-${newProjId}-${idx + 1}`,
+          project_id: newProjId,
+          project_name: trimmed,
+          target_name: String(r["정식 상호명"] || r["상호명"] || `가맹점_${idx + 1}`),
+          category: "RESTAURANT",
+          road_address: String(r["도로명 주소"] || r["주소"] || "서울특별시 강남구 테헤란로 152"),
+          dong: String(r["행정동"] || r["동"] || "역삼동"),
+          district: String(r["관할 자치구"] || r["구"] || "강남구"),
+          lat: 37.498 + (Math.random() - 0.5) * 0.05,
+          lng: 127.03 + (Math.random() - 0.5) * 0.05,
+          contact_number: String(r["연락처"] || r["전화번호"] || ""),
+          representative_name: String(r["대표자명"] || "대표자"),
+          visit_status: "UNVISITED",
+          metadata: {
+            estimated_refund: Number(r["추정 누수 금액 (원)"] || r["누수금액"] || 3500000),
+            leakage_cause: String(r["초과 사유 및 메모"] || r["메모"] || "신규 프로젝트 DB 등록"),
+            leakage_detail: "자체 DB 업로드를 통한 가맹점 정합성 분석 진행 중",
+            primary_leak_code: "LEAK_01",
+            biz_reg_no: "101-81-00000",
+            monthly_card_sales: 30000000,
+            applied_rate: 2.1,
+            statutory_rate: 1.1,
+            annual_leak_estimate: 1200000,
+            three_year_recovery: 3500000,
+          },
+        }));
+      } catch (e) {
+        console.error("Project file parsing error", e);
+      }
+    }
+
+    setProjects((prev) => [...prev, newProject]);
+    setSelectedProjectIds((prev) => [...prev, newProjId]);
+    if (importedTargets.length > 0) {
+      setTargets((prev) => [...importedTargets, ...prev]);
+      showToast(`📂 [${trimmed}] 프로젝트 등록 완료 (${importedTargets.length}개 DB 추가)`);
+    } else {
+      showToast(`📂 [${trimmed}] 프로젝트가 등록되었습니다.`);
+    }
+
+    setNewProjectName("");
+    setNewProjectFile(null);
+  };
+
+  // 특정 프로젝트 전용 엑셀 다운로드
+  const handleDownloadProjectSpecific = (projId: string) => {
+    const projTargets = targets.filter((t) => (t.project_id || "t-refund") === projId);
+    if (projTargets.length === 0) {
+      showToast("⚠️ 해당 프로젝트에 등록된 가맹점 DB가 없습니다.");
+      return;
+    }
+    const proj = projects.find((p) => p.id === projId);
+    const excelData = projTargets.map((item) => ({
+      "프로젝트": item.project_name || proj?.name || "T-환급 (기본)",
+      "업종": CATEGORY_CONFIG[item.category]?.label || item.category,
+      "가맹점명 (별칭)": item.masked_name || maskTargetName(item.target_name),
+      "정식 상호명": item.target_name,
+      "대표자명": item.representative_name,
+      "연락처": item.contact_number || "",
+      "관할 자치구": item.district,
+      "행정동": item.dong,
+      "도로명 주소": item.road_address,
+      "월평균 카드매출 (원)": item.metadata.monthly_card_sales || 0,
+      "추정 누수 금액 (원)": item.metadata.estimated_refund,
+      "점검 상태": item.visit_status,
+      "관심도": item.interest_rating ?? 3,
+      "통화 결과": item.call_result_code || "",
+      "예약 일시": item.scheduled_visit_date || "",
+      "초과 사유 및 메모": item.leakage_reason_comment || item.metadata.leakage_cause,
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "가맹점DB");
+    XLSX.writeFile(workbook, `t.note_Sales_${proj?.name || "프로젝트"}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    showToast(`📥 [${proj?.name}] 전용 엑셀 다운로드 완료`);
+  };
+
+  // 특정 프로젝트 전용 엑셀 업로드 트리거
+  const handleTriggerUploadProjectSpecific = (projId: string) => {
+    setTargetUploadProjectId(projId);
+    projectSpecificFileInputRef.current?.click();
+  };
+
+  // 특정 프로젝트 전용 파일 파싱 업로드 핸들러
+  const handleUploadProjectSpecific = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !targetUploadProjectId) return;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawRows: any[] = XLSX.utils.sheet_to_json(sheet);
+
+      const proj = projects.find((p) => p.id === targetUploadProjectId);
+      const projName = proj?.name || "T-환급 (기본)";
+
+      const importedTargets: MfadGeoTarget[] = rawRows.map((r, idx) => ({
+        id: `tgt-${targetUploadProjectId}-${Date.now()}-${idx + 1}`,
+        project_id: targetUploadProjectId,
+        project_name: projName,
+        target_name: String(r["정식 상호명"] || r["상호명"] || `가맹점_${idx + 1}`),
+        category: "RESTAURANT",
+        road_address: String(r["도로명 주소"] || r["주소"] || "서울특별시 강남구 테헤란로 152"),
+        dong: String(r["행정동"] || r["동"] || "역삼동"),
+        district: String(r["관할 자치구"] || r["구"] || "강남구"),
+        lat: 37.498 + (Math.random() - 0.5) * 0.05,
+        lng: 127.03 + (Math.random() - 0.5) * 0.05,
+        contact_number: String(r["연락처"] || r["전화번호"] || ""),
+        representative_name: String(r["대표자명"] || "대표자"),
+        visit_status: "UNVISITED",
+        metadata: {
+          estimated_refund: Number(r["추정 누수 금액 (원)"] || r["누수금액"] || 3500000),
+          leakage_cause: String(r["초과 사유 및 메모"] || r["메모"] || "신규 엑셀 업로드"),
+          leakage_detail: "자체 DB 업로드를 통한 가맹점 정합성 분석 진행 중",
+          primary_leak_code: "LEAK_01",
+          biz_reg_no: "101-81-00000",
+          monthly_card_sales: 30000000,
+          applied_rate: 2.1,
+          statutory_rate: 1.1,
+          annual_leak_estimate: 1200000,
+          three_year_recovery: 3500000,
+        },
+      }));
+
+      setTargets((prev) => [...importedTargets, ...prev]);
+      showToast(`📂 [${projName}]에 ${importedTargets.length}건의 가맹점 DB가 성공적으로 추가되었습니다.`);
+    } catch (err) {
+      console.error(err);
+      showToast("❌ 엑셀 파일을 읽는 중 오류가 발생했습니다.");
+    } finally {
+      if (projectSpecificFileInputRef.current) {
+        projectSpecificFileInputRef.current.value = "";
+      }
+      setTargetUploadProjectId(null);
+    }
+  };
+
+  // 필터링된 타깃 목록
   const filteredTargets = useMemo(() => {
     return targets.filter((item) => {
       // 1. 프로젝트 필터
@@ -342,10 +475,21 @@ export default function MfadGeoRadarMap({
     });
   }, [targets, selectedProjectIds, selectedDistrict, selectedDong, selectedCategories, searchTerm]);
 
+  // 관심도 높은순 정렬 반영 목록
+  const sortedTargets = useMemo(() => {
+    if (!isSortByRating) return filteredTargets;
+    return [...filteredTargets].sort((a, b) => {
+      const ratingA = a.interest_rating ?? 0;
+      const ratingB = b.interest_rating ?? 0;
+      if (ratingB !== ratingA) return ratingB - ratingA;
+      return b.metadata.estimated_refund - a.metadata.estimated_refund;
+    });
+  }, [filteredTargets, isSortByRating]);
+
   // 관내 타깃 통계 집계
   const stats = useMemo(() => {
-    const count = filteredTargets.length;
-    const totalAmount = filteredTargets.reduce((acc, t) => acc + t.metadata.estimated_refund, 0);
+    const count = sortedTargets.length;
+    const totalAmount = sortedTargets.reduce((acc, t) => acc + t.metadata.estimated_refund, 0);
 
     const billions = Math.floor(totalAmount / 100000000);
     const millions = Math.floor((totalAmount % 100000000) / 10000000);
@@ -362,7 +506,7 @@ export default function MfadGeoRadarMap({
     }
 
     return { count, totalAmount, amountText };
-  }, [filteredTargets]);
+  }, [sortedTargets]);
 
   // 카테고리 필터 토글
   const toggleCategory = (cat: MfadCategory) => {
@@ -376,10 +520,10 @@ export default function MfadGeoRadarMap({
   };
 
   const toggleAllCategories = () => {
-    if (selectedCategories.length === 4) {
-      setSelectedCategories(["HOSPITAL"]);
+    if (selectedCategories.length === availableCategories.length) {
+      setSelectedCategories(availableCategories.slice(0, 1));
     } else {
-      setSelectedCategories(["HOSPITAL", "RESTAURANT", "GYM", "NEW_STORE"]);
+      setSelectedCategories([...availableCategories]);
     }
   };
 
@@ -400,10 +544,10 @@ export default function MfadGeoRadarMap({
       setSelectedTarget((prev) => (prev ? { ...prev, contact_number: trimmed } : null));
     }
     setEditingPhoneId(null);
-    showToast("📞 전화번호가 성공적으로 업데이트되었습니다.");
+    showToast("📞 전화번호가 업데이트되었습니다.");
   };
 
-  // 관심도 별점 평가 핸들러
+  // 관심도 별점 평가 핸들러 (1~5점 및 0점)
   const handleUpdateRating = (rating: number) => {
     if (!selectedTarget) return;
     setTargets((prev) =>
@@ -413,14 +557,20 @@ export default function MfadGeoRadarMap({
     showToast(`⭐ [${selectedTarget.target_name}] 관심도 ${rating}점으로 반영되었습니다.`);
   };
 
-  // 통화 결과 코드 설정 핸들러
+  // 통화 결과 코드 설정 핸들러 (6종 표준)
   const handleUpdateCallResult = (code: string) => {
     if (!selectedTarget) return;
     setTargets((prev) =>
       prev.map((t) => (t.id === selectedTarget.id ? { ...t, call_result_code: code } : t))
     );
     setSelectedTarget((prev) => (prev ? { ...prev, call_result_code: code } : null));
-    showToast(`📞 [${selectedTarget.target_name}] 통화 결과: ${code}`);
+
+    if (code === "방문예약") {
+      setIsScheduleOpen(true);
+      showToast(`📞 [${selectedTarget.target_name}] 방문예약 선택됨: 방문 일시를 지정해 주세요.`);
+    } else {
+      showToast(`📞 [${selectedTarget.target_name}] 통화 결과: ${code}`);
+    }
   };
 
   // 방문 상담 예약 스케줄러 저장 핸들러
@@ -448,6 +598,7 @@ export default function MfadGeoRadarMap({
               ...t,
               visit_status: updatedStatus,
               scheduled_visit_date: dateFormatted,
+              call_result_code: "방문예약",
               consult_timeline: [newRecord, ...(t.consult_timeline || [])],
             }
           : t
@@ -460,13 +611,15 @@ export default function MfadGeoRadarMap({
             ...prev,
             visit_status: updatedStatus,
             scheduled_visit_date: dateFormatted,
+            call_result_code: "방문예약",
             consult_timeline: [newRecord, ...(prev.consult_timeline || [])],
           }
         : null
     );
 
+    setIsScheduleOpen(false);
     setScheduledDateInput("");
-    showToast(`📅 [${selectedTarget.target_name}] ${dateFormatted} 방문 예약이 등록되었습니다. (지도 핀 예약 상태로 전환)`);
+    showToast(`📅 [${selectedTarget.target_name}] ${dateFormatted} 방문 예약이 확정되었습니다. (지도 핀 예약 상태 전환)`);
   };
 
   // 상담 메모 추가 핸들러
@@ -504,6 +657,20 @@ export default function MfadGeoRadarMap({
     showToast("📝 상담 메모가 타임라인에 저장되었습니다.");
   };
 
+  // 구글 드라이브 URL 저장 핸들러
+  const handleSaveGoogleDriveUrl = () => {
+    if (!selectedTarget) return;
+    const trimmed = googleDriveInput.trim();
+
+    setTargets((prev) =>
+      prev.map((t) => (t.id === selectedTarget.id ? { ...t, google_drive_url: trimmed } : t))
+    );
+
+    setSelectedTarget((prev) => (prev ? { ...prev, google_drive_url: trimmed } : null));
+    setIsGoogleDriveModalOpen(false);
+    showToast("🎙️ 구글 드라이브 녹음/사진 백업 링크가 연동되었습니다.");
+  };
+
   // Kakao Maps SDK 초기화
   const kakaoAppKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
 
@@ -518,7 +685,7 @@ export default function MfadGeoRadarMap({
     }
   }, [kakaoAppKey]);
 
-  // Kakao Map 마커 동기화 (블루 테마 & 이모지 없는 단정 텍스트 캡슐)
+  // Kakao Map 마커 동기화
   useEffect(() => {
     if (!useKakaoMap || !kakaoSdkLoaded || !kakaoMapContainerRef.current) return;
     const kakao = (window as any).kakao;
@@ -536,7 +703,7 @@ export default function MfadGeoRadarMap({
 
     const bounds = new kakao.maps.LatLngBounds();
 
-    filteredTargets.forEach((tgt) => {
+    sortedTargets.forEach((tgt) => {
       const position = new kakao.maps.LatLng(tgt.lat, tgt.lng);
       bounds.extend(position);
 
@@ -580,14 +747,14 @@ export default function MfadGeoRadarMap({
       kakaoMarkersRef.current.push(customOverlay);
     });
 
-    if (filteredTargets.length > 0) {
+    if (sortedTargets.length > 0) {
       map.setBounds(bounds);
     }
-  }, [useKakaoMap, kakaoSdkLoaded, filteredTargets, selectedTarget, userRole, supporterDistrict]);
+  }, [useKakaoMap, kakaoSdkLoaded, sortedTargets, selectedTarget, userRole, supporterDistrict]);
 
   // Tactical Grid Bounds 계산
   const gridBounds = useMemo(() => {
-    if (filteredTargets.length === 0) {
+    if (sortedTargets.length === 0) {
       return { minLat: 37.35, maxLat: 37.66, minLng: 127.01, maxLng: 127.12 };
     }
     let minLat = Infinity,
@@ -595,7 +762,7 @@ export default function MfadGeoRadarMap({
       minLng = Infinity,
       maxLng = -Infinity;
 
-    filteredTargets.forEach((t) => {
+    sortedTargets.forEach((t) => {
       if (t.lat < minLat) minLat = t.lat;
       if (t.lat > maxLat) maxLat = t.lat;
       if (t.lng < minLng) minLng = t.lng;
@@ -611,7 +778,7 @@ export default function MfadGeoRadarMap({
       minLng: minLng - lngPadding,
       maxLng: maxLng + lngPadding,
     };
-  }, [filteredTargets]);
+  }, [sortedTargets]);
 
   // 타깃 선택 및 지도 중심 이동 (Center & Pan)
   const handleSelectAndCenterTarget = (target: MfadGeoTarget) => {
@@ -643,12 +810,12 @@ export default function MfadGeoRadarMap({
 
   // [📥 엑셀 다운로드 (.xlsx)]
   const handleDownloadExcel = () => {
-    if (filteredTargets.length === 0) {
+    if (sortedTargets.length === 0) {
       showToast("⚠️ 다운로드할 가맹점 내역이 없습니다.");
       return;
     }
 
-    const excelData = filteredTargets.map((item) => {
+    const excelData = sortedTargets.map((item) => {
       const categoryLabel = CATEGORY_CONFIG[item.category]?.label || item.category;
       const maskedName = item.masked_name || maskTargetName(item.target_name);
       const fullName = userRole === "HQ_ADMIN" ? item.target_name : maskedName;
@@ -684,27 +851,6 @@ export default function MfadGeoRadarMap({
     });
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
-    worksheet["!cols"] = [
-      { wch: 16 }, // 프로젝트
-      { wch: 14 }, // 업종 카테고리
-      { wch: 20 }, // 가맹점명 (별칭)
-      { wch: 22 }, // 정식 상호명
-      { wch: 12 }, // 대표자명
-      { wch: 16 }, // 연락처
-      { wch: 12 }, // 관할 자치구
-      { wch: 10 }, // 행정동
-      { wch: 36 }, // 도로명 주소
-      { wch: 18 }, // 월평균 카드매출
-      { wch: 16 }, // 현재 적용 요율
-      { wch: 16 }, // 정상 우대 요율
-      { wch: 18 }, // 추정 누수 금액
-      { wch: 20 }, // 점검 상태
-      { wch: 12 }, // 관심도 점수
-      { wch: 14 }, // 통화 결과
-      { wch: 20 }, // 예약 일시
-      { wch: 45 }, // 초과 사유 및 메모
-    ];
-
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "세일즈_가맹점DB");
 
@@ -712,10 +858,10 @@ export default function MfadGeoRadarMap({
     const fileName = `t.note_Sales_DB_${todayStr}.xlsx`;
 
     XLSX.writeFile(workbook, fileName);
-    showToast(`📥 [${filteredTargets.length}개 가맹점] .xlsx 엑셀 다운로드가 완료되었습니다.`);
+    showToast(`📥 [${sortedTargets.length}개 가맹점] .xlsx 엑셀 다운로드가 완료되었습니다.`);
   };
 
-  // [📤 엑셀 업로드 및 양방향 병합(Upsert) 엔진]
+  // [📤 엑셀 업로드 및 양방향 병합(Upsert)]
   const handleUploadExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -843,7 +989,7 @@ export default function MfadGeoRadarMap({
     try {
       navigator.clipboard.writeText(docLink);
     } catch {}
-    showToast(`📲 [${target.target_name}] 카카오톡 공문 안내 링크가 복사 및 발송 처리되었습니다!`);
+    showToast(`💬 [${target.target_name}] 카카오톡 브리핑 안내 링크가 복사 및 전송되었습니다!`);
   };
 
   const handleDispatchTSign = (target: MfadGeoTarget) => {
@@ -851,7 +997,7 @@ export default function MfadGeoRadarMap({
     try {
       navigator.clipboard.writeText(contractLink);
     } catch {}
-    showToast(`📲 [${target.representative_name} 대표] (${target.contact_number}) t.sign 전자계약 링크가 발송되었습니다!`);
+    showToast(`✍️ [${target.representative_name} 대표] (${target.contact_number}) t.sign 모바일 전자약정서 링크가 발송되었습니다!`);
   };
 
   // 지도 드래그 팬 & 휠 줌
@@ -925,81 +1071,200 @@ export default function MfadGeoRadarMap({
         showFullName={selectedTarget ? canShowFullName(selectedTarget) || userRole === "HQ_ADMIN" : true}
       />
 
-      {/* 신규 프로젝트 등록 모달 */}
-      {isProjectModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-              <div className="flex items-center gap-1.5">
-                <span className="text-base">📂</span>
-                <h3 className="text-sm font-semibold text-slate-900">신규 세일즈 프로젝트 등록</h3>
+      {/* [⚙️ 프로젝트 관리 모달] */}
+      {isProjectManageModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Settings className="h-5 w-5 text-blue-600" />
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">세일즈 프로젝트 관리 및 DB 설정</h3>
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setIsProjectModalOpen(false);
-                  setNewProjectName("");
-                  setNewProjectFile(null);
-                }}
+                onClick={() => setIsProjectManageModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* 현재 등록된 프로젝트 리스트 */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-700">
+                등록된 프로젝트 목록 ({projects.length}개)
+              </label>
+              <div className="max-h-52 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl bg-slate-50/50">
+                {projects.map((proj) => {
+                  const targetCount = targets.filter((t) => (t.project_id || "t-refund") === proj.id).length;
+                  const isChecked = selectedProjectIds.includes(proj.id);
+                  return (
+                    <div key={proj.id} className="p-3 flex items-center justify-between gap-2 hover:bg-white transition-colors">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => handleToggleProject(proj.id)}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-xs text-slate-900 truncate">{proj.name}</span>
+                            {proj.isDefault && (
+                              <span className="text-[10px] bg-blue-100 text-blue-700 font-medium px-1.5 py-0.2 rounded">기본</span>
+                            )}
+                          </div>
+                          <span className="text-[11px] text-slate-500 font-mono">가맹점 DB {targetCount}건</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadProjectSpecific(proj.id)}
+                          className="px-2 py-1 rounded-md text-[11px] font-normal text-slate-600 bg-white hover:bg-slate-100 border border-slate-200 transition-colors flex items-center gap-1"
+                          title="해당 프로젝트 전용 엑셀 다운로드"
+                        >
+                          <Download className="h-3 w-3 text-slate-500" />
+                          <span>다운로드</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleTriggerUploadProjectSpecific(proj.id)}
+                          className="px-2 py-1 rounded-md text-[11px] font-normal text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors flex items-center gap-1"
+                          title="해당 프로젝트 전용 엑셀 업로드"
+                        >
+                          <Upload className="h-3 w-3 text-blue-600" />
+                          <span>업로드</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 신규 프로젝트 등록 섹션 */}
+            <div className="pt-2 border-t border-slate-100 space-y-2.5">
+              <div className="flex items-center gap-1.5">
+                <Plus className="h-4 w-4 text-blue-600" />
+                <span className="text-xs font-bold text-slate-900">신규 프로젝트 등록</span>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                <div>
+                  <input
+                    type="text"
+                    placeholder="신규 프로젝트명 입력 (예: CCTV 보안, 식자재 유통)"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-medium text-slate-600 mb-1">
+                    프로젝트 전용 엑셀/CSV 첨부 (선택)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    onChange={(e) => setNewProjectFile(e.target.files?.[0] || null)}
+                    className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="button"
+                  onClick={handleCreateProject}
+                  className="px-4 py-2 rounded-lg text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  <span>새 프로젝트 생성 및 등록</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 구글 드라이브 음성/사진 연동 모달 */}
+      {isGoogleDriveModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/45 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-5 space-y-3.5 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Mic className="h-5 w-5 text-blue-600" />
+                <h3 className="text-sm font-bold text-slate-900">구글 드라이브 녹음 및 현장 사진 연동</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGoogleDriveModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 p-1 rounded"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  프로젝트명 <span className="text-blue-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="예: POS/키오스크 교체 프로모션, CCTV 렌탈"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-blue-600"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-medium text-slate-700 mb-1">
-                  전용 가맹점 DB 업로드 (선택, .xlsx / .csv)
-                </label>
-                <input
-                  type="file"
-                  accept=".xlsx, .xls, .csv"
-                  onChange={(e) => setNewProjectFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                />
-                <p className="text-[10.5px] text-slate-400 mt-1">
-                  * 엑셀 파일 첨부 시 해당 프로젝트 DB로 즉시 매핑되어 추가됩니다.
-                </p>
-              </div>
+            <div className="space-y-2 text-xs">
+              <p className="text-slate-600 text-[11.5px] leading-relaxed">
+                현장 상담 녹음 파일(.m4a, .mp3)이나 매장 POS/단말기 사진이 저장된 <strong>구글 드라이브 공유 링크</strong>를 입력하시면 가맹점 카드에 자동 연동됩니다.
+              </p>
+              <input
+                type="url"
+                placeholder="https://drive.google.com/drive/folders/..."
+                value={googleDriveInput}
+                onChange={(e) => setGoogleDriveInput(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-900 focus:outline-none focus:border-blue-600 font-mono"
+              />
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsProjectModalOpen(false);
-                  setNewProjectName("");
-                  setNewProjectFile(null);
-                }}
-                className="px-3 py-1.5 rounded-lg text-xs text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateProject}
-                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-              >
-                프로젝트 등록 완료
-              </button>
+            <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+              {selectedTarget?.google_drive_url ? (
+                <a
+                  href={selectedTarget.google_drive_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-blue-600 hover:underline flex items-center gap-1 text-[11px]"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  <span>현재 등록된 드라이브 열기</span>
+                </a>
+              ) : (
+                <span />
+              )}
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsGoogleDriveModalOpen(false)}
+                  className="px-3 py-1.5 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveGoogleDriveUrl}
+                  className="px-3.5 py-1.5 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                >
+                  연동 저장
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* 숨김 프로젝트 파일 인풋 */}
+      <input
+        type="file"
+        ref={projectSpecificFileInputRef}
+        onChange={handleUploadProjectSpecific}
+        accept=".xlsx, .xls, .csv"
+        className="hidden"
+      />
 
       {/* 상단 알림 토스트 */}
       {toastMessage && (
@@ -1010,73 +1275,73 @@ export default function MfadGeoRadarMap({
       )}
 
       {/* ============================================================
-          [1. 상단 슬림 헤더 (52px 단일 바 - t.note Sales 브랜딩 & 순백 미니멀)]
+          [1. 상단 슬림 헤더 (52px 단일 바 - t.note Sales + 동네명 강조 & 동적 카테고리)]
          ============================================================ */}
       <header className="h-[52px] w-full bg-white border-b border-slate-100 px-3 sm:px-4 flex items-center justify-between shrink-0 z-30 select-none">
-        {/* 좌측: t.note Sales 브랜딩 */}
-        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        {/* 좌측: t.note Sales 로고 + 선택된 동네명 (text-blue-600 font-bold text-xl) + 동적 카테고리 밀착 */}
+        <div className="flex items-center gap-2.5 sm:gap-4 shrink-0 overflow-x-auto py-1">
           <Link
             href="/admin/crm"
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-800 transition-colors py-1 px-1.5 rounded-md hover:bg-slate-50"
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-800 transition-colors py-1 px-1.5 rounded-md hover:bg-slate-50 shrink-0"
             title="CRM 백오피스로 이동"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             <span className="hidden sm:inline font-normal">CRM</span>
           </Link>
 
-          <span className="text-slate-200">|</span>
+          <span className="text-slate-200 shrink-0">|</span>
 
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm">⚡</span>
-            <h1 className="text-xs sm:text-sm text-slate-900 tracking-tight flex items-center gap-1.5">
-              <span className="font-semibold text-slate-950">t.note Sales</span>
-              <span className="text-slate-300 font-light">|</span>
-              <span className="text-slate-600 font-normal">필드 세일즈 레이더</span>
-            </h1>
+          {/* t.note Sales 로고 & 동네명 강조 표기 */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="font-bold text-slate-950 text-sm tracking-tight shrink-0">t.note Sales</span>
+            <span className="text-blue-600 font-bold text-lg sm:text-xl tracking-tight shrink-0">
+              {currentLocationTitle}
+            </span>
+          </div>
+
+          <span className="hidden md:inline text-slate-200 shrink-0">|</span>
+
+          {/* 동네명 바로 우측: 현재 DB에 존재하는 업종만 동적 노출 */}
+          <div className="hidden sm:flex items-center gap-1.5 text-xs shrink-0">
+            <button
+              type="button"
+              onClick={toggleAllCategories}
+              className={`py-1 px-2 rounded-md transition-colors cursor-pointer ${
+                selectedCategories.length === availableCategories.length
+                  ? "bg-blue-50 text-blue-700 font-bold"
+                  : "text-slate-500 hover:text-slate-900 font-normal hover:bg-slate-50"
+              }`}
+            >
+              전체
+            </button>
+
+            {availableCategories.map((cat) => {
+              const config = CATEGORY_CONFIG[cat];
+              if (!config) return null;
+              const isActive = selectedCategories.includes(cat);
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => toggleCategory(cat)}
+                  className={`py-1 px-2 rounded-md transition-colors cursor-pointer ${
+                    isActive
+                      ? "bg-blue-50 text-blue-700 font-bold"
+                      : "text-slate-500 hover:text-slate-900 font-normal hover:bg-slate-50"
+                  }`}
+                >
+                  {config.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* 중앙: 업종 텍스트 인라인 필터 */}
-        <div className="hidden lg:flex items-center gap-3 text-xs">
-          <button
-            type="button"
-            onClick={toggleAllCategories}
-            className={`py-1 px-1 transition-colors cursor-pointer ${
-              selectedCategories.length === 4
-                ? "text-blue-600 font-medium border-b-2 border-blue-600"
-                : "text-slate-500 hover:text-slate-900 font-normal"
-            }`}
-          >
-            <span>전체 업종</span>
-          </button>
-
-          <span className="text-slate-200">|</span>
-
-          {(Object.keys(CATEGORY_CONFIG) as MfadCategory[]).map((cat) => {
-            const config = CATEGORY_CONFIG[cat];
-            const isActive = selectedCategories.includes(cat);
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => toggleCategory(cat)}
-                className={`flex items-center gap-1 py-1 px-1 transition-colors cursor-pointer ${
-                  isActive
-                    ? "text-blue-600 font-medium border-b-2 border-blue-600"
-                    : "text-slate-500 hover:text-slate-900 font-normal"
-                }`}
-              >
-                <span>{config.label}</span>
-              </button>
-            );
-          })}
-        </div>
-
         {/* 우측: 관내 요약 통계 + 권한 전환 / 계정 */}
-        <div className="flex items-center gap-2 sm:gap-3 text-xs">
+        <div className="flex items-center gap-2 sm:gap-3 text-xs shrink-0">
           <div className="hidden md:flex items-center gap-1 text-xs text-slate-500 font-normal">
             <span>활성 타깃</span>
-            <span className="font-medium text-blue-600 font-mono">{stats.count}개소</span>
+            <span className="font-bold text-blue-600 font-mono">{stats.count}개소</span>
             <span className="text-slate-200 mx-1">|</span>
             <span>예상 환급액</span>
             <span className="font-medium text-slate-800 font-mono">{stats.amountText}</span>
@@ -1151,43 +1416,45 @@ export default function MfadGeoRadarMap({
           aria-label="세일즈 프로젝트 및 가맹점 목록"
           className="w-full md:w-[310px] lg:w-[320px] h-full flex flex-col bg-white border-r border-slate-100 shrink-0 z-20 select-none"
         >
-          {/* 최상단: 프로젝트 선택 및 관리 바 */}
+          {/* 최상단: 프로젝트 선택 드롭다운 & 도구 모음 */}
           <div className="p-2.5 border-b border-slate-100 bg-white space-y-2 shrink-0">
-            {/* 1행: 프로젝트 라벨 & 액션 버튼 3개 */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs">📂</span>
-                <span className="text-xs font-semibold text-slate-800 tracking-tight">프로젝트 선택</span>
-                <span className="text-[10px] text-slate-400 font-mono">
-                  ({selectedProjectIds.length}/{projects.length})
-                </span>
-              </div>
+            {/* 1행: [📂 프로젝트 선택 ▼] 드롭다운 버튼 & [📥 다운로드] [📤 업로드] [⚙️ 설정] */}
+            <div className="flex items-center justify-between relative">
+              <button
+                type="button"
+                onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+                className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-800 transition-colors cursor-pointer"
+              >
+                <span>📂 프로젝트 선택</span>
+                <span className="text-[10px] font-mono text-blue-600">({selectedProjectIds.length})</span>
+                {isProjectDropdownOpen ? <ChevronUp className="h-3.5 w-3.5 text-slate-400" /> : <ChevronDown className="h-3.5 w-3.5 text-slate-400" />}
+              </button>
 
-              {/* 우측 슬림 라인 아이콘 버튼 3개 */}
-              <div className="flex items-center gap-0.5">
-                <button
-                  type="button"
-                  onClick={() => setIsProjectModalOpen(true)}
-                  className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                  title="[+ 프로젝트 등록]"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
+              {/* 우측 도구 모음: 다운로드, 업로드, 선형 설정 버튼 */}
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
                   onClick={handleDownloadExcel}
-                  className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                  title="[📥 DB 다운로드 (.xlsx)]"
+                  className="p-1.5 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                  title="[📥 DB 엑셀 다운로드 (.xlsx)]"
                 >
                   <Download className="h-3.5 w-3.5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-1 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                  title="[📤 DB 업로드 및 병합]"
+                  className="p-1.5 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                  title="[📤 DB 엑셀 업로드 및 병합]"
                 >
                   <Upload className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsProjectManageModalOpen(true)}
+                  className="p-1.5 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                  title="[⚙️ 프로젝트 관리 모달]"
+                >
+                  <Settings className="h-3.5 w-3.5" />
                 </button>
                 <input
                   type="file"
@@ -1197,34 +1464,53 @@ export default function MfadGeoRadarMap({
                   className="hidden"
                 />
               </div>
+
+              {/* 드롭다운 확장 레이어 */}
+              {isProjectDropdownOpen && (
+                <div className="absolute top-full left-0 mt-1.5 w-56 bg-white border border-slate-200 rounded-xl shadow-xl z-40 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="text-[10px] text-slate-400 font-semibold px-1 pb-1 border-b border-slate-100">
+                    프로젝트 다중 선택 필터
+                  </div>
+                  {projects.map((p) => {
+                    const isChecked = selectedProjectIds.includes(p.id);
+                    const count = targets.filter((t) => (t.project_id || "t-refund") === p.id).length;
+                    return (
+                      <label
+                        key={p.id}
+                        className={`flex items-center justify-between px-2 py-1 rounded text-xs cursor-pointer transition-colors ${
+                          isChecked ? "bg-blue-50/80 text-blue-900 font-medium" : "hover:bg-slate-50 text-slate-700"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleProject(p.id)}
+                            className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3 w-3"
+                          />
+                          <span>{p.name}</span>
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-mono">{count}</span>
+                      </label>
+                    );
+                  })}
+                  <div className="pt-1 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsProjectDropdownOpen(false);
+                        setIsProjectManageModalOpen(true);
+                      }}
+                      className="w-full text-center text-[10.5px] text-blue-600 hover:underline py-0.5"
+                    >
+                      + 프로젝트 관리/등록 ⚙️
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* 2행: 프로젝트 다중 체크박스 목록 */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {projects.map((p) => {
-                const isChecked = selectedProjectIds.includes(p.id);
-                return (
-                  <label
-                    key={p.id}
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10.5px] cursor-pointer transition-colors border ${
-                      isChecked
-                        ? "bg-blue-50/80 border-blue-300 text-blue-900 font-medium"
-                        : "bg-white border-slate-200 text-slate-600 hover:border-slate-300 font-normal"
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={() => handleToggleProject(p.id)}
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 h-3 w-3"
-                    />
-                    <span>{p.name}</span>
-                  </label>
-                );
-              })}
-            </div>
-
-            {/* 3행: 관할 자치구/행정동 필터 (1개 행에 2열로 슬림 배치) */}
+            {/* 2행: 관할 자치구/행정동 필터 (1개 행 2열 배치) */}
             <div className="grid grid-cols-2 gap-1.5 pt-0.5">
               <div>
                 <select
@@ -1264,30 +1550,46 @@ export default function MfadGeoRadarMap({
               </div>
             </div>
 
-            {/* 4행: 슬림 검색창 */}
-            <div className="relative pt-0.5">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
-              <input
-                type="text"
-                placeholder="매장명, 전화번호, 주소 검색..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-7 pr-12 py-1 bg-slate-50 rounded text-[11px] text-slate-800 placeholder-slate-400 border border-slate-200/80 focus:outline-none focus:border-blue-600 transition-colors font-normal"
-              />
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono">
-                {filteredTargets.length}개
-              </span>
+            {/* 3행: 슬림 검색창 & [관심도 높은순 ★] 필터 토글 */}
+            <div className="space-y-1.5 pt-0.5">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="매장명, 전화번호, 주소 검색..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-7 pr-12 py-1 bg-slate-50 rounded text-[11px] text-slate-800 placeholder-slate-400 border border-slate-200/80 focus:outline-none focus:border-blue-600 transition-colors font-normal"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono">
+                  {sortedTargets.length}개
+                </span>
+              </div>
+
+              {/* [관심도 높은순 ★] 필터 토글 버튼 */}
+              <button
+                type="button"
+                onClick={() => setIsSortByRating(!isSortByRating)}
+                className={`w-full flex items-center justify-center gap-1.5 py-1 rounded-lg text-[11px] transition-colors border cursor-pointer ${
+                  isSortByRating
+                    ? "bg-amber-50 text-amber-900 border-amber-300 font-bold"
+                    : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200 font-normal"
+                }`}
+              >
+                <Star className={`h-3 w-3 ${isSortByRating ? "text-amber-500 fill-amber-500" : "text-slate-400"}`} />
+                <span>관심도 높은순 우선 정렬 (계약 가망 고객)</span>
+              </button>
             </div>
           </div>
 
-          {/* 가맹점 행 리스트 (그래픽 아이콘 전면 제거 & 단정한 행 구조) */}
+          {/* 가맹점 행 리스트 (전화번호 시인성 대폭 강화 & 별점 표시 & 무이모지 플랫 구조) */}
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-            {filteredTargets.length === 0 ? (
+            {sortedTargets.length === 0 ? (
               <div className="py-12 px-4 text-center text-xs text-slate-400 font-normal">
                 선택한 조건에 해당하는 가맹점 데이터가 없습니다.
               </div>
             ) : (
-              filteredTargets.map((item) => {
+              sortedTargets.map((item) => {
                 const config = CATEGORY_CONFIG[item.category];
                 const isSelected = selectedTarget?.id === item.id;
                 const isRestricted = userRole === "LOCAL_SUPPORTER" && item.district !== supporterDistrict;
@@ -1298,6 +1600,7 @@ export default function MfadGeoRadarMap({
                   : item.masked_name || maskTargetName(item.target_name);
 
                 const isEditingPhone = editingPhoneId === item.id;
+                const rating = item.interest_rating ?? 0;
 
                 return (
                   <div
@@ -1309,16 +1612,32 @@ export default function MfadGeoRadarMap({
                         : "hover:bg-slate-50/60 bg-white"
                     }`}
                   >
-                    {/* 1행: [연회색 박스 뱃지: 무슨동 / 카테고리명] + 점검/예약 상태 */}
+                    {/* 1행: [연회색 박스 뱃지: 무슨동 / 카테고리명] + 관심도 별점(★ 1~5) + 점검/예약 상태 */}
                     <div className="flex items-center justify-between gap-1">
-                      <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-normal truncate">
-                        {item.dong} / {config.label}
-                      </span>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-normal truncate">
+                          {item.dong} / {config?.label}
+                        </span>
+
+                        {/* 별점 시각화 (★ 1~5) */}
+                        <div className="flex items-center gap-0.5 shrink-0" title={`관심도 ${rating}점`}>
+                          {[1, 2, 3, 4, 5].map((starIdx) => (
+                            <Star
+                              key={starIdx}
+                              className={`h-2.5 w-2.5 ${
+                                starIdx <= rating
+                                  ? "text-amber-500 fill-amber-500"
+                                  : "text-slate-200 fill-slate-100"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
 
                       <span
-                        className={`px-1.5 py-0.2 rounded text-[10px] font-normal border ${
+                        className={`px-1.5 py-0.2 rounded text-[10px] font-normal border shrink-0 ${
                           item.visit_status === "SCHEDULED"
-                            ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                            ? "bg-indigo-50 text-indigo-700 border-indigo-200 font-bold"
                             : item.visit_status === "VISITED"
                             ? "bg-blue-50 text-blue-700 border-blue-200"
                             : item.visit_status === "ASSIGNED"
@@ -1336,9 +1655,9 @@ export default function MfadGeoRadarMap({
                       </span>
                     </div>
 
-                    {/* 2행: 상호명 + 전화번호 (상호명 바로 옆에 번호 노출) */}
+                    {/* 2행: 상호명 + 전화번호 (시인성 대폭 강화: text-slate-900 font-semibold text-sm) */}
                     <div className="mt-1 flex items-baseline justify-between gap-1.5">
-                      <span className="font-medium text-slate-900 truncate text-[12px] flex-1">
+                      <span className="font-bold text-slate-900 truncate text-[12.5px] flex-1">
                         {displayStoreName}
                       </span>
 
@@ -1357,7 +1676,7 @@ export default function MfadGeoRadarMap({
                             }}
                             placeholder="010-0000-0000"
                             autoFocus
-                            className="px-1 py-0.5 text-[10.5px] font-mono border border-blue-400 rounded bg-white text-slate-900 focus:outline-none w-28"
+                            className="px-1.5 py-0.5 text-xs font-mono font-semibold border border-blue-500 rounded bg-white text-slate-900 focus:outline-none w-28"
                           />
                           <button
                             type="button"
@@ -1365,7 +1684,7 @@ export default function MfadGeoRadarMap({
                             className="p-0.5 text-blue-600 hover:text-blue-800"
                             title="저장"
                           >
-                            <Check className="h-3 w-3" />
+                            <Check className="h-3.5 w-3.5" />
                           </button>
                           <button
                             type="button"
@@ -1373,15 +1692,15 @@ export default function MfadGeoRadarMap({
                             className="p-0.5 text-slate-400 hover:text-slate-600"
                             title="취소"
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       ) : item.contact_number ? (
-                        <div className="flex items-center gap-1 font-mono text-slate-600 text-[11px] shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
                           <a
                             href={`tel:${item.contact_number}`}
                             onClick={(e) => e.stopPropagation()}
-                            className="text-slate-700 hover:text-blue-600 hover:underline"
+                            className="text-slate-900 font-semibold text-sm font-mono tracking-tight hover:text-blue-600 hover:underline"
                             title="전화 걸기"
                           >
                             {item.contact_number}
@@ -1399,14 +1718,14 @@ export default function MfadGeoRadarMap({
                         <button
                           type="button"
                           onClick={(e) => handleStartEditPhone(e, item)}
-                          className="text-[10px] text-slate-400 hover:text-blue-600 bg-slate-100/80 hover:bg-blue-50 px-1.5 py-0.5 rounded text-chip shrink-0 cursor-pointer font-normal"
+                          className="text-[11px] font-medium text-slate-500 hover:text-blue-600 bg-slate-100 hover:bg-blue-50 px-2 py-0.5 rounded border border-slate-200 shrink-0 cursor-pointer"
                         >
                           + 번호 기재
                         </button>
                       )}
                     </div>
 
-                    {/* 3행: 예상 금액 또는 환급/계약 메모 (차분한 슬레이트 컬러) */}
+                    {/* 3행: 예상 금액 또는 통화 결과 / 메모 (차분한 슬레이트 컬러) */}
                     <div className="mt-1 flex items-center justify-between text-[11px] text-slate-500 font-normal">
                       <span className="truncate max-w-[170px]">
                         {item.call_result_code ? `[${item.call_result_code}] ` : ""}
@@ -1466,7 +1785,7 @@ export default function MfadGeoRadarMap({
                 />
               )}
 
-              {/* 타깃 핀 렌더링 컨테이너 (Today Link 통일 블루 테마 & 이모지 없는 단정 핀) */}
+              {/* 타깃 핀 렌더링 컨테이너 */}
               <div
                 className="absolute inset-8 z-20 transition-transform duration-75 origin-center pointer-events-none"
                 style={{
@@ -1474,7 +1793,7 @@ export default function MfadGeoRadarMap({
                   transformOrigin: "center center",
                 }}
               >
-                {filteredTargets.map((item) => {
+                {sortedTargets.map((item) => {
                   const isSelected = selectedTarget?.id === item.id;
                   const isHovered = hoveredTarget?.id === item.id;
                   const isScheduled = item.visit_status === "SCHEDULED";
@@ -1509,7 +1828,7 @@ export default function MfadGeoRadarMap({
                         isHovered ? "z-40 scale-105" : "z-20"
                       }`}
                     >
-                      {/* 메인 핀 노드 배지 (Today Link 블루 테마 일관화) */}
+                      {/* 메인 핀 노드 배지 (블루 테마) */}
                       <div
                         className={`relative flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-normal shadow-xs border transition-all ${
                           isRestricted
@@ -1533,7 +1852,7 @@ export default function MfadGeoRadarMap({
                       {isHovered && (
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-60 rounded-xl bg-white/98 text-slate-800 p-2.5 text-xs border border-slate-200 shadow-md pointer-events-none animate-in fade-in zoom-in-95 duration-100">
                           <div className="flex items-center justify-between gap-1 border-b border-slate-100 pb-1.5">
-                            <div className="flex items-center gap-1 min-w-0 font-medium text-slate-900 truncate text-[11.5px]">
+                            <div className="flex items-center gap-1 min-w-0 font-bold text-slate-900 truncate text-[11.5px]">
                               <span className="text-blue-600 font-semibold">•</span>
                               <span className="truncate">{displayStoreName}</span>
                             </div>
@@ -1555,7 +1874,7 @@ export default function MfadGeoRadarMap({
 
                               <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between text-xs">
                                 <span className="text-slate-400 text-[10.5px]">예상 환급액</span>
-                                <span className="font-mono font-medium text-blue-700 text-xs">
+                                <span className="font-mono font-bold text-blue-700 text-xs">
                                   ₩{item.metadata.estimated_refund.toLocaleString()}원
                                 </span>
                               </div>
@@ -1568,9 +1887,9 @@ export default function MfadGeoRadarMap({
                 })}
               </div>
 
-              {/* 하단 좌측 텔레메트리 (블루 테마) */}
+              {/* 하단 좌측 텔레메트리 */}
               <div className="absolute bottom-3 left-4 z-20 flex items-center gap-2 text-[10.5px] text-blue-600 font-mono bg-blue-50/80 px-2 py-0.5 rounded-full border border-blue-200 shadow-xs">
-                <span>VIEW: {selectedDistrict === "ALL" ? "수도권 전역" : selectedDistrict} ({selectedDong === "ALL" ? "전체동" : selectedDong})</span>
+                <span>VIEW: {currentLocationTitle}</span>
                 <span>·</span>
                 <span>Zoom: {(zoom * 100).toFixed(0)}%</span>
               </div>
@@ -1624,10 +1943,10 @@ export default function MfadGeoRadarMap({
           {selectedTarget && (
             <aside
               aria-label="가맹점 TM CRM 상세 패널"
-              className="absolute top-0 bottom-0 left-0 md:left-0 w-full sm:w-[360px] bg-white border-r border-slate-200/90 z-30 shadow-xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-left duration-150"
+              className="absolute top-0 bottom-0 left-0 md:left-0 w-full sm:w-[360px] bg-white border-r border-slate-200 z-30 shadow-xl flex flex-col justify-between overflow-y-auto animate-in slide-in-from-left duration-150"
             >
               <div className="p-4 space-y-3.5">
-                {/* 1. 패널 상단 헤더: 상호명, 주소, 전화번호 */}
+                {/* 1. 패널 최상단 헤더 + 큼직한 [✕ 닫기] 버튼 */}
                 <div className="border-b border-slate-100 pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1 min-w-0">
@@ -1641,7 +1960,7 @@ export default function MfadGeoRadarMap({
                         <span
                           className={`px-1.5 py-0.2 rounded text-[10px] font-normal border ${
                             selectedTarget.visit_status === "SCHEDULED"
-                              ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                              ? "bg-indigo-50 text-indigo-700 border-indigo-200 font-bold"
                               : selectedTarget.visit_status === "VISITED"
                               ? "bg-blue-50 text-blue-700 border-blue-200"
                               : "bg-white text-slate-500 border-slate-200"
@@ -1656,7 +1975,7 @@ export default function MfadGeoRadarMap({
                       </div>
 
                       <div className="flex items-center gap-1.5 pt-0.5">
-                        <h3 className="text-sm font-semibold text-slate-900 truncate">
+                        <h3 className="text-base font-bold text-slate-900 truncate">
                           {canShowFullName(selectedTarget)
                             ? selectedTarget.target_name
                             : selectedTarget.masked_name || maskTargetName(selectedTarget.target_name)}
@@ -1674,17 +1993,18 @@ export default function MfadGeoRadarMap({
                       </p>
                     </div>
 
+                    {/* 마우스로 누르기 편한 큼직한 [✕ 닫기] 버튼 */}
                     <button
                       type="button"
                       onClick={() => setSelectedTarget(null)}
-                      className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+                      className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full text-base font-bold cursor-pointer transition-colors shrink-0"
                       title="닫기"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-5 w-5" />
                     </button>
                   </div>
 
-                  {/* 전화번호 인라인 수정 및 원클릭 다이얼 */}
+                  {/* 대표 연락처: text-slate-900 font-semibold text-sm */}
                   <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
                     <span className="text-slate-400 text-[10.5px]">대표 연락처</span>
                     <div>
@@ -1700,31 +2020,31 @@ export default function MfadGeoRadarMap({
                             }}
                             placeholder="010-0000-0000"
                             autoFocus
-                            className="px-1.5 py-0.5 text-[11px] font-mono border border-blue-400 rounded bg-white text-slate-900 w-28"
+                            className="px-1.5 py-0.5 text-xs font-mono font-semibold border border-blue-500 rounded bg-white text-slate-900 w-28"
                           />
                           <button
                             type="button"
                             onClick={() => handleSavePhone(selectedTarget.id)}
                             className="p-0.5 text-blue-600 hover:text-blue-800"
                           >
-                            <Check className="h-3 w-3" />
+                            <Check className="h-3.5 w-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => setEditingPhoneId(null)}
                             className="p-0.5 text-slate-400"
                           >
-                            <X className="h-3 w-3" />
+                            <X className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       ) : selectedTarget.contact_number ? (
                         <div className="flex items-center gap-1.5 font-mono">
                           <a
                             href={`tel:${selectedTarget.contact_number}`}
-                            className="flex items-center gap-1 text-blue-600 hover:underline font-medium text-[11.5px]"
+                            className="flex items-center gap-1 text-slate-900 font-semibold text-sm hover:text-blue-600 hover:underline tracking-tight"
                             title="원클릭 통화 연결"
                           >
-                            <Phone className="h-3 w-3" />
+                            <Phone className="h-3.5 w-3.5 text-blue-600" />
                             <span>{selectedTarget.contact_number}</span>
                           </a>
                           <button
@@ -1740,7 +2060,7 @@ export default function MfadGeoRadarMap({
                         <button
                           type="button"
                           onClick={(e) => handleStartEditPhone(e, selectedTarget)}
-                          className="text-[10.5px] text-blue-600 hover:underline flex items-center gap-0.5 cursor-pointer"
+                          className="text-[11px] font-medium text-blue-600 hover:underline flex items-center gap-0.5 cursor-pointer"
                         >
                           <Plus className="h-2.5 w-2.5" />
                           <span>번호 입력</span>
@@ -1750,64 +2070,81 @@ export default function MfadGeoRadarMap({
                   </div>
                 </div>
 
-                {/* 2. 관심도 / 반응도 원클릭 평가 (0점: 거절, 1~5점: 별점) */}
+                {/* 2. 최상단 중요 알림 배너 (방문 예약 확정 또는 중요 일정 하이라이트) */}
+                {selectedTarget.visit_status === "SCHEDULED" && selectedTarget.scheduled_visit_date && (
+                  <div className="p-2.5 rounded-xl bg-blue-50 border-2 border-blue-600 text-blue-950 text-xs flex items-center gap-2.5 shadow-xs">
+                    <span className="text-lg">🚨</span>
+                    <div>
+                      <span className="text-blue-700 font-extrabold block">[방문 상담 예약 확정]</span>
+                      <p className="text-[11.5px] font-semibold text-slate-900 mt-0.5">
+                        {selectedTarget.scheduled_visit_date} 현장 방문 실사 예정
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. 관심도 / 반응도 평가 (1~5점 별점 칩 + 0점 거절) */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[11px] font-medium text-slate-700 flex items-center gap-1">
+                    <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
                       <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
                       <span>관심도 / 반응도 평가</span>
                     </span>
-                    <span className="text-[10px] text-slate-400">
-                      현재: {selectedTarget.interest_rating ?? 3}점
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      현재: {selectedTarget.interest_rating ?? 0}점
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-6 gap-1">
-                    {[
-                      { val: 0, label: "0 거절" },
-                      { val: 1, label: "★ 1" },
-                      { val: 2, label: "★ 2" },
-                      { val: 3, label: "★ 3" },
-                      { val: 4, label: "★ 4" },
-                      { val: 5, label: "★ 5" },
-                    ].map((item) => {
-                      const isActive = (selectedTarget.interest_rating ?? 3) === item.val;
-                      return (
-                        <button
-                          key={item.val}
-                          type="button"
-                          onClick={() => handleUpdateRating(item.val)}
-                          className={`py-1 text-[10px] rounded transition-colors cursor-pointer border ${
-                            isActive
-                              ? item.val === 0
-                                ? "bg-slate-200 text-slate-800 border-slate-300 font-semibold"
-                                : "bg-blue-600 text-white border-blue-600 font-semibold"
-                              : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200"
-                          }`}
-                        >
-                          {item.label}
-                        </button>
-                      );
-                    })}
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateRating(0)}
+                      className={`px-2 py-1 text-[10px] rounded border transition-colors cursor-pointer ${
+                        (selectedTarget.interest_rating ?? 0) === 0
+                          ? "bg-slate-800 text-white border-slate-800 font-semibold"
+                          : "bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-200"
+                      }`}
+                    >
+                      0 거절
+                    </button>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => handleUpdateRating(star)}
+                        className={`flex-1 py-1 flex items-center justify-center gap-0.5 text-[11px] rounded border transition-colors cursor-pointer ${
+                          (selectedTarget.interest_rating ?? 0) === star
+                            ? "bg-amber-500 text-white border-amber-500 font-bold shadow-xs"
+                            : "bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200"
+                        }`}
+                      >
+                        <Star className={`h-3 w-3 ${(selectedTarget.interest_rating ?? 0) === star ? "fill-white" : "fill-amber-400 text-amber-500"}`} />
+                        <span>{star}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* 3. 통화 결과 코드 원클릭 선택 */}
+                {/* 4. 통화 결과 코드 (6종 표준 버튼) */}
                 <div className="space-y-1.5">
-                  <span className="text-[11px] font-medium text-slate-700 block">
-                    통화 결과 코드
+                  <span className="text-[11px] font-bold text-slate-800 block">
+                    통화 결과 코드 (6종)
                   </span>
-                  <div className="grid grid-cols-4 gap-1">
-                    {["부재중", "재통화요청", "방문예약", "계약완료"].map((code) => {
+                  <div className="grid grid-cols-6 gap-1">
+                    {["결번", "부재중", "재통화요청", "컨택중", "방문예약", "계약완료"].map((code) => {
                       const isActive = selectedTarget.call_result_code === code;
                       return (
                         <button
                           key={code}
                           type="button"
                           onClick={() => handleUpdateCallResult(code)}
-                          className={`py-1 px-1 text-[10px] rounded transition-colors cursor-pointer border text-center ${
+                          className={`py-1 text-[9.5px] rounded transition-colors cursor-pointer border text-center ${
                             isActive
-                              ? "bg-slate-900 text-white border-slate-900 font-medium"
+                              ? code === "계약완료"
+                                ? "bg-blue-600 text-white border-blue-600 font-bold"
+                                : code === "방문예약"
+                                ? "bg-indigo-700 text-white border-indigo-700 font-bold"
+                                : "bg-slate-900 text-white border-slate-900 font-medium"
                               : "bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200"
                           }`}
                         >
@@ -1818,43 +2155,59 @@ export default function MfadGeoRadarMap({
                   </div>
                 </div>
 
-                {/* 4. 방문 상담 스케줄러 (저장 시 지도 핀이 '예약 핀'으로 즉시 전환) */}
-                <div className="p-2.5 rounded-lg bg-blue-50/50 border border-blue-100 space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[11px] font-medium text-blue-900 flex items-center gap-1">
-                      <Calendar className="h-3 w-3 text-blue-600" />
-                      <span>방문 상담 스케줄러</span>
-                    </span>
-                    {selectedTarget.scheduled_visit_date && (
-                      <span className="text-[10px] font-mono text-blue-700 font-medium">
-                        예약: {selectedTarget.scheduled_visit_date}
+                {/* 방문 일시 선택 창 (방문예약 선택 시 슬라이딩/토글) */}
+                {isScheduleOpen && (
+                  <div className="p-2.5 rounded-xl bg-indigo-50/60 border border-indigo-200 space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-[11px] font-bold text-indigo-900 flex items-center gap-1">
+                        <Calendar className="h-3 w-3 text-indigo-600" />
+                        <span>방문 상담 일정 지정</span>
                       </span>
-                    )}
-                  </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsScheduleOpen(false)}
+                        className="text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="datetime-local"
-                      value={scheduledDateInput}
-                      onChange={(e) => setScheduledDateInput(e.target.value)}
-                      className="flex-1 px-2 py-1 bg-white border border-slate-200 rounded text-[10.5px] text-slate-800 focus:outline-none focus:border-blue-600"
-                    />
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="datetime-local"
+                        value={scheduledDateInput}
+                        onChange={(e) => setScheduledDateInput(e.target.value)}
+                        className="flex-1 px-2 py-1 bg-white border border-slate-300 rounded text-[11px] text-slate-800 focus:outline-none focus:border-indigo-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveSchedule}
+                        className="px-2.5 py-1 bg-indigo-700 hover:bg-indigo-800 text-white text-[11px] rounded font-medium transition-colors cursor-pointer shrink-0"
+                      >
+                        저장
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. 상담 메모 및 음성 녹음 / 사진 백업 */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3 text-slate-400" />
+                      <span>상담 메모 & 타임라인 기록</span>
+                    </span>
+
+                    {/* 파란색 [+ 방문 예약 등록] 텍스트 링크 */}
                     <button
                       type="button"
-                      onClick={handleSaveSchedule}
-                      className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10.5px] rounded font-medium transition-colors cursor-pointer shrink-0"
+                      onClick={() => setIsScheduleOpen(true)}
+                      className="text-[10.5px] font-semibold text-blue-600 hover:underline flex items-center gap-0.5"
                     >
-                      예약 저장
+                      <Plus className="h-2.5 w-2.5" />
+                      <span>방문 예약 등록</span>
                     </button>
                   </div>
-                </div>
-
-                {/* 5. 상담 메모 입력창 & 타임라인 기록 */}
-                <div className="space-y-1.5">
-                  <span className="text-[11px] font-medium text-slate-700 flex items-center gap-1">
-                    <MessageSquare className="h-3 w-3 text-slate-400" />
-                    <span>상담 메모 & 타임라인 기록</span>
-                  </span>
 
                   <div className="flex items-center gap-1.5">
                     <input
@@ -1865,19 +2218,37 @@ export default function MfadGeoRadarMap({
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleAddConsultTimeline();
                       }}
-                      className="flex-1 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded text-[11px] text-slate-800 focus:outline-none focus:border-blue-600 font-normal"
+                      className="flex-1 px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-blue-600 font-normal"
                     />
                     <button
                       type="button"
                       onClick={handleAddConsultTimeline}
-                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-[10.5px] rounded font-normal transition-colors cursor-pointer shrink-0"
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs rounded-lg font-normal transition-colors cursor-pointer shrink-0"
                     >
                       기록 저장
                     </button>
                   </div>
 
+                  {/* 메모창 하단: [🎙️ 음성 녹음 / 사진 구글 드라이브 백업] 버튼 */}
+                  <div className="flex items-center justify-between pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGoogleDriveInput(selectedTarget.google_drive_url || "");
+                        setIsGoogleDriveModalOpen(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-1 py-1 px-2 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-normal transition-colors cursor-pointer"
+                    >
+                      <Mic className="h-3 w-3 text-blue-600" />
+                      <span>🎙️ 음성 녹음 / 사진 구글 드라이브 백업</span>
+                      {selectedTarget.google_drive_url && (
+                        <span className="text-[9.5px] text-blue-600 font-semibold">(연동완료)</span>
+                      )}
+                    </button>
+                  </div>
+
                   {/* 타임라인 목록 */}
-                  <div className="max-h-28 overflow-y-auto space-y-1 pt-1">
+                  <div className="max-h-24 overflow-y-auto space-y-1 pt-1">
                     {(selectedTarget.consult_timeline || []).map((rec) => (
                       <div
                         key={rec.id}
@@ -1894,10 +2265,10 @@ export default function MfadGeoRadarMap({
                 </div>
 
                 {/* 6. 환급/영업 금액 요약 */}
-                <div className="rounded-lg bg-slate-50 border border-slate-200/80 p-2.5 flex items-center justify-between text-xs">
+                <div className="rounded-xl bg-slate-50 border border-slate-200/80 p-2.5 flex items-center justify-between text-xs">
                   <div>
                     <span className="text-[10px] text-slate-400 block">회수/영업 대상 금액</span>
-                    <span className="font-mono text-sm font-semibold text-slate-900">
+                    <span className="font-mono text-sm font-bold text-slate-900">
                       ₩{selectedTarget.metadata.estimated_refund.toLocaleString()}원
                     </span>
                   </div>
@@ -1907,34 +2278,41 @@ export default function MfadGeoRadarMap({
                 </div>
               </div>
 
-              {/* 하단 액션 버튼 바 */}
-              <div className="p-3 border-t border-slate-100 bg-white space-y-1.5">
-                <button
-                  type="button"
-                  onClick={() => setIsOfficialDocOpen(true)}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium shadow-xs transition-colors cursor-pointer"
-                >
-                  <FileCheck className="h-3.5 w-3.5" />
-                  <span>공문 카톡 전송 & 정식 공문 출력</span>
-                </button>
-
-                <div className="grid grid-cols-2 gap-1.5">
+              {/* 하단 3대 균형 액션 버튼 (고정 바 - grid grid-cols-3 gap-2) */}
+              <div className="p-3 border-t border-slate-100 bg-white">
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  {/* 1. t.sign 전자계약 */}
                   <button
                     type="button"
                     onClick={() => handleDispatchTSign(selectedTarget)}
-                    className="flex items-center justify-center gap-1 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-normal transition-colors cursor-pointer"
+                    className={`flex items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11.5px] transition-colors cursor-pointer text-center ${
+                      selectedTarget.call_result_code === "계약완료" || selectedTarget.visit_status === "CONTRACTED"
+                        ? "bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs"
+                        : "bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-medium"
+                    }`}
                   >
-                    <Send className="h-3 w-3 text-blue-600" />
-                    <span>✍️ t.sign 전자계약</span>
+                    <Send className="h-3 w-3 shrink-0" />
+                    <span className="truncate">✍️ t.sign 전자계약</span>
                   </button>
 
+                  {/* 2. 브리핑 출력 */}
                   <button
                     type="button"
                     onClick={() => handlePrintReport(selectedTarget)}
-                    className="flex items-center justify-center gap-1 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-normal transition-colors cursor-pointer"
+                    className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 text-[11.5px] font-medium transition-colors cursor-pointer text-center"
                   >
-                    <Printer className="h-3 w-3 text-slate-500" />
-                    <span>브리핑 출력</span>
+                    <Printer className="h-3 w-3 text-slate-500 shrink-0" />
+                    <span className="truncate">📄 브리핑 출력</span>
+                  </button>
+
+                  {/* 3. 브리핑 카톡 전송 (카카오 노란색) */}
+                  <button
+                    type="button"
+                    onClick={() => handleDispatchKakaoDoc(selectedTarget)}
+                    className="flex items-center justify-center gap-1 py-2 px-1 rounded-xl bg-[#FEE500] hover:bg-[#FADA0A] text-[#191919] border border-[#E6CF00] text-[11.5px] font-bold transition-colors cursor-pointer text-center shadow-2xs"
+                  >
+                    <MessageSquare className="h-3 w-3 text-[#3C1E1E] shrink-0" />
+                    <span className="truncate">💬 카톡 전송</span>
                   </button>
                 </div>
               </div>

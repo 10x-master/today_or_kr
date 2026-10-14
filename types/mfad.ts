@@ -91,6 +91,8 @@ export interface MfadGeoTarget {
   scheduled_visit_date?: string | null;
   /** 상담 메모 타임라인 */
   consult_timeline?: CrmConsultRecord[];
+  /** 음성 녹음 및 사진 구글 드라이브 백업 링크 */
+  google_drive_url?: string | null;
   metadata: MfadTargetMetadata;
   created_at?: string;
   updated_at?: string;
