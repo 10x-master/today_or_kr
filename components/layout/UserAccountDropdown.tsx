@@ -17,6 +17,7 @@ import {
   Building,
   Coins,
   Compass,
+  Sparkles,
 } from "lucide-react";
 import type { AuthProfile } from "@/types/auth";
 import { signOutKakao } from "@/lib/auth/kakaoAuth";
@@ -284,10 +285,25 @@ export default function UserAccountDropdown({
             >
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-amber-600" />
-                <span className="font-medium text-slate-800">📝 t.note 스마트 데스크 & 캘린더</span>
+                <span className="font-medium text-slate-800">📝 t.note 캘린더 데스크</span>
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-amber-600 transition-colors">
                 1초 배포·OSMU →
+              </span>
+            </Link>
+
+            {/* 2-1. [⚡ t.note 스마트 데스크 & 링크픽 허브] */}
+            <Link
+              href="/desk"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-rose-600" />
+                <span className="font-medium text-slate-800">⚡ t.note 스마트 데스크 & 링크픽</span>
+              </div>
+              <span className="text-[10px] text-rose-600 font-semibold bg-rose-50 px-1.5 py-0.2 rounded group-hover:bg-rose-100 transition-colors">
+                AI 비서·수익화 →
               </span>
             </Link>
 
