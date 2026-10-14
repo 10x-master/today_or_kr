@@ -5,7 +5,24 @@
 
 export type MfadCategory = "HOSPITAL" | "RESTAURANT" | "GYM" | "NEW_STORE";
 
-export type MfadVisitStatus = "UNVISITED" | "ASSIGNED" | "VISITED" | "CONTRACTED" | "REJECTED";
+export type MfadVisitStatus = "UNVISITED" | "ASSIGNED" | "VISITED" | "CONTRACTED" | "REJECTED" | "SCHEDULED";
+
+/** TM CRM 프로젝트 단위 정의 */
+export interface CrmProject {
+  id: string;
+  name: string;
+  isDefault?: boolean;
+  color?: string;
+  targetCount?: number;
+}
+
+/** 상담 타임라인 기록 */
+export interface CrmConsultRecord {
+  id: string;
+  date: string;
+  text: string;
+  result?: string;
+}
 
 /** 관리자 vs 로컬 서포터즈 권한 등급 */
 export type MfadUserRole = "HQ_ADMIN" | "LOCAL_SUPPORTER";
@@ -44,6 +61,9 @@ export interface MfadTargetMetadata {
 export interface MfadGeoTarget {
   id: string;
   tenant_id?: string | null;
+  /** 소속 프로젝트 ID */
+  project_id?: string;
+  project_name?: string;
   /** 정식 실명 상호 */
   target_name: string;
   /** 정보보호 마스킹 별칭 (예: "역삼 *** 치과의원") */
@@ -63,6 +83,14 @@ export interface MfadGeoTarget {
   assigned_supporter_name?: string | null;
   last_visited_at?: string | null;
   visit_notes?: string | null;
+  /** TM CRM 관심도/반응도 (0: 거절, 1~5: 점수) */
+  interest_rating?: number;
+  /** 통화 결과 코드: 부재중 | 재통화요청 | 방문예약 | 계약완료 */
+  call_result_code?: string | null;
+  /** 방문 상담 예약 일시 */
+  scheduled_visit_date?: string | null;
+  /** 상담 메모 타임라인 */
+  consult_timeline?: CrmConsultRecord[];
   metadata: MfadTargetMetadata;
   created_at?: string;
   updated_at?: string;
