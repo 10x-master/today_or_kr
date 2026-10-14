@@ -23,11 +23,14 @@ import {
   RotateCcw,
   ArrowLeft,
   Download,
+  Upload,
   Search,
   Building,
   CheckCircle2,
-  ChevronRight,
-  Filter,
+  Phone,
+  Edit2,
+  Check,
+  Plus,
 } from "lucide-react";
 import type { MfadGeoTarget, MfadCategory, MfadVisitStatus, MfadUserRole } from "@/types/mfad";
 import { maskTargetName } from "@/types/mfad";
@@ -42,7 +45,7 @@ interface MfadGeoRadarMapProps {
   className?: string;
 }
 
-// 카테고리 설정 (색상 및 포커스 요약)
+// 4대 카테고리 설정 (미니멀 차분한 라벨)
 const CATEGORY_CONFIG: Record<
   MfadCategory,
   { label: string; icon: string; hex: string; focus: string }
@@ -50,26 +53,26 @@ const CATEGORY_CONFIG: Record<
   HOSPITAL: {
     label: "병의원",
     icon: "🩺",
-    hex: "#2563EB",
+    hex: "#334155",
     focus: "무이자 프로모션 분담금 미정산",
   },
   RESTAURANT: {
     label: "외식/카페",
     icon: "🍽️",
-    hex: "#EA580C",
+    hex: "#475569",
     focus: "키오스크/테이블오더 PG 추가 수수료",
   },
   GYM: {
     label: "헬스",
     icon: "🏋️",
-    hex: "#16A34A",
+    hex: "#334155",
     focus: "다개월 할부 마진 누수 및 수수료 괴리",
   },
   NEW_STORE: {
     label: "신규매장",
     icon: "🚨",
-    hex: "#DC2626",
-    focus: "영세 우대율(0.5%) 미소급 일반요율(2.0~2.3%) 과오납",
+    hex: "#475569",
+    focus: "영세 우대율(0.5%) 미소급 일반요율 과오납",
   },
 };
 
@@ -81,6 +84,10 @@ export default function MfadGeoRadarMap({
   const [targets, setTargets] = useState<MfadGeoTarget[]>(initialTargets);
   const [selectedTarget, setSelectedTarget] = useState<MfadGeoTarget | null>(null);
   const [hoveredTarget, setHoveredTarget] = useState<MfadGeoTarget | null>(null);
+
+  // 인라인 전화번호 편집 상태
+  const [editingPhoneId, setEditingPhoneId] = useState<string | null>(null);
+  const [phoneInputValue, setPhoneInputValue] = useState<string>("");
 
   // 1. 권한 격리 상태 (최고 관리자 vs 로컬 Today 서포터즈)
   const [userRole, setUserRole] = useState<MfadUserRole>("HQ_ADMIN");
@@ -110,7 +117,10 @@ export default function MfadGeoRadarMap({
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
-  // 5. 피드백 및 카카오 지도 상태
+  // 5. 엑셀 파일 인풋 ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 6. 피드백 및 카카오 지도 상태
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [kakaoSdkLoaded, setKakaoSdkLoaded] = useState<boolean>(false);
   const [useKakaoMap, setUseKakaoMap] = useState<boolean>(false);
@@ -161,30 +171,26 @@ export default function MfadGeoRadarMap({
   // 필터링된 타깃 목록
   const filteredTargets = useMemo(() => {
     return targets.filter((item) => {
-      // 1) 자치구 필터
       if (selectedDistrict !== "ALL" && item.district !== selectedDistrict) {
         return false;
       }
-      // 2) 행정동 필터
       if (selectedDong !== "ALL" && item.dong !== selectedDong) {
         return false;
       }
-      // 3) 카테고리 필터
       if (!selectedCategories.includes(item.category)) {
         return false;
       }
-      // 4) 임계치 필터
       if (item.metadata.estimated_refund < minRefundThreshold) {
         return false;
       }
-      // 5) 검색어 필터
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
         const matchesName = item.target_name.toLowerCase().includes(q);
         const matchesMasked = (item.masked_name || "").toLowerCase().includes(q);
         const matchesDong = item.dong.toLowerCase().includes(q);
         const matchesRoad = item.road_address.toLowerCase().includes(q);
-        if (!matchesName && !matchesMasked && !matchesDong && !matchesRoad) return false;
+        const matchesPhone = item.contact_number.toLowerCase().includes(q);
+        if (!matchesName && !matchesMasked && !matchesDong && !matchesRoad && !matchesPhone) return false;
       }
       return true;
     });
@@ -231,6 +237,26 @@ export default function MfadGeoRadarMap({
     }
   };
 
+  // 인라인 전화번호 편집 시작
+  const handleStartEditPhone = (e: React.MouseEvent, target: MfadGeoTarget) => {
+    e.stopPropagation();
+    setEditingPhoneId(target.id);
+    setPhoneInputValue(target.contact_number || "");
+  };
+
+  // 인라인 전화번호 저장
+  const handleSavePhone = (targetId: string) => {
+    const trimmed = phoneInputValue.trim();
+    setTargets((prev) =>
+      prev.map((t) => (t.id === targetId ? { ...t, contact_number: trimmed } : t))
+    );
+    if (selectedTarget && selectedTarget.id === targetId) {
+      setSelectedTarget((prev) => (prev ? { ...prev, contact_number: trimmed } : null));
+    }
+    setEditingPhoneId(null);
+    showToast("📞 전화번호가 성공적으로 업데이트되었습니다.");
+  };
+
   // Kakao Maps SDK 초기화
   const kakaoAppKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
 
@@ -271,18 +297,18 @@ export default function MfadGeoRadarMap({
       const config = CATEGORY_CONFIG[tgt.category];
       const isRestricted = userRole === "LOCAL_SUPPORTER" && tgt.district !== supporterDistrict;
       const displayStoreName = isRestricted
-        ? "🔒 관할 외"
+        ? "관할 외"
         : tgt.masked_name || maskTargetName(tgt.target_name);
 
       const overlayContent = document.createElement("div");
       overlayContent.className = "cursor-pointer transform transition-transform hover:scale-105";
       overlayContent.innerHTML = `
-        <div style="background-color: ${isRestricted ? "#64748B" : config.hex};" class="flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-xs font-semibold shadow-md border ${
-        isSelected ? "border-white ring-2 ring-slate-900" : isRestricted ? "border-dashed opacity-50" : "border-white/80"
+        <div class="flex items-center gap-1 px-2 py-0.5 rounded-full text-white text-[11px] font-normal shadow-xs border ${
+        isSelected ? "bg-slate-950 border-white ring-2 ring-slate-900" : isRestricted ? "bg-slate-400 border-dashed opacity-50" : "bg-slate-800 border-white/80"
       }">
           <span>${config.icon}</span>
           <span class="truncate max-w-[85px]">${displayStoreName}</span>
-          <span style="background: rgba(0,0,0,0.2);" class="px-1 py-0.2 rounded text-[10px] font-mono">₩${(
+          <span class="bg-black/20 px-1 py-0.2 rounded text-[9.5px] font-mono text-slate-200">₩${(
             tgt.metadata.estimated_refund / 10000
           ).toFixed(0)}만</span>
         </div>
@@ -335,7 +361,7 @@ export default function MfadGeoRadarMap({
     };
   }, [filteredTargets]);
 
-  // 타깃 선택 및 지도 중심 부드러운 이동 (Center & Pan)
+  // 타깃 선택 및 지도 중심 이동 (Center & Pan)
   const handleSelectAndCenterTarget = (target: MfadGeoTarget) => {
     if (userRole === "LOCAL_SUPPORTER" && target.district !== supporterDistrict) {
       showToast(
@@ -345,12 +371,10 @@ export default function MfadGeoRadarMap({
     }
     setSelectedTarget(target);
 
-    // 1) 카카오 맵 활성화 시
     if (useKakaoMap && kakaoMapInstanceRef.current) {
       const kakao = (window as any).kakao;
       kakaoMapInstanceRef.current.panTo(new kakao.maps.LatLng(target.lat, target.lng));
     } else {
-      // 2) 순백색 인터랙티브 전술 캔버스 중심 이동
       const latRange = gridBounds.maxLat - gridBounds.minLat || 1;
       const lngRange = gridBounds.maxLng - gridBounds.minLng || 1;
       const topPercent = 1 - (target.lat - gridBounds.minLat) / latRange;
@@ -363,12 +387,10 @@ export default function MfadGeoRadarMap({
         setPan({ x: targetOffsetX, y: targetOffsetY });
       }
     }
-
-    showToast(`📍 [${target.masked_name || target.target_name}] 지도로 중심을 이동했습니다.`);
   };
 
   // ============================================================
-  // [📥 엑셀 다운로드 (.xlsx 바이너리 직접 생성 - SheetJS 탑재)]
+  // [📥 엑셀 다운로드 (.xlsx 바이너리 직접 생성 - SheetJS)]
   // ============================================================
   const handleDownloadExcel = () => {
     if (filteredTargets.length === 0) {
@@ -392,7 +414,7 @@ export default function MfadGeoRadarMap({
         "가맹점명 (별칭)": maskedName,
         "정식 상호명": fullName,
         "대표자명": item.representative_name,
-        "연락처": item.contact_number || "02-***-****",
+        "연락처": item.contact_number || "",
         "관할 자치구": item.district,
         "행정동": item.dong,
         "도로명 주소": item.road_address,
@@ -408,23 +430,22 @@ export default function MfadGeoRadarMap({
 
     const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-    // 열 너비 자동 최적화 설정
     worksheet["!cols"] = [
-      { wch: 15 }, // 업종 카테고리
-      { wch: 22 }, // 가맹점명 (별칭)
-      { wch: 24 }, // 정식 상호명
-      { wch: 14 }, // 대표자명
+      { wch: 14 }, // 업종 카테고리
+      { wch: 20 }, // 가맹점명 (별칭)
+      { wch: 22 }, // 정식 상호명
+      { wch: 12 }, // 대표자명
       { wch: 16 }, // 연락처
-      { wch: 14 }, // 관할 자치구
-      { wch: 12 }, // 행정동
-      { wch: 38 }, // 도로명 주소
-      { wch: 20 }, // 월평균 카드매출
-      { wch: 18 }, // 현재 적용 요율
-      { wch: 18 }, // 정상 우대 요율
-      { wch: 20 }, // 추정 누수 금액
-      { wch: 16 }, // 초과 사유 코드
-      { wch: 48 }, // 초과 수수료 발생 사유
-      { wch: 24 }, // 점검 상태
+      { wch: 12 }, // 관할 자치구
+      { wch: 10 }, // 행정동
+      { wch: 36 }, // 도로명 주소
+      { wch: 18 }, // 월평균 카드매출
+      { wch: 16 }, // 현재 적용 요율
+      { wch: 16 }, // 정상 우대 요율
+      { wch: 18 }, // 추정 누수 금액
+      { wch: 15 }, // 초과 사유 코드
+      { wch: 45 }, // 초과 수수료 발생 사유
+      { wch: 22 }, // 점검 상태
     ];
 
     const workbook = XLSX.utils.book_new();
@@ -433,11 +454,113 @@ export default function MfadGeoRadarMap({
     const todayStr = new Date().toISOString().slice(0, 10);
     const districtName = selectedDistrict === "ALL" ? "전국" : selectedDistrict;
     const dongName = selectedDong === "ALL" ? "전체동" : selectedDong;
-    const fileName = `M-FAD_수수료누수_가맹점목록_${districtName}_${dongName}_${todayStr}.xlsx`;
+    const fileName = `t.note_Sales_가맹점목록_${districtName}_${dongName}_${todayStr}.xlsx`;
 
     XLSX.writeFile(workbook, fileName);
+    showToast(`📥 [${filteredTargets.length}개 가맹점] .xlsx 엑셀 다운로드가 완료되었습니다.`);
+  };
 
-    showToast(`📥 [${filteredTargets.length}개 가맹점] 진짜 엑셀(.xlsx) 다운로드가 완료되었습니다.`);
+  // ============================================================
+  // [📤 엑셀 업로드 및 양방향 병합(Upsert) 엔진]
+  // ============================================================
+  const handleUploadExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array" });
+      const firstSheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[firstSheetName];
+      const rawRows: any[] = XLSX.utils.sheet_to_json(sheet);
+
+      if (!rawRows || rawRows.length === 0) {
+        showToast("⚠️ 업로드된 엑셀 파일에 데이터가 없습니다.");
+        return;
+      }
+
+      let updatedCount = 0;
+
+      setTargets((prev) => {
+        const next = prev.map((target) => {
+          // 일치하는 행 매칭 (정식상호명, 가맹점명(별칭), 도로명주소 기준 대조)
+          const matchedRow = rawRows.find((row) => {
+            const rowFullName = String(row["정식 상호명"] || row["정식상호명"] || row["상호명"] || "").trim();
+            const rowMaskedName = String(row["가맹점명 (별칭)"] || row["가맹점명(마스킹)"] || row["가맹점명"] || "").trim();
+            const rowAddress = String(row["도로명 주소"] || row["도로명주소"] || row["주소"] || "").trim();
+
+            if (rowFullName && target.target_name.includes(rowFullName)) return true;
+            if (rowMaskedName && (target.masked_name === rowMaskedName || target.target_name.includes(rowMaskedName.replace(/\*/g, "")))) return true;
+            if (rowAddress && (target.road_address.includes(rowAddress) || rowAddress.includes(target.road_address))) return true;
+            return false;
+          });
+
+          if (!matchedRow) return target;
+
+          const newPhone = matchedRow["연락처"] || matchedRow["전화번호"] || matchedRow["핸드폰"];
+          const newStatus = matchedRow["점검 상태"] || matchedRow["실사 상태"] || matchedRow["상태"];
+          const newMemo = matchedRow["초과 수수료 발생 사유"] || matchedRow["메모"] || matchedRow["주요 누수 원인"];
+
+          let hasChanged = false;
+          let updatedPhone = target.contact_number;
+          let updatedStatus = target.visit_status;
+          let updatedMemo = target.leakage_reason_comment;
+
+          if (newPhone && String(newPhone).trim() && String(newPhone).trim() !== target.contact_number) {
+            updatedPhone = String(newPhone).trim();
+            hasChanged = true;
+          }
+
+          if (newStatus) {
+            const statusStr = String(newStatus);
+            if ((statusStr.includes("확정") || statusStr.includes("완료")) && target.visit_status !== "VISITED") {
+              updatedStatus = "VISITED";
+              hasChanged = true;
+            } else if (statusStr.includes("배정") && target.visit_status !== "ASSIGNED") {
+              updatedStatus = "ASSIGNED";
+              hasChanged = true;
+            }
+          }
+
+          if (newMemo && String(newMemo).trim() && String(newMemo).trim() !== target.leakage_reason_comment) {
+            updatedMemo = String(newMemo).trim();
+            hasChanged = true;
+          }
+
+          if (hasChanged) {
+            updatedCount++;
+            return {
+              ...target,
+              contact_number: updatedPhone,
+              visit_status: updatedStatus,
+              leakage_reason_comment: updatedMemo,
+            };
+          }
+
+          return target;
+        });
+
+        return next;
+      });
+
+      // selectedTarget 동기화
+      if (selectedTarget) {
+        setSelectedTarget((prev) => {
+          if (!prev) return null;
+          const updated = targets.find((t) => t.id === prev.id);
+          return updated || prev;
+        });
+      }
+
+      showToast(`총 ${updatedCount}건의 가맹점 정보가 성공적으로 업데이트되었습니다.`);
+    } catch (err) {
+      console.error(err);
+      showToast("❌ 엑셀 파일을 읽는 중 오류가 발생했습니다. 올바른 .xlsx 파일인지 확인하세요.");
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handlePrintReport = (target: MfadGeoTarget) => {
@@ -563,55 +686,51 @@ export default function MfadGeoRadarMap({
 
       {/* 상단 알림 토스트 */}
       {toastMessage && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-60 px-4 py-2 rounded-full bg-slate-900/95 text-white text-xs font-normal shadow-xl border border-slate-700 animate-in fade-in slide-in-from-top-2 duration-200 flex items-center gap-2 backdrop-blur-md">
-          <Sparkles className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-60 px-4 py-2 rounded-full bg-slate-900/95 text-white text-xs font-normal shadow-lg border border-slate-700 animate-in fade-in slide-in-from-top-2 duration-200 flex items-center gap-2 backdrop-blur-md">
+          <Sparkles className="h-3.5 w-3.5 text-slate-300 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* ============================================================
-          [1. 상단 슬림 헤더 (52px 단일 바)]
+          [1. 상단 슬림 헤더 (52px 단일 바 - t.note Sales 브랜딩 & 순백 미니멀)]
          ============================================================ */}
       <header className="h-[52px] w-full bg-white border-b border-slate-100 px-3 sm:px-4 flex items-center justify-between shrink-0 z-30 select-none">
-        {/* 좌측: 타이틀 */}
+        {/* 좌측: t.note Sales 브랜딩 */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <Link
             href="/admin/crm"
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 transition-colors py-1 px-1.5 rounded-md hover:bg-slate-50"
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-800 transition-colors py-1 px-1.5 rounded-md hover:bg-slate-50"
             title="CRM 백오피스로 이동"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline font-medium">CRM</span>
+            <span className="hidden sm:inline font-normal">CRM</span>
           </Link>
 
           <span className="text-slate-200">|</span>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-sm">🛰️</span>
-            <h1 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-              <span>가맹점 수수료 누수 레이더</span>
-              <span className="hidden xl:inline font-normal text-slate-400 text-xs">
-                (카드 수수료 초과분 환급 시스템)
-              </span>
+            <span className="text-sm">⚡</span>
+            <h1 className="text-xs sm:text-sm text-slate-900 tracking-tight flex items-center gap-1.5">
+              <span className="font-semibold text-slate-950">t.note Sales</span>
+              <span className="text-slate-300 font-light">|</span>
+              <span className="text-slate-600 font-normal">필드 세일즈 레이더</span>
             </h1>
           </div>
         </div>
 
-        {/* 중앙: 업종 텍스트 인라인 필터 */}
-        <div className="hidden lg:flex items-center gap-2.5 text-xs">
+        {/* 중앙: 차분한 업종 텍스트 인라인 필터 (강한 원색 배제) */}
+        <div className="hidden lg:flex items-center gap-3 text-xs">
           <button
             type="button"
             onClick={toggleAllCategories}
-            className={`flex items-center gap-1 py-1 px-1.5 transition-colors cursor-pointer ${
+            className={`py-1 px-1 transition-colors cursor-pointer ${
               selectedCategories.length === 4
-                ? "text-slate-950 font-bold"
-                : "text-slate-400 hover:text-slate-600 font-medium"
+                ? "text-slate-950 font-medium border-b border-slate-900"
+                : "text-slate-500 hover:text-slate-900 font-normal"
             }`}
           >
             <span>전체</span>
-            {selectedCategories.length === 4 && (
-              <span className="h-1.5 w-1.5 rounded-full bg-slate-900" />
-            )}
           </button>
 
           <span className="text-slate-200">|</span>
@@ -624,20 +743,14 @@ export default function MfadGeoRadarMap({
                 key={cat}
                 type="button"
                 onClick={() => toggleCategory(cat)}
-                className={`flex items-center gap-1 py-1 px-1.5 transition-colors cursor-pointer ${
+                className={`flex items-center gap-1 py-1 px-1 transition-colors cursor-pointer ${
                   isActive
-                    ? "text-slate-950 font-bold"
-                    : "text-slate-400 hover:text-slate-600 font-medium"
+                    ? "text-slate-950 font-medium border-b border-slate-900"
+                    : "text-slate-500 hover:text-slate-900 font-normal"
                 }`}
               >
                 <span>{config.icon}</span>
                 <span>{config.label}</span>
-                {isActive && (
-                  <span
-                    style={{ backgroundColor: config.hex }}
-                    className="h-1.5 w-1.5 rounded-full"
-                  />
-                )}
               </button>
             );
           })}
@@ -647,10 +760,10 @@ export default function MfadGeoRadarMap({
         <div className="flex items-center gap-2 sm:gap-3 text-xs">
           <div className="hidden md:flex items-center gap-1 text-xs text-slate-500 font-normal">
             <span>관내 타깃</span>
-            <span className="font-bold text-slate-900 font-mono">{stats.count}개소</span>
-            <span className="text-slate-300 mx-1">|</span>
+            <span className="font-medium text-slate-900 font-mono">{stats.count}개소</span>
+            <span className="text-slate-200 mx-1">|</span>
             <span>예상 환급액</span>
-            <span className="font-bold text-red-600 font-mono">{stats.amountText}</span>
+            <span className="font-medium text-slate-800 font-mono">{stats.amountText}</span>
           </div>
 
           <span className="hidden md:inline text-slate-200">|</span>
@@ -669,18 +782,18 @@ export default function MfadGeoRadarMap({
                   showToast("🏢 [최고 관리자] 전국 전역 열람 권한");
                 }
               }}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-slate-700 hover:bg-slate-50 transition-colors font-medium cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-slate-700 hover:bg-slate-50 transition-colors font-normal cursor-pointer"
               title="권한 모드 전환"
             >
               {userRole === "HQ_ADMIN" ? (
                 <>
-                  <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
-                  <span className="font-semibold text-blue-700">HQ 관리자</span>
+                  <ShieldCheck className="h-3.5 w-3.5 text-slate-600" />
+                  <span className="text-slate-800 font-medium">HQ 관리자</span>
                 </>
               ) : (
                 <>
-                  <MapPin className="h-3.5 w-3.5 text-emerald-600" />
-                  <span className="font-semibold text-emerald-700">서포터즈</span>
+                  <MapPin className="h-3.5 w-3.5 text-slate-600" />
+                  <span className="text-slate-800 font-medium">서포터즈</span>
                 </>
               )}
             </button>
@@ -692,7 +805,7 @@ export default function MfadGeoRadarMap({
                 className="p-1 text-slate-400 hover:text-slate-800 transition-colors rounded-md hover:bg-slate-50 cursor-pointer"
                 title={unmaskPermission ? "실명 상호 노출 중 (클릭 시 마스킹)" : "마스킹 중 (클릭 시 실명 언마스킹)"}
               >
-                {unmaskPermission ? <Unlock className="h-3.5 w-3.5 text-amber-600" /> : <Lock className="h-3.5 w-3.5" />}
+                {unmaskPermission ? <Unlock className="h-3.5 w-3.5 text-slate-700" /> : <Lock className="h-3.5 w-3.5" />}
               </button>
             )}
           </div>
@@ -722,12 +835,12 @@ export default function MfadGeoRadarMap({
           aria-label="행정동 가맹점 수수료 누수 목록"
           className="w-full md:w-[390px] lg:w-[410px] h-full flex flex-col bg-white border-r border-slate-100 shrink-0 z-20"
         >
-          {/* 상단 컨트롤러: 행정동 필터 & 엑셀 다운로드 */}
-          <div className="p-3 border-b border-slate-100 bg-white space-y-2.5">
+          {/* 상단 컨트롤러: 행정동 필터 & 엑셀 양방향 동기화(다운로드/업로드) */}
+          <div className="p-3 border-b border-slate-100 bg-white space-y-2">
             {/* 1행: 관할 구 & 행정동 셀렉터 */}
             <div className="flex items-center gap-2">
               <div className="flex-1">
-                <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">
+                <label className="block text-[10px] font-normal text-slate-400 mb-0.5">
                   관할 자치구
                 </label>
                 <select
@@ -741,7 +854,7 @@ export default function MfadGeoRadarMap({
                       showToast(`📍 관할 구역: ${e.target.value}`);
                     }
                   }}
-                  className="w-full bg-slate-50 hover:bg-slate-100/80 text-slate-900 font-semibold px-2.5 py-1.5 rounded-lg text-xs border border-slate-200/80 focus:outline-none focus:border-slate-900 cursor-pointer transition-colors"
+                  className="w-full bg-slate-50/70 hover:bg-slate-100 text-slate-800 font-normal px-2.5 py-1.5 rounded-lg text-xs border border-slate-200/60 focus:outline-none focus:border-slate-800 cursor-pointer transition-colors"
                 >
                   {userRole === "HQ_ADMIN" && <option value="ALL">전체 자치구 ({districts.join(", ")})</option>}
                   {districts.map((d) => (
@@ -753,13 +866,13 @@ export default function MfadGeoRadarMap({
               </div>
 
               <div className="flex-1">
-                <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">
+                <label className="block text-[10px] font-normal text-slate-400 mb-0.5">
                   행정동 선택
                 </label>
                 <select
                   value={selectedDong}
                   onChange={(e) => setSelectedDong(e.target.value)}
-                  className="w-full bg-slate-50 hover:bg-slate-100/80 text-slate-900 font-semibold px-2.5 py-1.5 rounded-lg text-xs border border-slate-200/80 focus:outline-none focus:border-slate-900 cursor-pointer transition-colors"
+                  className="w-full bg-slate-50/70 hover:bg-slate-100 text-slate-800 font-normal px-2.5 py-1.5 rounded-lg text-xs border border-slate-200/60 focus:outline-none focus:border-slate-800 cursor-pointer transition-colors"
                 >
                   <option value="ALL">전체 행정동 ({dongs.length}개동)</option>
                   {dongs.map((dong) => (
@@ -771,46 +884,59 @@ export default function MfadGeoRadarMap({
               </div>
             </div>
 
-            {/* 2행: 엑셀 다운로드 버튼 & 검색 인풋 */}
+            {/* 2행: 엑셀 양방향 동기화 액션 바 [📥 엑셀 다운로드] & [📤 엑셀 업로드] */}
+            <div className="flex items-center gap-1.5 pt-0.5">
+              <button
+                type="button"
+                onClick={handleDownloadExcel}
+                className="flex-1 flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-normal border border-slate-200/70 transition-colors cursor-pointer"
+                title="현재 필터 가맹점 .xlsx 엑셀 다운로드"
+              >
+                <Download className="h-3 w-3 text-slate-500" />
+                <span>📥 엑셀 다운로드 (.xlsx)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-normal border border-slate-200/70 transition-colors cursor-pointer"
+                title="수정된 엑셀(.xlsx) 파일 업로드 및 병합"
+              >
+                <Upload className="h-3 w-3 text-slate-500" />
+                <span>📤 엑셀 업로드</span>
+              </button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleUploadExcel}
+                accept=".xlsx, .xls, .csv"
+                className="hidden"
+              />
+            </div>
+
+            {/* 3행: 검색 인풋 및 요약 카운터 */}
             <div className="flex items-center gap-2 pt-0.5">
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="매장명, 도로명 주소 검색..."
+                  placeholder="매장명, 전화번호, 주소 검색..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-8 pr-2.5 py-1.5 bg-slate-50 rounded-lg text-xs text-slate-800 placeholder-slate-400 border border-slate-200/80 focus:outline-none focus:border-slate-900 transition-colors"
+                  className="w-full pl-8 pr-2.5 py-1.5 bg-slate-50/70 rounded-lg text-xs text-slate-800 placeholder-slate-400 border border-slate-200/60 focus:outline-none focus:border-slate-800 transition-colors font-normal"
                 />
               </div>
 
-              {/* [📥 엑셀 다운로드 (.xlsx)] 버튼 */}
-              <button
-                type="button"
-                onClick={handleDownloadExcel}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors shrink-0 cursor-pointer"
-                title="현재 필터 가맹점 .xlsx 엑셀 즉시 다운로드"
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>엑셀 다운로드 (.xlsx)</span>
-              </button>
-            </div>
-
-            {/* 요약 바 */}
-            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-              <span>
-                조회 결과: <strong className="text-slate-900 font-mono">{filteredTargets.length}</strong>개소
-              </span>
-              <span>
-                누수 합계: <strong className="text-red-600 font-mono font-bold">{stats.amountText}</strong>
-              </span>
+              <div className="text-[11px] text-slate-500 shrink-0 font-normal">
+                <span>{filteredTargets.length}개소</span>
+              </div>
             </div>
           </div>
 
-          {/* 업체 리스트 (스크롤 가능한 순백색 무경계 테이블) */}
+          {/* 가맹점 행 리스트 (순백색 무경계 테이블 & 인라인 전화번호 편집) */}
           <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
             {filteredTargets.length === 0 ? (
-              <div className="py-12 px-4 text-center text-xs text-slate-400">
+              <div className="py-12 px-4 text-center text-xs text-slate-400 font-normal">
                 선택한 조건에 해당하는 가맹점 데이터가 없습니다.
               </div>
             ) : (
@@ -819,10 +945,12 @@ export default function MfadGeoRadarMap({
                 const isSelected = selectedTarget?.id === item.id;
                 const isRestricted = userRole === "LOCAL_SUPPORTER" && item.district !== supporterDistrict;
                 const displayStoreName = isRestricted
-                  ? "🔒 관할 외 가맹점"
+                  ? "관할 외 가맹점"
                   : canShowFullName(item)
                   ? item.target_name
                   : item.masked_name || maskTargetName(item.target_name);
+
+                const isEditingPhone = editingPhoneId === item.id;
 
                 return (
                   <div
@@ -830,20 +958,17 @@ export default function MfadGeoRadarMap({
                     onClick={() => handleSelectAndCenterTarget(item)}
                     className={`p-3 transition-colors cursor-pointer text-xs select-none ${
                       isSelected
-                        ? "bg-blue-50/70 border-l-4 border-l-blue-600"
-                        : "hover:bg-slate-50/80 bg-white"
+                        ? "bg-slate-50/90 border-l-2 border-l-slate-900"
+                        : "hover:bg-slate-50/50 bg-white"
                     }`}
                   >
                     {/* 1행: 업종 뱃지, 상호명, 동 */}
                     <div className="flex items-center justify-between gap-1.5">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span
-                          style={{ backgroundColor: config.hex }}
-                          className="px-1.5 py-0.2 rounded text-[10px] text-white font-bold shrink-0"
-                        >
+                        <span className="px-1.5 py-0.2 rounded text-[10px] text-slate-600 bg-slate-100 font-normal shrink-0">
                           {config.icon} {config.label}
                         </span>
-                        <span className="font-bold text-slate-900 truncate text-[12px]">
+                        <span className="font-medium text-slate-900 truncate text-[12px]">
                           {displayStoreName}
                         </span>
                       </div>
@@ -852,28 +977,81 @@ export default function MfadGeoRadarMap({
                       </span>
                     </div>
 
-                    {/* 2행: 초과 카드수수료 사유 코멘트 */}
-                    <div className="mt-1 text-[11px] text-slate-600 line-clamp-1 flex items-center gap-1">
-                      <span className="text-amber-600 shrink-0">⚠️</span>
-                      <span className="truncate">{item.leakage_reason_comment || item.metadata.leakage_cause}</span>
-                    </div>
+                    {/* 2행: 전화번호 인라인 표기 / 수정 및 다이얼 링크 */}
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[11px]">
+                      {isEditingPhone ? (
+                        <div
+                          className="flex items-center gap-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="tel"
+                            value={phoneInputValue}
+                            onChange={(e) => setPhoneInputValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSavePhone(item.id);
+                              if (e.key === "Escape") setEditingPhoneId(null);
+                            }}
+                            placeholder="010-0000-0000"
+                            autoFocus
+                            className="px-1.5 py-0.5 text-[11px] font-mono border border-slate-300 rounded bg-white text-slate-900 focus:outline-none focus:border-slate-800 w-32"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSavePhone(item.id)}
+                            className="p-1 text-slate-700 hover:text-black hover:bg-slate-100 rounded cursor-pointer"
+                            title="저장"
+                          >
+                            <Check className="h-3 w-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingPhoneId(null)}
+                            className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded cursor-pointer"
+                            title="취소"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ) : item.contact_number ? (
+                        <div className="flex items-center gap-1.5 font-mono text-slate-600 text-[11px]">
+                          <a
+                            href={`tel:${item.contact_number}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-0.5 text-slate-700 hover:text-slate-950 hover:underline"
+                            title="전화 걸기"
+                          >
+                            <Phone className="h-3 w-3 text-slate-400" />
+                            <span>{item.contact_number}</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={(e) => handleStartEditPhone(e, item)}
+                            className="text-slate-300 hover:text-slate-600 p-0.5 rounded cursor-pointer transition-colors"
+                            title="전화번호 수정"
+                          >
+                            <Edit2 className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => handleStartEditPhone(e, item)}
+                          className="text-[10.5px] text-slate-400 hover:text-slate-700 hover:underline flex items-center gap-0.5 cursor-pointer font-normal"
+                        >
+                          <Plus className="h-2.5 w-2.5" />
+                          <span>+ 번호 입력</span>
+                        </button>
+                      )}
 
-                    {/* 3행: 예상 환급액 및 상태 뱃지 */}
-                    <div className="mt-1.5 flex items-center justify-between text-[11px]">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-slate-400 text-[10px]">예상 환급:</span>
-                        <span className="font-mono font-bold text-red-600 text-xs">
-                          ₩{item.metadata.estimated_refund.toLocaleString()}원
-                        </span>
-                      </div>
-
+                      {/* 상태 뱃지 */}
                       <span
-                        className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                        className={`px-1.5 py-0.2 rounded text-[10px] font-normal border ${
                           item.visit_status === "VISITED"
-                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            ? "bg-slate-100 text-slate-800 border-slate-200"
                             : item.visit_status === "ASSIGNED"
-                            ? "bg-blue-50 text-blue-800 border-blue-200"
-                            : "bg-slate-50 text-slate-600 border-slate-200"
+                            ? "bg-slate-50 text-slate-600 border-slate-200"
+                            : "bg-white text-slate-400 border-slate-200"
                         }`}
                       >
                         {item.visit_status === "VISITED"
@@ -881,6 +1059,20 @@ export default function MfadGeoRadarMap({
                           : item.visit_status === "ASSIGNED"
                           ? "배정완료"
                           : "미방문"}
+                      </span>
+                    </div>
+
+                    {/* 3행: 초과 수수료 사유 코멘트 */}
+                    <div className="mt-1 text-[11px] text-slate-500 line-clamp-1 font-normal flex items-center gap-1">
+                      <span className="text-slate-400 shrink-0">·</span>
+                      <span className="truncate">{item.leakage_reason_comment || item.metadata.leakage_cause}</span>
+                    </div>
+
+                    {/* 4행: 예상 환급액 */}
+                    <div className="mt-1 pt-1 border-t border-slate-50 flex items-center justify-between text-[11px]">
+                      <span className="text-slate-400 text-[10.5px] font-normal">예상 환급</span>
+                      <span className="font-mono font-medium text-slate-800 text-xs">
+                        ₩{item.metadata.estimated_refund.toLocaleString()}원
                       </span>
                     </div>
                   </div>
@@ -894,11 +1086,9 @@ export default function MfadGeoRadarMap({
             [B. 우측 메인 뷰 (전면 순백색 인터랙티브 GIS 지도)]
            ============================================================ */}
         <main className="flex-1 h-full relative overflow-hidden select-none bg-white">
-          {/* 모드 A: 카카오 지도 SDK 활성화 시 */}
           {useKakaoMap ? (
             <div ref={kakaoMapContainerRef} className="w-full h-full bg-white" />
           ) : (
-            /* 모드 B: 카카오 SDK 대기 시 순백색 인터랙티브 캔버스 (Pan/Zoom 지원) */
             <div
               ref={mapContainerRef}
               onMouseDown={handleMouseDown}
@@ -918,24 +1108,24 @@ export default function MfadGeoRadarMap({
                   </pattern>
                 </defs>
                 <rect width="100%" height="100%" fill="url(#whiteRadarGrid)" />
-                <circle cx="50%" cy="50%" r="160" fill="none" stroke="#CBD5E1" strokeWidth="1" strokeDasharray="6 6" />
-                <circle cx="50%" cy="50%" r="320" fill="none" stroke="#CBD5E1" strokeWidth="1" strokeDasharray="6 6" />
+                <circle cx="50%" cy="50%" r="160" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="6 6" />
+                <circle cx="50%" cy="50%" r="320" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="6 6" />
                 <circle cx="50%" cy="50%" r="480" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4 4" />
               </svg>
 
-              {/* 순백색 레이더 부드러운 스위프 빔 효과 */}
+              {/* 순백색 레이더 스위프 빔 효과 */}
               {isRadarSweepActive && (
                 <div
-                  className="absolute inset-0 pointer-events-none overflow-hidden opacity-20"
+                  className="absolute inset-0 pointer-events-none overflow-hidden opacity-10"
                   style={{
                     background:
-                      "conic-gradient(from 0deg at 50% 50%, rgba(37, 99, 235, 0.25) 0deg, rgba(37, 99, 235, 0) 60deg, transparent 360deg)",
+                      "conic-gradient(from 0deg at 50% 50%, rgba(30, 41, 59, 0.25) 0deg, rgba(30, 41, 59, 0) 60deg, transparent 360deg)",
                     animation: "radarSweep 6s linear infinite",
                   }}
                 />
               )}
 
-              {/* 타깃 핀 렌더링 컨테이너 (Pan & Zoom transform 동기화) */}
+              {/* 타깃 핀 렌더링 컨테이너 */}
               <div
                 className="absolute inset-8 z-20 transition-transform duration-75 origin-center pointer-events-none"
                 style={{
@@ -950,7 +1140,7 @@ export default function MfadGeoRadarMap({
                   const isRestricted = userRole === "LOCAL_SUPPORTER" && item.district !== supporterDistrict;
 
                   const displayStoreName = isRestricted
-                    ? "타 지역 관할"
+                    ? "관할 외"
                     : canShowFullName(item)
                     ? item.target_name
                     : item.masked_name || maskTargetName(item.target_name);
@@ -978,43 +1168,30 @@ export default function MfadGeoRadarMap({
                         isHovered ? "z-40 scale-105" : "z-20"
                       }`}
                     >
-                      {/* 펄스 링 */}
-                      {!isRestricted && (
-                        <div
-                          style={{ borderColor: config.hex }}
-                          className={`absolute -inset-1.5 rounded-full border opacity-40 ${
-                            isSelected ? "animate-ping scale-150" : isHovered ? "animate-ping" : ""
-                          }`}
-                        />
-                      )}
-
-                      {/* 메인 핀 노드 배지 */}
+                      {/* 메인 핀 노드 배지 (미니멀 순백/슬레이트) */}
                       <div
-                        style={{
-                          backgroundColor: isRestricted ? "#94A3B8" : config.hex,
-                        }}
-                        className={`relative flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-xs font-semibold shadow-xs border transition-all ${
+                        className={`relative flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-normal shadow-xs border transition-all ${
                           isRestricted
-                            ? "opacity-35 grayscale border-dashed border-slate-300"
+                            ? "bg-slate-300 text-slate-600 opacity-40 border-dashed"
                             : isSelected
-                            ? "border-white ring-2 ring-slate-900 shadow-md scale-110"
-                            : "border-white/80 hover:shadow-sm"
+                            ? "bg-slate-950 text-white border-white ring-2 ring-slate-800 scale-105"
+                            : "bg-slate-800 text-white border-white/80 hover:bg-slate-900"
                         }`}
                       >
-                        <span className="text-xs">{config.icon}</span>
-                        <span className="hidden sm:inline-block max-w-[95px] truncate text-[11px] font-medium">
+                        <span className="text-[10px]">{config.icon}</span>
+                        <span className="hidden sm:inline-block max-w-[95px] truncate text-[11px]">
                           {displayStoreName}
                         </span>
-                        <span className="bg-black/20 px-1 py-0.2 rounded font-mono text-[9.5px] text-amber-200">
+                        <span className="bg-black/20 px-1 py-0.2 rounded font-mono text-[9px] text-slate-200">
                           ₩{(item.metadata.estimated_refund / 10000).toFixed(0)}만
                         </span>
                       </div>
 
                       {/* 롤오버 툴팁 */}
                       {isHovered && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 rounded-xl bg-white/95 backdrop-blur-sm text-slate-900 p-2.5 text-xs border border-slate-200/90 shadow-lg pointer-events-none animate-in fade-in zoom-in-95 duration-100">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 rounded-xl bg-white/98 text-slate-800 p-2.5 text-xs border border-slate-200 shadow-md pointer-events-none animate-in fade-in zoom-in-95 duration-100">
                           <div className="flex items-center justify-between gap-1 border-b border-slate-100 pb-1.5">
-                            <div className="flex items-center gap-1 min-w-0 font-bold text-slate-900 truncate text-[11.5px]">
+                            <div className="flex items-center gap-1 min-w-0 font-medium text-slate-900 truncate text-[11.5px]">
                               <span>{config.icon}</span>
                               <span className="truncate">{displayStoreName}</span>
                             </div>
@@ -1024,20 +1201,20 @@ export default function MfadGeoRadarMap({
                           </div>
 
                           {isRestricted ? (
-                            <div className="mt-1.5 p-1 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-medium flex items-center gap-1">
+                            <div className="mt-1.5 p-1 rounded-lg bg-slate-50 text-slate-500 text-[10px] font-normal flex items-center gap-1">
                               <Lock className="h-3 w-3 shrink-0" />
                               <span>타 지역본부 관할 구역 (열람 제한)</span>
                             </div>
                           ) : (
                             <>
-                              <div className="mt-1.5 text-amber-900 text-[10.5px] leading-snug font-medium flex items-start gap-1">
-                                <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0 mt-0.5" />
+                              <div className="mt-1.5 text-slate-600 text-[10.5px] leading-snug font-normal flex items-start gap-1">
+                                <span className="text-slate-400 shrink-0">·</span>
                                 <span>{item.leakage_reason_comment || item.metadata.leakage_cause}</span>
                               </div>
 
                               <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between text-xs">
                                 <span className="text-slate-400 text-[10.5px]">예상 환급액</span>
-                                <span className="font-mono font-bold text-red-600 text-xs">
+                                <span className="font-mono font-medium text-slate-900 text-xs">
                                   ₩{item.metadata.estimated_refund.toLocaleString()}원
                                 </span>
                               </div>
@@ -1050,19 +1227,19 @@ export default function MfadGeoRadarMap({
                 })}
               </div>
 
-              {/* 하단 좌측 슬림 텔레메트리 */}
+              {/* 하단 좌측 텔레메트리 */}
               <div className="absolute bottom-3 left-4 z-20 flex items-center gap-2 text-[10.5px] text-slate-400 font-mono">
-                <span>RADAR VIEW: {selectedDistrict === "ALL" ? "수도권 전역" : selectedDistrict} ({selectedDong === "ALL" ? "전체동" : selectedDong})</span>
+                <span>VIEW: {selectedDistrict === "ALL" ? "수도권 전역" : selectedDistrict} ({selectedDong === "ALL" ? "전체동" : selectedDong})</span>
                 <span>·</span>
                 <span>Zoom: {(zoom * 100).toFixed(0)}%</span>
               </div>
 
               {/* 하단 우측 플랫 컨트롤러 */}
-              <div className="absolute bottom-3 right-4 z-20 flex items-center gap-1 bg-white/90 border border-slate-200/80 px-2 py-1 rounded-lg text-xs backdrop-blur-xs shadow-2xs">
+              <div className="absolute bottom-3 right-4 z-20 flex items-center gap-1 bg-white border border-slate-200/80 px-2 py-1 rounded-lg text-xs shadow-2xs">
                 <button
                   type="button"
                   onClick={handleZoomIn}
-                  className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
                   title="확대"
                 >
                   <ZoomIn className="h-3.5 w-3.5" />
@@ -1070,7 +1247,7 @@ export default function MfadGeoRadarMap({
                 <button
                   type="button"
                   onClick={handleZoomOut}
-                  className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
                   title="축소"
                 >
                   <ZoomOut className="h-3.5 w-3.5" />
@@ -1079,7 +1256,7 @@ export default function MfadGeoRadarMap({
                 <button
                   type="button"
                   onClick={handleResetView}
-                  className="flex items-center gap-0.5 text-[10.5px] text-slate-600 hover:text-slate-900 px-1 py-0.5 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                  className="flex items-center gap-0.5 text-[10.5px] text-slate-600 hover:text-slate-900 px-1 py-0.5 rounded hover:bg-slate-50 transition-colors cursor-pointer font-normal"
                   title="100% 원점 복귀"
                 >
                   <RotateCcw className="h-3 w-3" />
@@ -1090,7 +1267,7 @@ export default function MfadGeoRadarMap({
                   type="button"
                   onClick={() => setIsRadarSweepActive(!isRadarSweepActive)}
                   className={`p-1 rounded transition-colors cursor-pointer ${
-                    isRadarSweepActive ? "text-blue-600 hover:bg-blue-50" : "text-slate-400 hover:bg-slate-100"
+                    isRadarSweepActive ? "text-slate-900 hover:bg-slate-50" : "text-slate-400 hover:bg-slate-50"
                   }`}
                   title="스위프 토글"
                 >
@@ -1101,32 +1278,28 @@ export default function MfadGeoRadarMap({
           )}
 
           {/* ============================================================
-              [C. 핀/행 클릭 시 슬라이딩 인 정밀 실사 & 공문 드로어]
+              [C. 핀/행 클릭 시 슬라이딩 인 상세 패널 (순백 미니멀 디자인)]
              ============================================================ */}
           {selectedTarget && (
             <aside
               aria-label="가맹점 정밀 진단 패널"
-              className="absolute top-0 right-0 bottom-0 w-full sm:w-[380px] bg-white border-l border-slate-200 z-40 shadow-xl p-5 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-150"
+              className="absolute top-0 right-0 bottom-0 w-full sm:w-[380px] bg-white border-l border-slate-100 z-40 shadow-lg p-5 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-150"
             >
               <div className="space-y-4">
                 {/* 패널 헤더 */}
                 <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
-                      <span
-                        style={{ backgroundColor: CATEGORY_CONFIG[selectedTarget.category].hex }}
-                        className="px-2 py-0.5 rounded-full text-white text-[10px] font-bold flex items-center gap-1"
-                      >
-                        <span>{CATEGORY_CONFIG[selectedTarget.category].icon}</span>
-                        <span>{CATEGORY_CONFIG[selectedTarget.category].label}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] text-slate-600 bg-slate-100 font-normal">
+                        {CATEGORY_CONFIG[selectedTarget.category].icon} {CATEGORY_CONFIG[selectedTarget.category].label}
                       </span>
                       <span
-                        className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                        className={`px-1.5 py-0.2 rounded text-[10px] font-normal border ${
                           selectedTarget.visit_status === "VISITED"
-                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            ? "bg-slate-100 text-slate-800 border-slate-200"
                             : selectedTarget.visit_status === "ASSIGNED"
-                            ? "bg-blue-50 text-blue-800 border-blue-200"
-                            : "bg-slate-50 text-slate-600 border-slate-200"
+                            ? "bg-slate-50 text-slate-600 border-slate-200"
+                            : "bg-white text-slate-400 border-slate-200"
                         }`}
                       >
                         {selectedTarget.visit_status === "VISITED"
@@ -1138,19 +1311,19 @@ export default function MfadGeoRadarMap({
                     </div>
 
                     <div className="flex items-center gap-1.5 pt-0.5">
-                      <h3 className="text-base font-bold text-slate-950 truncate">
+                      <h3 className="text-sm font-semibold text-slate-900 truncate">
                         {canShowFullName(selectedTarget)
                           ? selectedTarget.target_name
                           : selectedTarget.masked_name || maskTargetName(selectedTarget.target_name)}
                       </h3>
                       {!canShowFullName(selectedTarget) && (
-                        <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-200">
+                        <span className="text-[10px] font-normal text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-200">
                           마스킹
                         </span>
                       )}
                     </div>
 
-                    <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                    <p className="text-xs text-slate-500 flex items-center gap-1 truncate font-normal">
                       <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
                       <span>{selectedTarget.road_address}</span>
                     </p>
@@ -1159,24 +1332,24 @@ export default function MfadGeoRadarMap({
                   <button
                     type="button"
                     onClick={() => setSelectedTarget(null)}
-                    className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
                   >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
 
-                {/* 환급 추정액 박스 */}
-                <div className="rounded-xl bg-red-50/70 border border-red-200 p-3.5 space-y-1">
-                  <span className="text-[11px] font-semibold text-red-800">
+                {/* 환급 추정액 카드 (단정한 모노톤) */}
+                <div className="rounded-lg bg-slate-50/70 border border-slate-200/60 p-3 space-y-1">
+                  <span className="text-[11px] font-normal text-slate-500">
                     3개년 추정 과오납 회수 예상액
                   </span>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black text-red-700 font-mono tracking-tight">
+                    <span className="text-xl font-medium text-slate-900 font-mono tracking-tight">
                       ₩{selectedTarget.metadata.estimated_refund.toLocaleString()}
                     </span>
-                    <span className="text-xs font-semibold text-red-600">환급 소명 대상</span>
+                    <span className="text-xs text-slate-500 font-normal">환급 소명 대상</span>
                   </div>
-                  <div className="pt-1.5 border-t border-red-200/60 flex items-center justify-between text-[11px] text-red-900 font-medium">
+                  <div className="pt-1.5 border-t border-slate-200/40 flex items-center justify-between text-[11px] text-slate-600 font-normal">
                     <span>현재 차감 {selectedTarget.metadata.applied_rate}%</span>
                     <span>➔ 법정 우대 {selectedTarget.metadata.statutory_rate}% (소급)</span>
                   </div>
@@ -1185,50 +1358,108 @@ export default function MfadGeoRadarMap({
                 {/* 누수 원인 상세 */}
                 <div className="space-y-2 text-xs">
                   <div className="space-y-1">
-                    <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                    <span className="text-[11px] font-medium text-slate-700 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3 text-slate-400" />
                       <span>주요 누수 원인</span>
                       <span className="font-mono text-slate-400 text-[10px]">
                         ({selectedTarget.metadata.primary_leak_code})
                       </span>
                     </span>
-                    <p className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-950 text-[11px] font-medium leading-snug">
+                    <p className="p-2.5 rounded-lg bg-slate-50/50 border border-slate-200/60 text-slate-700 text-[11px] font-normal leading-snug">
                       {selectedTarget.leakage_reason_comment || selectedTarget.metadata.leakage_cause}
                     </p>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[11px] font-bold text-slate-800">
+                    <span className="text-[11px] font-medium text-slate-700">
                       현장 실사 진단 상세:
                     </span>
-                    <p className="text-[11.5px] text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    <p className="text-[11px] text-slate-600 leading-relaxed bg-slate-50/50 p-2.5 rounded-lg border border-slate-200/60 font-normal">
                       {selectedTarget.metadata.leakage_detail}
                     </p>
                   </div>
 
-                  {/* 기본 정보 그리드 */}
+                  {/* 기본 정보 그리드 & 전화번호 인라인 수정 */}
                   <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
-                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                      <span className="text-slate-400 text-[10px]">대표자 성명</span>
-                      <p className="font-semibold text-slate-900 mt-0.5">
+                    <div className="p-2 rounded-lg bg-slate-50/50 border border-slate-200/50">
+                      <span className="text-slate-400 text-[10px] font-normal">대표자 성명</span>
+                      <p className="font-medium text-slate-900 mt-0.5">
                         {selectedTarget.representative_name} 대표
                       </p>
                     </div>
-                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                      <span className="text-slate-400 text-[10px]">전화번호</span>
-                      <p className="font-semibold text-slate-900 mt-0.5 font-mono">
-                        {selectedTarget.contact_number}
-                      </p>
+
+                    <div className="p-2 rounded-lg bg-slate-50/50 border border-slate-200/50">
+                      <span className="text-slate-400 text-[10px] font-normal">연락처</span>
+                      <div className="mt-0.5">
+                        {editingPhoneId === selectedTarget.id ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="tel"
+                              value={phoneInputValue}
+                              onChange={(e) => setPhoneInputValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSavePhone(selectedTarget.id);
+                                if (e.key === "Escape") setEditingPhoneId(null);
+                              }}
+                              placeholder="010-0000-0000"
+                              autoFocus
+                              className="px-1 py-0.5 text-[10.5px] font-mono border border-slate-300 rounded bg-white text-slate-900 w-24"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSavePhone(selectedTarget.id)}
+                              className="p-0.5 text-slate-700"
+                            >
+                              <Check className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingPhoneId(null)}
+                              className="p-0.5 text-slate-400"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : selectedTarget.contact_number ? (
+                          <div className="flex items-center gap-1 font-mono">
+                            <a
+                              href={`tel:${selectedTarget.contact_number}`}
+                              className="text-slate-800 hover:underline flex items-center gap-0.5"
+                            >
+                              <Phone className="h-3 w-3 text-slate-400" />
+                              <span>{selectedTarget.contact_number}</span>
+                            </a>
+                            <button
+                              type="button"
+                              onClick={(e) => handleStartEditPhone(e, selectedTarget)}
+                              className="text-slate-300 hover:text-slate-600 p-0.5 cursor-pointer"
+                            >
+                              <Edit2 className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => handleStartEditPhone(e, selectedTarget)}
+                            className="text-[10px] text-slate-400 hover:text-slate-700 underline flex items-center gap-0.5 cursor-pointer"
+                          >
+                            <Plus className="h-2 w-2" />
+                            <span>번호 입력</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                      <span className="text-slate-400 text-[10px]">월평균 카드매출</span>
-                      <p className="font-semibold text-slate-900 mt-0.5 font-mono">
+
+                    <div className="p-2 rounded-lg bg-slate-50/50 border border-slate-200/50">
+                      <span className="text-slate-400 text-[10px] font-normal">월평균 카드매출</span>
+                      <p className="font-medium text-slate-900 mt-0.5 font-mono">
                         {(selectedTarget.metadata.monthly_card_sales || 35000000).toLocaleString()}원
                       </p>
                     </div>
-                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                      <span className="text-slate-400 text-[10px]">단말기 / 솔루션</span>
-                      <p className="font-semibold text-slate-900 mt-0.5 truncate">
+
+                    <div className="p-2 rounded-lg bg-slate-50/50 border border-slate-200/50">
+                      <span className="text-slate-400 text-[10px] font-normal">단말기 / 솔루션</span>
+                      <p className="font-medium text-slate-900 mt-0.5 truncate">
                         {selectedTarget.metadata.terminal_company || "표준 POS"}
                       </p>
                     </div>
@@ -1236,42 +1467,42 @@ export default function MfadGeoRadarMap({
                 </div>
               </div>
 
-              {/* 패널 하단 4대 액션 바 */}
-              <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
+              {/* 패널 하단 단정한 액션 바 */}
+              <div className="pt-3 mt-3 border-t border-slate-100 space-y-1.5">
                 <button
                   type="button"
                   onClick={() => setIsOfficialDocOpen(true)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-normal shadow-2xs transition-colors cursor-pointer"
                 >
-                  <FileCheck className="h-4 w-4 text-white" />
-                  <span>📜 정식 점검 공문 발송 / A4 즉시 인쇄</span>
+                  <FileCheck className="h-3.5 w-3.5 text-slate-300" />
+                  <span>정식 점검 공문 발송 / A4 즉시 인쇄</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handlePrintReport(selectedTarget)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/80 text-xs font-normal transition-colors cursor-pointer"
                 >
-                  <Printer className="h-3.5 w-3.5 text-amber-400" />
-                  <span>📄 M-FAD 사전 실사 브리핑 리포트 출력</span>
+                  <Printer className="h-3.5 w-3.5 text-slate-400" />
+                  <span>사전 실사 브리핑 리포트 출력</span>
                 </button>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-1.5">
                   <button
                     type="button"
                     onClick={() => handleAssignVisit(selectedTarget)}
-                    className="flex items-center justify-center gap-1 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-medium transition-colors cursor-pointer"
+                    className="flex items-center justify-center gap-1 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/60 text-xs font-normal transition-colors cursor-pointer"
                   >
-                    <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                    <UserCheck className="h-3 w-3 text-slate-500" />
                     <span>방문 접수</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleDispatchTSign(selectedTarget)}
-                    className="flex items-center justify-center gap-1 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-medium transition-colors cursor-pointer"
+                    className="flex items-center justify-center gap-1 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/60 text-xs font-normal transition-colors cursor-pointer"
                   >
-                    <Send className="h-3.5 w-3.5 text-emerald-600" />
+                    <Send className="h-3 w-3 text-slate-500" />
                     <span>t.sign 약정서</span>
                   </button>
                 </div>
