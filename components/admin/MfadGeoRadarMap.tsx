@@ -375,6 +375,13 @@ export default function MfadGeoRadarMap({
       return;
     }
 
+    const escapeCsvField = (val: string | number | undefined | null): string => {
+      if (val === undefined || val === null) return '""';
+      // 줄바꿈/공백 깨짐 방지 및 큰따옴표 이스케이프
+      const cleanStr = String(val).replace(/\r?\n/g, " ").replace(/"/g, '""');
+      return `"${cleanStr}"`;
+    };
+
     const headers = [
       "카테고리",
       "가맹점명(마스킹)",
@@ -393,26 +400,41 @@ export default function MfadGeoRadarMap({
       "실사 상태",
     ];
 
-    const rows = filteredTargets.map((t) => [
-      CATEGORY_CONFIG[t.category].label,
-      `"${(t.masked_name || maskTargetName(t.target_name)).replace(/"/g, '""')}"`,
-      userRole === "HQ_ADMIN" ? `"${t.target_name.replace(/"/g, '""')}"` : `"${(t.masked_name || maskTargetName(t.target_name)).replace(/"/g, '""')}"`,
-      `"${t.representative_name.replace(/"/g, '""')}"`,
-      t.contact_number,
-      t.district,
-      t.dong,
-      `"${t.road_address.replace(/"/g, '""')}"`,
-      t.metadata.monthly_card_sales || 0,
-      t.metadata.applied_rate,
-      t.metadata.statutory_rate,
-      t.metadata.estimated_refund,
-      t.metadata.primary_leak_code,
-      `"${(t.leakage_reason_comment || t.metadata.leakage_cause).replace(/"/g, '""')}"`,
-      t.visit_status === "VISITED" ? "방문접수완료" : t.visit_status === "ASSIGNED" ? "서포터즈배정" : "미방문발굴",
-    ]);
+    const headerLine = headers.map((h) => escapeCsvField(h)).join(",");
 
-    // UTF-8 BOM 추가 (\uFEFF)로 엑셀 한글 깨짐 방지
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    const dataLines = filteredTargets.map((t) => {
+      const categoryLabel = CATEGORY_CONFIG[t.category]?.label || t.category;
+      const maskedName = t.masked_name || maskTargetName(t.target_name);
+      const fullName = userRole === "HQ_ADMIN" ? t.target_name : maskedName;
+      const statusText =
+        t.visit_status === "VISITED"
+          ? "방문접수완료"
+          : t.visit_status === "ASSIGNED"
+          ? "서포터즈배정"
+          : "미방문발굴";
+
+      return [
+        escapeCsvField(categoryLabel),
+        escapeCsvField(maskedName),
+        escapeCsvField(fullName),
+        escapeCsvField(t.representative_name),
+        escapeCsvField(t.contact_number),
+        escapeCsvField(t.district),
+        escapeCsvField(t.dong),
+        escapeCsvField(t.road_address),
+        escapeCsvField(t.metadata.monthly_card_sales || 0),
+        escapeCsvField(t.metadata.applied_rate),
+        escapeCsvField(t.metadata.statutory_rate),
+        escapeCsvField(t.metadata.estimated_refund),
+        escapeCsvField(t.metadata.primary_leak_code),
+        escapeCsvField(t.leakage_reason_comment || t.metadata.leakage_cause),
+        escapeCsvField(statusText),
+      ].join(",");
+    });
+
+    // MS Excel 호환성을 위해 UTF-8 BOM(\uFEFF) 반드시 맨 앞에 삽입
+    const csvRows = [headerLine, ...dataLines];
+    const csvContent = "\uFEFF" + csvRows.join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
