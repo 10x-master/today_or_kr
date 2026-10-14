@@ -21,7 +21,12 @@ import {
   ZoomOut,
   RotateCcw,
   ArrowLeft,
-  ChevronDown,
+  Download,
+  Search,
+  Building,
+  CheckCircle2,
+  ChevronRight,
+  Filter,
 } from "lucide-react";
 import type { MfadGeoTarget, MfadCategory, MfadVisitStatus, MfadUserRole } from "@/types/mfad";
 import { maskTargetName } from "@/types/mfad";
@@ -84,8 +89,10 @@ export default function MfadGeoRadarMap({
   // 2. 공문(Official Document) 모달 제어 상태
   const [isOfficialDocOpen, setIsOfficialDocOpen] = useState<boolean>(false);
 
-  // 3. 필터 상태
+  // 3. 필터 상태 (행정구 & 행정동 2단계 필터)
   const [selectedDistrict, setSelectedDistrict] = useState<string>("ALL");
+  const [selectedDong, setSelectedDong] = useState<string>("ALL");
+  const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedCategories, setSelectedCategories] = useState<MfadCategory[]>([
     "HOSPITAL",
     "RESTAURANT",
@@ -125,6 +132,24 @@ export default function MfadGeoRadarMap({
     return Array.from(set);
   }, [targets]);
 
+  // 선택된 구에 따른 행정동(Dong) 목록 추출
+  const dongs = useMemo(() => {
+    const set = new Set<string>();
+    targets.forEach((t) => {
+      if (selectedDistrict === "ALL" || t.district === selectedDistrict) {
+        if (t.dong) set.add(t.dong);
+      }
+    });
+    return Array.from(set);
+  }, [targets, selectedDistrict]);
+
+  // 구 변경 시 유효하지 않은 동 리셋
+  useEffect(() => {
+    if (selectedDong !== "ALL" && !dongs.includes(selectedDong)) {
+      setSelectedDong("ALL");
+    }
+  }, [selectedDistrict, dongs, selectedDong]);
+
   // 서포터즈 모드 시 관할 구역 자동 연동
   useEffect(() => {
     if (userRole === "LOCAL_SUPPORTER") {
@@ -135,18 +160,34 @@ export default function MfadGeoRadarMap({
   // 필터링된 타깃 목록
   const filteredTargets = useMemo(() => {
     return targets.filter((item) => {
+      // 1) 자치구 필터
       if (selectedDistrict !== "ALL" && item.district !== selectedDistrict) {
         return false;
       }
+      // 2) 행정동 필터
+      if (selectedDong !== "ALL" && item.dong !== selectedDong) {
+        return false;
+      }
+      // 3) 카테고리 필터
       if (!selectedCategories.includes(item.category)) {
         return false;
       }
+      // 4) 임계치 필터
       if (item.metadata.estimated_refund < minRefundThreshold) {
         return false;
       }
+      // 5) 검색어 필터
+      if (searchTerm.trim()) {
+        const q = searchTerm.toLowerCase();
+        const matchesName = item.target_name.toLowerCase().includes(q);
+        const matchesMasked = (item.masked_name || "").toLowerCase().includes(q);
+        const matchesDong = item.dong.toLowerCase().includes(q);
+        const matchesRoad = item.road_address.toLowerCase().includes(q);
+        if (!matchesName && !matchesMasked && !matchesDong && !matchesRoad) return false;
+      }
       return true;
     });
-  }, [targets, selectedDistrict, selectedCategories, minRefundThreshold]);
+  }, [targets, selectedDistrict, selectedDong, selectedCategories, minRefundThreshold, searchTerm]);
 
   // 관내 타깃 통계 집계
   const stats = useMemo(() => {
@@ -181,7 +222,6 @@ export default function MfadGeoRadarMap({
     });
   };
 
-  // 전체 카테고리 토글
   const toggleAllCategories = () => {
     if (selectedCategories.length === 4) {
       setSelectedCategories(["HOSPITAL"]);
@@ -190,7 +230,7 @@ export default function MfadGeoRadarMap({
     }
   };
 
-  // Kakao Maps SDK 초기화 시도
+  // Kakao Maps SDK 초기화
   const kakaoAppKey = process.env.NEXT_PUBLIC_KAKAO_MAP_KEY;
 
   useEffect(() => {
@@ -204,7 +244,7 @@ export default function MfadGeoRadarMap({
     }
   }, [kakaoAppKey]);
 
-  // Kakao Map 렌더링 & 마커 동기화
+  // Kakao Map 마커 동기화
   useEffect(() => {
     if (!useKakaoMap || !kakaoSdkLoaded || !kakaoMapContainerRef.current) return;
     const kakao = (window as any).kakao;
@@ -217,7 +257,6 @@ export default function MfadGeoRadarMap({
     }
 
     const map = kakaoMapInstanceRef.current;
-
     kakaoMarkersRef.current.forEach((m) => m.setMap(null));
     kakaoMarkersRef.current = [];
 
@@ -249,8 +288,7 @@ export default function MfadGeoRadarMap({
       `;
 
       overlayContent.onclick = () => {
-        handleSelectTarget(tgt);
-        map.panTo(position);
+        handleSelectAndCenterTarget(tgt);
       };
 
       const customOverlay = new kakao.maps.CustomOverlay({
@@ -268,7 +306,36 @@ export default function MfadGeoRadarMap({
     }
   }, [useKakaoMap, kakaoSdkLoaded, filteredTargets, selectedTarget, userRole, supporterDistrict]);
 
-  const handleSelectTarget = (target: MfadGeoTarget) => {
+  // Tactical Grid Bounds 계산
+  const gridBounds = useMemo(() => {
+    if (filteredTargets.length === 0) {
+      return { minLat: 37.35, maxLat: 37.66, minLng: 127.01, maxLng: 127.12 };
+    }
+    let minLat = Infinity,
+      maxLat = -Infinity,
+      minLng = Infinity,
+      maxLng = -Infinity;
+
+    filteredTargets.forEach((t) => {
+      if (t.lat < minLat) minLat = t.lat;
+      if (t.lat > maxLat) maxLat = t.lat;
+      if (t.lng < minLng) minLng = t.lng;
+      if (t.lng > maxLng) maxLng = t.lng;
+    });
+
+    const latPadding = Math.max((maxLat - minLat) * 0.15, 0.02);
+    const lngPadding = Math.max((maxLng - minLng) * 0.15, 0.02);
+
+    return {
+      minLat: minLat - latPadding,
+      maxLat: maxLat + latPadding,
+      minLng: minLng - lngPadding,
+      maxLng: maxLng + lngPadding,
+    };
+  }, [filteredTargets]);
+
+  // 타깃 선택 및 지도 중심 부드러운 이동 (Center & Pan)
+  const handleSelectAndCenterTarget = (target: MfadGeoTarget) => {
     if (userRole === "LOCAL_SUPPORTER" && target.district !== supporterDistrict) {
       showToast(
         `🔒 [열람 제한] '${target.district}'은 타 지역본부 관할 구역입니다 (내 관할: ${supporterDistrict}).`
@@ -276,6 +343,91 @@ export default function MfadGeoRadarMap({
       return;
     }
     setSelectedTarget(target);
+
+    // 1) 카카오 맵 활성화 시
+    if (useKakaoMap && kakaoMapInstanceRef.current) {
+      const kakao = (window as any).kakao;
+      kakaoMapInstanceRef.current.panTo(new kakao.maps.LatLng(target.lat, target.lng));
+    } else {
+      // 2) 순백색 인터랙티브 전술 캔버스 중심 이동
+      const latRange = gridBounds.maxLat - gridBounds.minLat || 1;
+      const lngRange = gridBounds.maxLng - gridBounds.minLng || 1;
+      const topPercent = 1 - (target.lat - gridBounds.minLat) / latRange;
+      const leftPercent = (target.lng - gridBounds.minLng) / lngRange;
+
+      if (mapContainerRef.current) {
+        const { clientWidth, clientHeight } = mapContainerRef.current;
+        const targetOffsetX = (0.5 - leftPercent) * clientWidth * zoom;
+        const targetOffsetY = (0.5 - topPercent) * clientHeight * zoom;
+        setPan({ x: targetOffsetX, y: targetOffsetY });
+      }
+    }
+
+    showToast(`📍 [${target.masked_name || target.target_name}] 지도로 중심을 이동했습니다.`);
+  };
+
+  // ============================================================
+  // [📥 엑셀 다운로드 (.xlsx / .csv - UTF-8 BOM 완벽 인코딩)]
+  // ============================================================
+  const handleDownloadExcel = () => {
+    if (filteredTargets.length === 0) {
+      showToast("⚠️ 다운로드할 가맹점 내역이 없습니다.");
+      return;
+    }
+
+    const headers = [
+      "카테고리",
+      "가맹점명(마스킹)",
+      "정식상호명",
+      "대표자명",
+      "연락처",
+      "관할구",
+      "행정동",
+      "도로명 주소",
+      "월평균 카드매출(원)",
+      "현재 적용수수료율(%)",
+      "법정 우대수수료율(%)",
+      "추정 누수 금액(원)",
+      "초과 사유 코드",
+      "주요 누수 원인",
+      "실사 상태",
+    ];
+
+    const rows = filteredTargets.map((t) => [
+      CATEGORY_CONFIG[t.category].label,
+      `"${(t.masked_name || maskTargetName(t.target_name)).replace(/"/g, '""')}"`,
+      userRole === "HQ_ADMIN" ? `"${t.target_name.replace(/"/g, '""')}"` : `"${(t.masked_name || maskTargetName(t.target_name)).replace(/"/g, '""')}"`,
+      `"${t.representative_name.replace(/"/g, '""')}"`,
+      t.contact_number,
+      t.district,
+      t.dong,
+      `"${t.road_address.replace(/"/g, '""')}"`,
+      t.metadata.monthly_card_sales || 0,
+      t.metadata.applied_rate,
+      t.metadata.statutory_rate,
+      t.metadata.estimated_refund,
+      t.metadata.primary_leak_code,
+      `"${(t.leakage_reason_comment || t.metadata.leakage_cause).replace(/"/g, '""')}"`,
+      t.visit_status === "VISITED" ? "방문접수완료" : t.visit_status === "ASSIGNED" ? "서포터즈배정" : "미방문발굴",
+    ]);
+
+    // UTF-8 BOM 추가 (\uFEFF)로 엑셀 한글 깨짐 방지
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const districtName = selectedDistrict === "ALL" ? "전국" : selectedDistrict;
+    const dongName = selectedDong === "ALL" ? "전체동" : selectedDong;
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", `M-FAD_수수료누수_가맹점목록_${districtName}_${dongName}_${todayStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast(`📥 [${filteredTargets.length}개 가맹점] 엑셀(.csv) 다운로드가 완료되었습니다.`);
   };
 
   const handlePrintReport = (target: MfadGeoTarget) => {
@@ -328,7 +480,7 @@ export default function MfadGeoRadarMap({
     );
   };
 
-  // Pan & Zoom 핸들러
+  // 지도 드래그 팬(Pan) & 휠 줌(Zoom)
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if ((e.target as HTMLElement).closest(".radar-pin-node, button, select, input, a")) return;
     setIsDragging(true);
@@ -364,33 +516,6 @@ export default function MfadGeoRadarMap({
     setSelectedTarget(null);
   };
 
-  const gridBounds = useMemo(() => {
-    if (filteredTargets.length === 0) {
-      return { minLat: 37.35, maxLat: 37.66, minLng: 127.01, maxLng: 127.12 };
-    }
-    let minLat = Infinity,
-      maxLat = -Infinity,
-      minLng = Infinity,
-      maxLng = -Infinity;
-
-    filteredTargets.forEach((t) => {
-      if (t.lat < minLat) minLat = t.lat;
-      if (t.lat > maxLat) maxLat = t.lat;
-      if (t.lng < minLng) minLng = t.lng;
-      if (t.lng > maxLng) maxLng = t.lng;
-    });
-
-    const latPadding = Math.max((maxLat - minLat) * 0.15, 0.02);
-    const lngPadding = Math.max((maxLng - minLng) * 0.15, 0.02);
-
-    return {
-      minLat: minLat - latPadding,
-      maxLat: maxLat + latPadding,
-      minLng: minLng - lngPadding,
-      maxLng: maxLng + lngPadding,
-    };
-  }, [filteredTargets]);
-
   const canShowFullName = (target: MfadGeoTarget): boolean => {
     if (userRole === "HQ_ADMIN" && unmaskPermission) return true;
     if (target.visit_status === "VISITED") return true;
@@ -399,7 +524,7 @@ export default function MfadGeoRadarMap({
 
   return (
     <div className={`relative w-full h-full flex flex-col font-sans overflow-hidden bg-white text-slate-900 ${className}`}>
-      {/* 카카오 SDK 로더 (키가 있을 때만 활성화) */}
+      {/* 카카오 SDK 로더 */}
       {kakaoAppKey && (
         <Script
           src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${kakaoAppKey}&autoload=false&libraries=services,clusterer`}
@@ -435,15 +560,14 @@ export default function MfadGeoRadarMap({
       )}
 
       {/* ============================================================
-          [1. 상단 전체 폭 슬림 인라인 바 (Full-Width Slim Header Bar)]
-          - 높이 52px, 무경계 플랫 인라인 레이아웃
+          [1. 상단 슬림 헤더 (52px 단일 바)]
          ============================================================ */}
-      <header className="h-[52px] w-full bg-white border-b border-slate-200/80 px-3 sm:px-4 flex items-center justify-between shrink-0 z-30 select-none">
-        {/* 좌측: 타이틀 및 지역 선택(구/동 셀렉터) */}
+      <header className="h-[52px] w-full bg-white border-b border-slate-100 px-3 sm:px-4 flex items-center justify-between shrink-0 z-30 select-none">
+        {/* 좌측: 타이틀 */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <Link
             href="/admin/crm"
-            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 transition-colors py-1 px-1.5 rounded-md hover:bg-slate-100"
+            className="flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 transition-colors py-1 px-1.5 rounded-md hover:bg-slate-50"
             title="CRM 백오피스로 이동"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
@@ -461,33 +585,9 @@ export default function MfadGeoRadarMap({
               </span>
             </h1>
           </div>
-
-          {/* 지역 구/동 무경계 플랫 셀렉터 */}
-          <div className="flex items-center text-xs">
-            <select
-              value={userRole === "HQ_ADMIN" ? selectedDistrict : supporterDistrict}
-              onChange={(e) => {
-                if (userRole === "HQ_ADMIN") {
-                  setSelectedDistrict(e.target.value);
-                } else {
-                  setSupporterDistrict(e.target.value);
-                  setSelectedDistrict(e.target.value);
-                  showToast(`📍 관할 구역: ${e.target.value}`);
-                }
-              }}
-              className="bg-transparent hover:bg-slate-100 text-slate-800 font-semibold px-2 py-1 rounded-md text-xs border-0 focus:ring-1 focus:ring-slate-300 cursor-pointer outline-none transition-colors"
-            >
-              {userRole === "HQ_ADMIN" && <option value="ALL">전국 전역 ({districts.join(", ")})</option>}
-              {districts.map((d) => (
-                <option key={d} value={d}>
-                  {userRole === "LOCAL_SUPPORTER" ? `배정: ${d}` : d}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
-        {/* 중앙: 업종 카테고리 텍스트 필터 (박스 형태가 아닌 심플한 텍스트 탭) */}
+        {/* 중앙: 업종 텍스트 인라인 필터 */}
         <div className="hidden lg:flex items-center gap-2.5 text-xs">
           <button
             type="button"
@@ -533,9 +633,8 @@ export default function MfadGeoRadarMap({
           })}
         </div>
 
-        {/* 우측: 관내 요약 통계 (박스 없이 깔끔한 텍스트 인라인) + 서포터즈 권한/공문 바로가기 */}
+        {/* 우측: 관내 요약 통계 + 권한 전환 / 계정 */}
         <div className="flex items-center gap-2 sm:gap-3 text-xs">
-          {/* 관내 요약 통계 텍스트 인라인 */}
           <div className="hidden md:flex items-center gap-1 text-xs text-slate-500 font-normal">
             <span>관내 타깃</span>
             <span className="font-bold text-slate-900 font-mono">{stats.count}개소</span>
@@ -546,7 +645,7 @@ export default function MfadGeoRadarMap({
 
           <span className="hidden md:inline text-slate-200">|</span>
 
-          {/* 권한 토글 (HQ Admin vs Local Supporter) */}
+          {/* 권한 토글 */}
           <div className="flex items-center gap-1 text-[11px]">
             <button
               type="button"
@@ -560,7 +659,7 @@ export default function MfadGeoRadarMap({
                   showToast("🏢 [최고 관리자] 전국 전역 열람 권한");
                 }
               }}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-slate-700 hover:bg-slate-100 transition-colors font-medium cursor-pointer"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-slate-700 hover:bg-slate-50 transition-colors font-medium cursor-pointer"
               title="권한 모드 전환"
             >
               {userRole === "HQ_ADMIN" ? (
@@ -576,33 +675,16 @@ export default function MfadGeoRadarMap({
               )}
             </button>
 
-            {/* 실명 언마스킹 (HQ Admin 전용) */}
             {userRole === "HQ_ADMIN" && (
               <button
                 type="button"
                 onClick={() => setUnmaskPermission(!unmaskPermission)}
-                className="p-1 text-slate-400 hover:text-slate-800 transition-colors rounded-md hover:bg-slate-100 cursor-pointer"
+                className="p-1 text-slate-400 hover:text-slate-800 transition-colors rounded-md hover:bg-slate-50 cursor-pointer"
                 title={unmaskPermission ? "실명 상호 노출 중 (클릭 시 마스킹)" : "마스킹 중 (클릭 시 실명 언마스킹)"}
               >
                 {unmaskPermission ? <Unlock className="h-3.5 w-3.5 text-amber-600" /> : <Lock className="h-3.5 w-3.5" />}
               </button>
             )}
-
-            {/* 정식 공문 모달 직접 열기 바로가기 */}
-            <button
-              type="button"
-              onClick={() => {
-                if (filteredTargets.length > 0) {
-                  setSelectedTarget(filteredTargets[0]);
-                  setIsOfficialDocOpen(true);
-                }
-              }}
-              className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md text-blue-600 hover:bg-blue-50 font-medium transition-colors cursor-pointer"
-              title="정식 점검 공문 바로 작성"
-            >
-              <FileCheck className="h-3.5 w-3.5" />
-              <span>공문 작성</span>
-            </button>
           </div>
 
           {currentUser && (
@@ -620,400 +702,573 @@ export default function MfadGeoRadarMap({
       </header>
 
       {/* ============================================================
-          [2. 전체 화면 지도 뷰포트 극대화 (Full Screen Viewport)]
-          - 좌우/하단 여백 및 둥근 외곽 테두리 100% 제거
-          - 화면의 90% 이상을 시원하게 채우는 순백색 캔버스
+          [2. 스플릿 바디 (좌: 행정동 업체 리스트 + 엑셀 / 우: 전면 지도)]
          ============================================================ */}
-      <div className="relative w-full flex-1 overflow-hidden select-none bg-white">
-        {/* 모드 A: 카카오 지도 SDK 활성화 시 */}
-        {useKakaoMap ? (
-          <div ref={kakaoMapContainerRef} className="w-full h-full bg-white" />
-        ) : (
-          /* 모드 B: 카카오 SDK 대기 시 순백색 인터랙티브 전술 캔버스 (Pan/Zoom 지원) */
-          <div
-            ref={mapContainerRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onWheel={handleWheel}
-            className={`w-full h-full relative bg-white overflow-hidden select-none ${
-              isDragging ? "cursor-grabbing" : "cursor-grab"
-            }`}
-          >
-            {/* 극미세 그리드선 & 동심 조준원 */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
-              <defs>
-                <pattern id="whiteRadarGrid" width="48" height="48" patternUnits="userSpaceOnUse">
-                  <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#E2E8F0" strokeWidth="0.75" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#whiteRadarGrid)" />
-              <circle cx="50%" cy="50%" r="160" fill="none" stroke="#CBD5E1" strokeWidth="1" strokeDasharray="6 6" />
-              <circle cx="50%" cy="50%" r="320" fill="none" stroke="#CBD5E1" strokeWidth="1" strokeDasharray="6 6" />
-              <circle cx="50%" cy="50%" r="480" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4 4" />
-            </svg>
+      <div className="flex-1 w-full flex flex-col md:flex-row overflow-hidden bg-white">
+        {/* ============================================================
+            [A. 좌측 사이드 패널 (폭 약 390px, 순백색 무경계 테이블 리스트)]
+           ============================================================ */}
+        <aside
+          aria-label="행정동 가맹점 수수료 누수 목록"
+          className="w-full md:w-[390px] lg:w-[410px] h-full flex flex-col bg-white border-r border-slate-100 shrink-0 z-20"
+        >
+          {/* 상단 컨트롤러: 행정동 필터 & 엑셀 다운로드 */}
+          <div className="p-3 border-b border-slate-100 bg-white space-y-2.5">
+            {/* 1행: 관할 구 & 행정동 셀렉터 */}
+            <div className="flex items-center gap-2">
+              <div className="flex-1">
+                <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">
+                  관할 자치구
+                </label>
+                <select
+                  value={userRole === "HQ_ADMIN" ? selectedDistrict : supporterDistrict}
+                  onChange={(e) => {
+                    if (userRole === "HQ_ADMIN") {
+                      setSelectedDistrict(e.target.value);
+                    } else {
+                      setSupporterDistrict(e.target.value);
+                      setSelectedDistrict(e.target.value);
+                      showToast(`📍 관할 구역: ${e.target.value}`);
+                    }
+                  }}
+                  className="w-full bg-slate-50 hover:bg-slate-100/80 text-slate-900 font-semibold px-2.5 py-1.5 rounded-lg text-xs border border-slate-200/80 focus:outline-none focus:border-slate-900 cursor-pointer transition-colors"
+                >
+                  {userRole === "HQ_ADMIN" && <option value="ALL">전체 자치구 ({districts.join(", ")})</option>}
+                  {districts.map((d) => (
+                    <option key={d} value={d}>
+                      {userRole === "LOCAL_SUPPORTER" ? `배정: ${d}` : d}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* 순백색 레이더 부드러운 스위프 빔 효과 */}
-            {isRadarSweepActive && (
-              <div
-                className="absolute inset-0 pointer-events-none overflow-hidden opacity-20"
-                style={{
-                  background:
-                    "conic-gradient(from 0deg at 50% 50%, rgba(37, 99, 235, 0.25) 0deg, rgba(37, 99, 235, 0) 60deg, transparent 360deg)",
-                  animation: "radarSweep 6s linear infinite",
-                }}
-              />
-            )}
+              <div className="flex-1">
+                <label className="block text-[10px] font-semibold text-slate-400 mb-0.5">
+                  행정동 선택
+                </label>
+                <select
+                  value={selectedDong}
+                  onChange={(e) => setSelectedDong(e.target.value)}
+                  className="w-full bg-slate-50 hover:bg-slate-100/80 text-slate-900 font-semibold px-2.5 py-1.5 rounded-lg text-xs border border-slate-200/80 focus:outline-none focus:border-slate-900 cursor-pointer transition-colors"
+                >
+                  <option value="ALL">전체 행정동 ({dongs.length}개동)</option>
+                  {dongs.map((dong) => (
+                    <option key={dong} value={dong}>
+                      {dong}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-            {/* 타깃 핀 렌더링 컨테이너 (Pan & Zoom transform 동기화) */}
-            <div
-              className="absolute inset-8 z-20 transition-transform duration-75 origin-center pointer-events-none"
-              style={{
-                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                transformOrigin: "center center",
-              }}
-            >
-              {filteredTargets.map((item) => {
+            {/* 2행: 엑셀 다운로드 버튼 & 검색 인풋 */}
+            <div className="flex items-center gap-2 pt-0.5">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="매장명, 도로명 주소 검색..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-8 pr-2.5 py-1.5 bg-slate-50 rounded-lg text-xs text-slate-800 placeholder-slate-400 border border-slate-200/80 focus:outline-none focus:border-slate-900 transition-colors"
+                />
+              </div>
+
+              {/* [📥 엑셀 다운로드 (.xlsx / .csv)] 버튼 */}
+              <button
+                type="button"
+                onClick={handleDownloadExcel}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors shrink-0 cursor-pointer"
+                title="현재 필터 가맹점 엑셀/CSV 즉시 다운로드"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>엑셀 다운로드 (.xlsx / .csv)</span>
+              </button>
+            </div>
+
+            {/* 요약 바 */}
+            <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+              <span>
+                조회 결과: <strong className="text-slate-900 font-mono">{filteredTargets.length}</strong>개소
+              </span>
+              <span>
+                누수 합계: <strong className="text-red-600 font-mono font-bold">{stats.amountText}</strong>
+              </span>
+            </div>
+          </div>
+
+          {/* 업체 리스트 (스크롤 가능한 순백색 무경계 테이블) */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            {filteredTargets.length === 0 ? (
+              <div className="py-12 px-4 text-center text-xs text-slate-400">
+                선택한 조건에 해당하는 가맹점 데이터가 없습니다.
+              </div>
+            ) : (
+              filteredTargets.map((item) => {
                 const config = CATEGORY_CONFIG[item.category];
                 const isSelected = selectedTarget?.id === item.id;
-                const isHovered = hoveredTarget?.id === item.id;
                 const isRestricted = userRole === "LOCAL_SUPPORTER" && item.district !== supporterDistrict;
-
                 const displayStoreName = isRestricted
-                  ? "타 지역 관할"
+                  ? "🔒 관할 외 가맹점"
                   : canShowFullName(item)
                   ? item.target_name
                   : item.masked_name || maskTargetName(item.target_name);
 
-                const latRange = gridBounds.maxLat - gridBounds.minLat || 1;
-                const lngRange = gridBounds.maxLng - gridBounds.minLng || 1;
-
-                const topPercent = Math.max(
-                  8,
-                  Math.min(92, (1 - (item.lat - gridBounds.minLat) / latRange) * 100)
-                );
-                const leftPercent = Math.max(
-                  8,
-                  Math.min(92, ((item.lng - gridBounds.minLng) / lngRange) * 100)
-                );
-
                 return (
                   <div
                     key={item.id}
-                    onMouseEnter={() => setHoveredTarget(item)}
-                    onMouseLeave={() => setHoveredTarget(null)}
-                    onClick={() => handleSelectTarget(item)}
-                    style={{ top: `${topPercent}%`, left: `${leftPercent}%` }}
-                    className={`radar-pin-node absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer pointer-events-auto transition-transform ${
-                      isHovered ? "z-40 scale-105" : "z-20"
+                    onClick={() => handleSelectAndCenterTarget(item)}
+                    className={`p-3 transition-colors cursor-pointer text-xs select-none ${
+                      isSelected
+                        ? "bg-blue-50/70 border-l-4 border-l-blue-600"
+                        : "hover:bg-slate-50/80 bg-white"
                     }`}
                   >
-                    {/* 펄스 링 */}
-                    {!isRestricted && (
-                      <div
-                        style={{ borderColor: config.hex }}
-                        className={`absolute -inset-1.5 rounded-full border opacity-40 ${
-                          isSelected ? "animate-ping scale-150" : isHovered ? "animate-ping" : ""
-                        }`}
-                      />
-                    )}
-
-                    {/* 메인 핀 노드 배지 (미니멀 플랫 디자인) */}
-                    <div
-                      style={{
-                        backgroundColor: isRestricted ? "#94A3B8" : config.hex,
-                      }}
-                      className={`relative flex items-center gap-1 px-2 py-1 rounded-full text-white text-xs font-semibold shadow-xs border transition-all ${
-                        isRestricted
-                          ? "opacity-35 grayscale border-dashed border-slate-300"
-                          : isSelected
-                          ? "border-white ring-2 ring-slate-900 shadow-md scale-110"
-                          : "border-white/80 hover:shadow-sm"
-                      }`}
-                    >
-                      <span className="text-xs">{config.icon}</span>
-                      <span className="hidden sm:inline-block max-w-[95px] truncate text-[11px] font-medium">
-                        {displayStoreName}
-                      </span>
-                      <span className="bg-black/20 px-1 py-0.2 rounded font-mono text-[9.5px] text-amber-200">
-                        ₩{(item.metadata.estimated_refund / 10000).toFixed(0)}만
+                    {/* 1행: 업종 뱃지, 상호명, 동 */}
+                    <div className="flex items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          style={{ backgroundColor: config.hex }}
+                          className="px-1.5 py-0.2 rounded text-[10px] text-white font-bold shrink-0"
+                        >
+                          {config.icon} {config.label}
+                        </span>
+                        <span className="font-bold text-slate-900 truncate text-[12px]">
+                          {displayStoreName}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                        {item.dong}
                       </span>
                     </div>
 
-                    {/* ============================================================
-                        [경량화된 롤오버 툴팁 (핵심만 산뜻하게 노출)]
-                       ============================================================ */}
-                    {isHovered && (
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 rounded-xl bg-white/95 backdrop-blur-sm text-slate-900 p-2.5 text-xs border border-slate-200/90 shadow-lg pointer-events-none animate-in fade-in zoom-in-95 duration-100">
-                        {/* 상호명 & 동 */}
-                        <div className="flex items-center justify-between gap-1 border-b border-slate-100 pb-1.5">
-                          <div className="flex items-center gap-1 min-w-0 font-bold text-slate-900 truncate text-[11.5px]">
-                            <span>{config.icon}</span>
-                            <span className="truncate">{displayStoreName}</span>
-                          </div>
-                          <span className="text-[10px] text-slate-400 font-mono shrink-0">
-                            {item.dong}
-                          </span>
-                        </div>
+                    {/* 2행: 초과 카드수수료 사유 코멘트 */}
+                    <div className="mt-1 text-[11px] text-slate-600 line-clamp-1 flex items-center gap-1">
+                      <span className="text-amber-600 shrink-0">⚠️</span>
+                      <span className="truncate">{item.leakage_reason_comment || item.metadata.leakage_cause}</span>
+                    </div>
 
-                        {/* 사유 코멘트 */}
-                        {isRestricted ? (
-                          <div className="mt-1.5 p-1 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-medium flex items-center gap-1">
-                            <Lock className="h-3 w-3 shrink-0" />
-                            <span>타 지역본부 관할 구역 (열람 제한)</span>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="mt-1.5 text-amber-900 text-[10.5px] leading-snug font-medium flex items-start gap-1">
-                              <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0 mt-0.5" />
-                              <span>{item.leakage_reason_comment || item.metadata.leakage_cause}</span>
-                            </div>
-
-                            <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between text-xs">
-                              <span className="text-slate-400 text-[10.5px]">예상 환급액</span>
-                              <span className="font-mono font-bold text-red-600 text-xs">
-                                ₩{item.metadata.estimated_refund.toLocaleString()}원
-                              </span>
-                            </div>
-                          </>
-                        )}
+                    {/* 3행: 예상 환급액 및 상태 뱃지 */}
+                    <div className="mt-1.5 flex items-center justify-between text-[11px]">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-slate-400 text-[10px]">예상 환급:</span>
+                        <span className="font-mono font-bold text-red-600 text-xs">
+                          ₩{item.metadata.estimated_refund.toLocaleString()}원
+                        </span>
                       </div>
-                    )}
+
+                      <span
+                        className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                          item.visit_status === "VISITED"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : item.visit_status === "ASSIGNED"
+                            ? "bg-blue-50 text-blue-800 border-blue-200"
+                            : "bg-slate-50 text-slate-600 border-slate-200"
+                        }`}
+                      >
+                        {item.visit_status === "VISITED"
+                          ? "접수완료"
+                          : item.visit_status === "ASSIGNED"
+                          ? "배정완료"
+                          : "미방문"}
+                      </span>
+                    </div>
                   </div>
                 );
-              })}
-            </div>
-
-            {/* 하단 좌측 슬림 텔레메트리 */}
-            <div className="absolute bottom-3 left-4 z-20 flex items-center gap-2 text-[10.5px] text-slate-400 font-mono">
-              <span>RADAR VIEW: {selectedDistrict === "ALL" ? "수도권 전역" : selectedDistrict}</span>
-              <span>·</span>
-              <span>Zoom: {(zoom * 100).toFixed(0)}%</span>
-            </div>
-
-            {/* 하단 우측 초경량 플랫 컨트롤러 (Zoom In/Out, 원점 복귀, 스위프 토글) */}
-            <div className="absolute bottom-3 right-4 z-20 flex items-center gap-1 bg-white/90 border border-slate-200/80 px-2 py-1 rounded-lg text-xs backdrop-blur-xs shadow-2xs">
-              <button
-                type="button"
-                onClick={handleZoomIn}
-                className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                title="확대"
-              >
-                <ZoomIn className="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={handleZoomOut}
-                className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-                title="축소"
-              >
-                <ZoomOut className="h-3.5 w-3.5" />
-              </button>
-              <span className="text-slate-200 mx-0.5">|</span>
-              <button
-                type="button"
-                onClick={handleResetView}
-                className="flex items-center gap-0.5 text-[10.5px] text-slate-600 hover:text-slate-900 px-1 py-0.5 rounded hover:bg-slate-100 transition-colors cursor-pointer"
-                title="100% 원점 복귀"
-              >
-                <RotateCcw className="h-3 w-3" />
-                <span>100%</span>
-              </button>
-              <span className="text-slate-200 mx-0.5">|</span>
-              <button
-                type="button"
-                onClick={() => setIsRadarSweepActive(!isRadarSweepActive)}
-                className={`p-1 rounded transition-colors cursor-pointer ${
-                  isRadarSweepActive ? "text-blue-600 hover:bg-blue-50" : "text-slate-400 hover:bg-slate-100"
-                }`}
-                title="스위프 토글"
-              >
-                <Crosshair className="h-3.5 w-3.5" />
-              </button>
-            </div>
+              })
+            )}
           </div>
-        )}
+        </aside>
 
         {/* ============================================================
-            [3. 우측 플랫 독 사이드 패널 (핀 클릭 시 슬라이딩 인)]
-            - 둥근 부유 박스가 아닌, 화면 우측에 슬림하게 결합되는 네이티브 패널
+            [B. 우측 메인 뷰 (전면 순백색 인터랙티브 GIS 지도)]
            ============================================================ */}
-        {selectedTarget && (
-          <aside
-            aria-label="가맹점 정밀 진단 패널"
-            className="absolute top-0 right-0 bottom-0 w-full sm:w-[390px] bg-white border-l border-slate-200 z-40 shadow-xl p-5 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-150"
-          >
-            <div className="space-y-4">
-              {/* 패널 헤더 */}
-              <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span
-                      style={{ backgroundColor: CATEGORY_CONFIG[selectedTarget.category].hex }}
-                      className="px-2 py-0.5 rounded-full text-white text-[10px] font-bold flex items-center gap-1"
-                    >
-                      <span>{CATEGORY_CONFIG[selectedTarget.category].icon}</span>
-                      <span>{CATEGORY_CONFIG[selectedTarget.category].label}</span>
-                    </span>
-                    <span
-                      className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
-                        selectedTarget.visit_status === "VISITED"
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-200"
-                          : selectedTarget.visit_status === "ASSIGNED"
-                          ? "bg-blue-50 text-blue-800 border-blue-200"
-                          : "bg-slate-50 text-slate-600 border-slate-200"
+        <main className="flex-1 h-full relative overflow-hidden select-none bg-white">
+          {/* 모드 A: 카카오 지도 SDK 활성화 시 */}
+          {useKakaoMap ? (
+            <div ref={kakaoMapContainerRef} className="w-full h-full bg-white" />
+          ) : (
+            /* 모드 B: 카카오 SDK 대기 시 순백색 인터랙티브 캔버스 (Pan/Zoom 지원) */
+            <div
+              ref={mapContainerRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onWheel={handleWheel}
+              className={`w-full h-full relative bg-white overflow-hidden select-none ${
+                isDragging ? "cursor-grabbing" : "cursor-grab"
+              }`}
+            >
+              {/* 극미세 그리드선 & 동심 조준원 */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-20">
+                <defs>
+                  <pattern id="whiteRadarGrid" width="48" height="48" patternUnits="userSpaceOnUse">
+                    <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#E2E8F0" strokeWidth="0.75" />
+                  </pattern>
+                </defs>
+                <rect width="100%" height="100%" fill="url(#whiteRadarGrid)" />
+                <circle cx="50%" cy="50%" r="160" fill="none" stroke="#CBD5E1" strokeWidth="1" strokeDasharray="6 6" />
+                <circle cx="50%" cy="50%" r="320" fill="none" stroke="#CBD5E1" strokeWidth="1" strokeDasharray="6 6" />
+                <circle cx="50%" cy="50%" r="480" fill="none" stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4 4" />
+              </svg>
+
+              {/* 순백색 레이더 부드러운 스위프 빔 효과 */}
+              {isRadarSweepActive && (
+                <div
+                  className="absolute inset-0 pointer-events-none overflow-hidden opacity-20"
+                  style={{
+                    background:
+                      "conic-gradient(from 0deg at 50% 50%, rgba(37, 99, 235, 0.25) 0deg, rgba(37, 99, 235, 0) 60deg, transparent 360deg)",
+                    animation: "radarSweep 6s linear infinite",
+                  }}
+                />
+              )}
+
+              {/* 타깃 핀 렌더링 컨테이너 (Pan & Zoom transform 동기화) */}
+              <div
+                className="absolute inset-8 z-20 transition-transform duration-75 origin-center pointer-events-none"
+                style={{
+                  transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                  transformOrigin: "center center",
+                }}
+              >
+                {filteredTargets.map((item) => {
+                  const config = CATEGORY_CONFIG[item.category];
+                  const isSelected = selectedTarget?.id === item.id;
+                  const isHovered = hoveredTarget?.id === item.id;
+                  const isRestricted = userRole === "LOCAL_SUPPORTER" && item.district !== supporterDistrict;
+
+                  const displayStoreName = isRestricted
+                    ? "타 지역 관할"
+                    : canShowFullName(item)
+                    ? item.target_name
+                    : item.masked_name || maskTargetName(item.target_name);
+
+                  const latRange = gridBounds.maxLat - gridBounds.minLat || 1;
+                  const lngRange = gridBounds.maxLng - gridBounds.minLng || 1;
+
+                  const topPercent = Math.max(
+                    8,
+                    Math.min(92, (1 - (item.lat - gridBounds.minLat) / latRange) * 100)
+                  );
+                  const leftPercent = Math.max(
+                    8,
+                    Math.min(92, ((item.lng - gridBounds.minLng) / lngRange) * 100)
+                  );
+
+                  return (
+                    <div
+                      key={item.id}
+                      onMouseEnter={() => setHoveredTarget(item)}
+                      onMouseLeave={() => setHoveredTarget(null)}
+                      onClick={() => handleSelectAndCenterTarget(item)}
+                      style={{ top: `${topPercent}%`, left: `${leftPercent}%` }}
+                      className={`radar-pin-node absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer pointer-events-auto transition-transform ${
+                        isHovered ? "z-40 scale-105" : "z-20"
                       }`}
                     >
-                      {selectedTarget.visit_status === "VISITED"
-                        ? "방문 접수완료"
-                        : selectedTarget.visit_status === "ASSIGNED"
-                        ? "서포터즈 배정"
-                        : "미방문 발굴"}
-                    </span>
-                  </div>
+                      {/* 펄스 링 */}
+                      {!isRestricted && (
+                        <div
+                          style={{ borderColor: config.hex }}
+                          className={`absolute -inset-1.5 rounded-full border opacity-40 ${
+                            isSelected ? "animate-ping scale-150" : isHovered ? "animate-ping" : ""
+                          }`}
+                        />
+                      )}
 
-                  <div className="flex items-center gap-1.5 pt-0.5">
-                    <h3 className="text-base font-bold text-slate-950 truncate">
-                      {canShowFullName(selectedTarget)
-                        ? selectedTarget.target_name
-                        : selectedTarget.masked_name || maskTargetName(selectedTarget.target_name)}
-                    </h3>
-                    {!canShowFullName(selectedTarget) && (
-                      <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-200">
-                        마스킹
+                      {/* 메인 핀 노드 배지 */}
+                      <div
+                        style={{
+                          backgroundColor: isRestricted ? "#94A3B8" : config.hex,
+                        }}
+                        className={`relative flex items-center gap-1 px-2.5 py-1 rounded-full text-white text-xs font-semibold shadow-xs border transition-all ${
+                          isRestricted
+                            ? "opacity-35 grayscale border-dashed border-slate-300"
+                            : isSelected
+                            ? "border-white ring-2 ring-slate-900 shadow-md scale-110"
+                            : "border-white/80 hover:shadow-sm"
+                        }`}
+                      >
+                        <span className="text-xs">{config.icon}</span>
+                        <span className="hidden sm:inline-block max-w-[95px] truncate text-[11px] font-medium">
+                          {displayStoreName}
+                        </span>
+                        <span className="bg-black/20 px-1 py-0.2 rounded font-mono text-[9.5px] text-amber-200">
+                          ₩{(item.metadata.estimated_refund / 10000).toFixed(0)}만
+                        </span>
+                      </div>
+
+                      {/* 롤오버 툴팁 */}
+                      {isHovered && (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 w-64 rounded-xl bg-white/95 backdrop-blur-sm text-slate-900 p-2.5 text-xs border border-slate-200/90 shadow-lg pointer-events-none animate-in fade-in zoom-in-95 duration-100">
+                          <div className="flex items-center justify-between gap-1 border-b border-slate-100 pb-1.5">
+                            <div className="flex items-center gap-1 min-w-0 font-bold text-slate-900 truncate text-[11.5px]">
+                              <span>{config.icon}</span>
+                              <span className="truncate">{displayStoreName}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-mono shrink-0">
+                              {item.dong}
+                            </span>
+                          </div>
+
+                          {isRestricted ? (
+                            <div className="mt-1.5 p-1 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-medium flex items-center gap-1">
+                              <Lock className="h-3 w-3 shrink-0" />
+                              <span>타 지역본부 관할 구역 (열람 제한)</span>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="mt-1.5 text-amber-900 text-[10.5px] leading-snug font-medium flex items-start gap-1">
+                                <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0 mt-0.5" />
+                                <span>{item.leakage_reason_comment || item.metadata.leakage_cause}</span>
+                              </div>
+
+                              <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex items-center justify-between text-xs">
+                                <span className="text-slate-400 text-[10.5px]">예상 환급액</span>
+                                <span className="font-mono font-bold text-red-600 text-xs">
+                                  ₩{item.metadata.estimated_refund.toLocaleString()}원
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 하단 좌측 슬림 텔레메트리 */}
+              <div className="absolute bottom-3 left-4 z-20 flex items-center gap-2 text-[10.5px] text-slate-400 font-mono">
+                <span>RADAR VIEW: {selectedDistrict === "ALL" ? "수도권 전역" : selectedDistrict} ({selectedDong === "ALL" ? "전체동" : selectedDong})</span>
+                <span>·</span>
+                <span>Zoom: {(zoom * 100).toFixed(0)}%</span>
+              </div>
+
+              {/* 하단 우측 플랫 컨트롤러 */}
+              <div className="absolute bottom-3 right-4 z-20 flex items-center gap-1 bg-white/90 border border-slate-200/80 px-2 py-1 rounded-lg text-xs backdrop-blur-xs shadow-2xs">
+                <button
+                  type="button"
+                  onClick={handleZoomIn}
+                  className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="확대"
+                >
+                  <ZoomIn className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleZoomOut}
+                  className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="축소"
+                >
+                  <ZoomOut className="h-3.5 w-3.5" />
+                </button>
+                <span className="text-slate-200 mx-0.5">|</span>
+                <button
+                  type="button"
+                  onClick={handleResetView}
+                  className="flex items-center gap-0.5 text-[10.5px] text-slate-600 hover:text-slate-900 px-1 py-0.5 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="100% 원점 복귀"
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  <span>100%</span>
+                </button>
+                <span className="text-slate-200 mx-0.5">|</span>
+                <button
+                  type="button"
+                  onClick={() => setIsRadarSweepActive(!isRadarSweepActive)}
+                  className={`p-1 rounded transition-colors cursor-pointer ${
+                    isRadarSweepActive ? "text-blue-600 hover:bg-blue-50" : "text-slate-400 hover:bg-slate-100"
+                  }`}
+                  title="스위프 토글"
+                >
+                  <Crosshair className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================
+              [C. 핀/행 클릭 시 슬라이딩 인 정밀 실사 & 공문 드로어]
+             ============================================================ */}
+          {selectedTarget && (
+            <aside
+              aria-label="가맹점 정밀 진단 패널"
+              className="absolute top-0 right-0 bottom-0 w-full sm:w-[380px] bg-white border-l border-slate-200 z-40 shadow-xl p-5 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-150"
+            >
+              <div className="space-y-4">
+                {/* 패널 헤더 */}
+                <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        style={{ backgroundColor: CATEGORY_CONFIG[selectedTarget.category].hex }}
+                        className="px-2 py-0.5 rounded-full text-white text-[10px] font-bold flex items-center gap-1"
+                      >
+                        <span>{CATEGORY_CONFIG[selectedTarget.category].icon}</span>
+                        <span>{CATEGORY_CONFIG[selectedTarget.category].label}</span>
                       </span>
-                    )}
+                      <span
+                        className={`px-1.5 py-0.2 rounded text-[10px] font-semibold border ${
+                          selectedTarget.visit_status === "VISITED"
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                            : selectedTarget.visit_status === "ASSIGNED"
+                            ? "bg-blue-50 text-blue-800 border-blue-200"
+                            : "bg-slate-50 text-slate-600 border-slate-200"
+                        }`}
+                      >
+                        {selectedTarget.visit_status === "VISITED"
+                          ? "방문 접수완료"
+                          : selectedTarget.visit_status === "ASSIGNED"
+                          ? "서포터즈 배정"
+                          : "미방문 발굴"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <h3 className="text-base font-bold text-slate-950 truncate">
+                        {canShowFullName(selectedTarget)
+                          ? selectedTarget.target_name
+                          : selectedTarget.masked_name || maskTargetName(selectedTarget.target_name)}
+                      </h3>
+                      {!canShowFullName(selectedTarget) && (
+                        <span className="text-[10px] font-medium text-slate-400 bg-slate-50 px-1 py-0.2 rounded border border-slate-200">
+                          마스킹
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
+                      <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
+                      <span>{selectedTarget.road_address}</span>
+                    </p>
                   </div>
 
-                  <p className="text-xs text-slate-500 flex items-center gap-1 truncate">
-                    <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
-                    <span>{selectedTarget.road_address}</span>
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedTarget(null)}
+                    className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setSelectedTarget(null)}
-                  className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* 환급 추정액 박스 */}
-              <div className="rounded-xl bg-red-50/70 border border-red-200 p-3.5 space-y-1">
-                <span className="text-[11px] font-semibold text-red-800">
-                  3개년 추정 과오납 회수 예상액
-                </span>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-red-700 font-mono tracking-tight">
-                    ₩{selectedTarget.metadata.estimated_refund.toLocaleString()}
+                {/* 환급 추정액 박스 */}
+                <div className="rounded-xl bg-red-50/70 border border-red-200 p-3.5 space-y-1">
+                  <span className="text-[11px] font-semibold text-red-800">
+                    3개년 추정 과오납 회수 예상액
                   </span>
-                  <span className="text-xs font-semibold text-red-600">환급 소명 대상</span>
-                </div>
-                <div className="pt-1.5 border-t border-red-200/60 flex items-center justify-between text-[11px] text-red-900 font-medium">
-                  <span>현재 차감 {selectedTarget.metadata.applied_rate}%</span>
-                  <span>➔ 법정 우대 {selectedTarget.metadata.statutory_rate}% (소급)</span>
-                </div>
-              </div>
-
-              {/* 누수 원인 상세 */}
-              <div className="space-y-2 text-xs">
-                <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                    <span>주요 누수 원인</span>
-                    <span className="font-mono text-slate-400 text-[10px]">
-                      ({selectedTarget.metadata.primary_leak_code})
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-red-700 font-mono tracking-tight">
+                      ₩{selectedTarget.metadata.estimated_refund.toLocaleString()}
                     </span>
-                  </span>
-                  <p className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-950 text-[11px] font-medium leading-snug">
-                    {selectedTarget.leakage_reason_comment || selectedTarget.metadata.leakage_cause}
-                  </p>
+                    <span className="text-xs font-semibold text-red-600">환급 소명 대상</span>
+                  </div>
+                  <div className="pt-1.5 border-t border-red-200/60 flex items-center justify-between text-[11px] text-red-900 font-medium">
+                    <span>현재 차감 {selectedTarget.metadata.applied_rate}%</span>
+                    <span>➔ 법정 우대 {selectedTarget.metadata.statutory_rate}% (소급)</span>
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <span className="text-[11px] font-bold text-slate-800">
-                    현장 실사 진단 상세:
-                  </span>
-                  <p className="text-[11.5px] text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-                    {selectedTarget.metadata.leakage_detail}
-                  </p>
-                </div>
+                {/* 누수 원인 상세 */}
+                <div className="space-y-2 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                      <span>주요 누수 원인</span>
+                      <span className="font-mono text-slate-400 text-[10px]">
+                        ({selectedTarget.metadata.primary_leak_code})
+                      </span>
+                    </span>
+                    <p className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-950 text-[11px] font-medium leading-snug">
+                      {selectedTarget.leakage_reason_comment || selectedTarget.metadata.leakage_cause}
+                    </p>
+                  </div>
 
-                {/* 기본 정보 그리드 */}
-                <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
-                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 text-[10px]">대표자 성명</span>
-                    <p className="font-semibold text-slate-900 mt-0.5">
-                      {selectedTarget.representative_name} 대표
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-800">
+                      현장 실사 진단 상세:
+                    </span>
+                    <p className="text-[11.5px] text-slate-600 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                      {selectedTarget.metadata.leakage_detail}
                     </p>
                   </div>
-                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 text-[10px]">전화번호</span>
-                    <p className="font-semibold text-slate-900 mt-0.5 font-mono">
-                      {selectedTarget.contact_number}
-                    </p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 text-[10px]">월평균 카드매출</span>
-                    <p className="font-semibold text-slate-900 mt-0.5 font-mono">
-                      {(selectedTarget.metadata.monthly_card_sales || 35000000).toLocaleString()}원
-                    </p>
-                  </div>
-                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 text-[10px]">단말기 / 솔루션</span>
-                    <p className="font-semibold text-slate-900 mt-0.5 truncate">
-                      {selectedTarget.metadata.terminal_company || "표준 POS"}
-                    </p>
+
+                  {/* 기본 정보 그리드 */}
+                  <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
+                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                      <span className="text-slate-400 text-[10px]">대표자 성명</span>
+                      <p className="font-semibold text-slate-900 mt-0.5">
+                        {selectedTarget.representative_name} 대표
+                      </p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                      <span className="text-slate-400 text-[10px]">전화번호</span>
+                      <p className="font-semibold text-slate-900 mt-0.5 font-mono">
+                        {selectedTarget.contact_number}
+                      </p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                      <span className="text-slate-400 text-[10px]">월평균 카드매출</span>
+                      <p className="font-semibold text-slate-900 mt-0.5 font-mono">
+                        {(selectedTarget.metadata.monthly_card_sales || 35000000).toLocaleString()}원
+                      </p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">
+                      <span className="text-slate-400 text-[10px]">단말기 / 솔루션</span>
+                      <p className="font-semibold text-slate-900 mt-0.5 truncate">
+                        {selectedTarget.metadata.terminal_company || "표준 POS"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* 패널 하단 4대 액션 바 */}
-            <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
-              <button
-                type="button"
-                onClick={() => setIsOfficialDocOpen(true)}
-                className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
-              >
-                <FileCheck className="h-4 w-4 text-white" />
-                <span>📜 정식 점검 공문 발송 / A4 즉시 인쇄</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handlePrintReport(selectedTarget)}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-              >
-                <Printer className="h-3.5 w-3.5 text-amber-400" />
-                <span>📄 M-FAD 사전 실사 브리핑 리포트 출력</span>
-              </button>
-
-              <div className="grid grid-cols-2 gap-2">
+              {/* 패널 하단 4대 액션 바 */}
+              <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
                 <button
                   type="button"
-                  onClick={() => handleAssignVisit(selectedTarget)}
-                  className="flex items-center justify-center gap-1 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-medium transition-colors cursor-pointer"
+                  onClick={() => setIsOfficialDocOpen(true)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
                 >
-                  <UserCheck className="h-3.5 w-3.5 text-blue-600" />
-                  <span>방문 접수</span>
+                  <FileCheck className="h-4 w-4 text-white" />
+                  <span>📜 정식 점검 공문 발송 / A4 즉시 인쇄</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => handleDispatchTSign(selectedTarget)}
-                  className="flex items-center justify-center gap-1 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-medium transition-colors cursor-pointer"
+                  onClick={() => handlePrintReport(selectedTarget)}
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 >
-                  <Send className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>t.sign 약정서</span>
+                  <Printer className="h-3.5 w-3.5 text-amber-400" />
+                  <span>📄 M-FAD 사전 실사 브리핑 리포트 출력</span>
                 </button>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAssignVisit(selectedTarget)}
+                    className="flex items-center justify-center gap-1 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-900 border border-blue-200 text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+                    <span>방문 접수</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDispatchTSign(selectedTarget)}
+                    className="flex items-center justify-center gap-1 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-medium transition-colors cursor-pointer"
+                  >
+                    <Send className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>t.sign 약정서</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          </aside>
-        )}
+            </aside>
+          )}
+        </main>
       </div>
 
       {/* 레이더 스위프 키프레임 */}
