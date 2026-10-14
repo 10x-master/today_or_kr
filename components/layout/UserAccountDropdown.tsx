@@ -18,6 +18,7 @@ import {
   Coins,
   Compass,
   Sparkles,
+  UserCheck,
 } from "lucide-react";
 import type { AuthProfile } from "@/types/auth";
 import { signOutKakao } from "@/lib/auth/kakaoAuth";
@@ -319,6 +320,21 @@ export default function UserAccountDropdown({
               </div>
               <span className="text-[10px] text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.2 rounded group-hover:bg-amber-100 transition-colors">
                 동네 일자리 →
+              </span>
+            </Link>
+
+            {/* 2-3. [👥 알바 ATS & 노무·세무 데스크] */}
+            <Link
+              href="/desk/recruitment"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4 text-indigo-600" />
+                <span className="font-medium text-slate-800">👥 알바 ATS & 노무·세무</span>
+              </div>
+              <span className="text-[10px] text-indigo-700 font-semibold bg-indigo-50 px-1.5 py-0.2 rounded group-hover:bg-indigo-100 transition-colors">
+                전자계약·출결 →
               </span>
             </Link>
 

@@ -655,14 +655,23 @@ export default function TNoteSmartDesk({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setApplicantModalOpen(true)}
-            className="w-full flex items-center justify-center gap-1 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
-          >
-            <span>구직 지원자 ATS 심사 관리</span>
-            <ChevronRight className="h-3.5 w-3.5" />
-          </button>
+          <div className="flex items-center gap-1.5 pt-1">
+            <Link
+              href="/desk/recruitment"
+              className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs"
+            >
+              <span>ATS 노무·세무 데스크</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setApplicantModalOpen(true)}
+              className="px-2.5 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-medium transition-colors cursor-pointer"
+            >
+              요약
+            </button>
+          </div>
         </div>
 
         {/* ==========================================================
@@ -1134,11 +1143,19 @@ export default function TNoteSmartDesk({
               ))}
             </div>
 
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex justify-between items-center">
+              <Link
+                href="/desk/recruitment"
+                className="text-xs text-indigo-600 font-semibold hover:underline flex items-center gap-1"
+              >
+                <span>전체 ATS 노무·세무 데스크 바로가기</span>
+                <ChevronRight className="h-3 w-3" />
+              </Link>
+
               <button
                 type="button"
                 onClick={() => setApplicantModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors"
+                className="px-4 py-2 rounded-xl bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 닫기
               </button>
