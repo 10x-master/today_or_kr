@@ -132,6 +132,15 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         badge: "실시간",
       },
       {
+        id: "app-aptlink-portal",
+        section: "RESIDENT",
+        title: "아파트링크 (AptLink) 공정입찰 포털",
+        description: "내 아파트 공사비 적정성 진단, 주민인증 락인 및 2025 장기수선 실무스쿨",
+        href: "/aptlink",
+        icon: "🏢",
+        badge: "NEW 순백",
+      },
+      {
         id: "app-apt-audit",
         section: "RESIDENT",
         title: "아파트 자산 진단 및 공구 청원",
@@ -155,6 +164,15 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         href: "/biz/apt-sanggye14",
         icon: "🌐",
         badge: "멀티테넌트",
+      },
+      {
+        id: "app-templates-center",
+        section: "STORE",
+        title: "t.홈페이지 템플릿 센터",
+        description: "4대 표준 프리셋(아파트링크/제조사특판/동네매장/세일즈) 복제 엔진",
+        href: "/admin/templates",
+        icon: "📑",
+        badge: "템플릿 엔진",
       },
       {
         id: "app-desk-recruitment",
