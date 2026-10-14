@@ -7,6 +7,9 @@ export type MfadCategory = "HOSPITAL" | "RESTAURANT" | "GYM" | "NEW_STORE";
 
 export type MfadVisitStatus = "UNVISITED" | "ASSIGNED" | "VISITED" | "CONTRACTED" | "REJECTED";
 
+/** 관리자 vs 로컬 서포터즈 권한 등급 */
+export type MfadUserRole = "HQ_ADMIN" | "LOCAL_SUPPORTER";
+
 export interface MfadTargetMetadata {
   /** 3개년 추정 과오납 회수 예상액 (원) */
   estimated_refund: number;
@@ -41,7 +44,12 @@ export interface MfadTargetMetadata {
 export interface MfadGeoTarget {
   id: string;
   tenant_id?: string | null;
+  /** 정식 실명 상호 */
   target_name: string;
+  /** 정보보호 마스킹 별칭 (예: "역삼 *** 치과의원") */
+  masked_name?: string;
+  /** 롤오버 호버 시 누수 예측 코멘트 */
+  leakage_reason_comment?: string;
   category: MfadCategory;
   road_address: string;
   dong: string;
@@ -58,6 +66,23 @@ export interface MfadGeoTarget {
   metadata: MfadTargetMetadata;
   created_at?: string;
   updated_at?: string;
+}
+
+/** 상호명 마스킹 헬퍼 함수 */
+export function maskTargetName(name: string): string {
+  if (!name) return "";
+  const parts = name.split(" ");
+  if (parts.length >= 3) {
+    return `${parts[0]} *** ${parts[parts.length - 1]}`;
+  }
+  if (parts.length === 2) {
+    const starCount = Math.max(2, parts[1].length - 1);
+    return `${parts[0]} ${"*".repeat(starCount)}`;
+  }
+  if (name.length <= 4) {
+    return name.slice(0, 1) + "**" + name.slice(-1);
+  }
+  return name.slice(0, 2) + "***" + name.slice(-2);
 }
 
 /** 7대 누수 코드 항목 정의 */

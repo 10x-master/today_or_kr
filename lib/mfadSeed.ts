@@ -5,6 +5,8 @@ export const MOCK_MFAD_TARGETS: MfadGeoTarget[] = [
   {
     id: "mfad-tgt-01",
     target_name: "서울바른정형외과의원",
+    masked_name: "정자동 *** 정형외과의원",
+    leakage_reason_comment: "⚠️ 3개년 비급여 고액 할부 결제 무이자 특약(12개월) 카드사 분담금 1.8% 중복 공제 누수 감지",
     category: "HOSPITAL",
     road_address: "경기도 성남시 분당구 성남대로 385 (정자동)",
     dong: "정자동",
@@ -33,6 +35,8 @@ export const MOCK_MFAD_TARGETS: MfadGeoTarget[] = [
   {
     id: "mfad-tgt-02",
     target_name: "연세미소드림치과의원",
+    masked_name: "역삼 *** 치과의원",
+    leakage_reason_comment: "⚠️ 임플란트/교정 카드사 무이자 프로모션 분담율 과오납 및 중소2구간 우대율(1.25%) 미소급 누수",
     category: "HOSPITAL",
     road_address: "서울특별시 강남구 테헤란로 115 (역삼동)",
     dong: "역삼동",
@@ -65,6 +69,8 @@ export const MOCK_MFAD_TARGETS: MfadGeoTarget[] = [
   {
     id: "mfad-tgt-03",
     target_name: "정자동 화로구이 명가",
+    masked_name: "정자동 **** 명가",
+    leakage_reason_comment: "⚠️ 테이블오더 18대 도입에 따른 PG 밴 수수료 3.12% 중복 공제 추정 (법정 우대율 0.8% 적용 시 연 194만원 회수)",
     category: "RESTAURANT",
     road_address: "경기도 성남시 분당구 정자일로 230 (정자동)",
     dong: "정자동",
@@ -93,6 +99,8 @@ export const MOCK_MFAD_TARGETS: MfadGeoTarget[] = [
   {
     id: "mfad-tgt-04",
     target_name: "상계동 숯불갈비마을",
+    masked_name: "상계동 **** 갈비마을",
+    leakage_reason_comment: "⚠️ 배달앱 포장 주문 결제대행 수수료 및 밴사 전표매입비 2.25% 이중 정산 누수 확인",
     category: "RESTAURANT",
     road_address: "서울특별시 노원구 동일로 1354 (상계동)",
     dong: "상계동",
@@ -124,6 +132,8 @@ export const MOCK_MFAD_TARGETS: MfadGeoTarget[] = [
   {
     id: "mfad-tgt-05",
     target_name: "판교 에이펙스 피트니스 & 필라테스",
+    masked_name: "판교 **** 피트니스",
+    leakage_reason_comment: "⚠️ 연간 회원권 다개월(6~12개월) 할부 결제 시 가맹점 분담금 100% 불공정 전가 수수료 괴리",
     category: "GYM",
     road_address: "경기도 성남시 분당구 판교역로 146 (삼평동)",
     dong: "삼평동",
@@ -151,6 +161,8 @@ export const MOCK_MFAD_TARGETS: MfadGeoTarget[] = [
   {
     id: "mfad-tgt-06",
     target_name: "신사동 포레스트 크로스핏 & PT",
+    masked_name: "신사동 **** 크로스핏",
+    leakage_reason_comment: "⚠️ 스포츠시설 다개월 할부 매출 취소분 가맹점 기납부 수수료 익월 재정산 미환급 누수",
     category: "GYM",
     road_address: "서울특별시 강남구 압구정로 134 (신사동)",
     dong: "신사동",
@@ -182,6 +194,8 @@ export const MOCK_MFAD_TARGETS: MfadGeoTarget[] = [
   {
     id: "mfad-tgt-07",
     target_name: "정자역 브런치 앤 베이크 로스터리",
+    masked_name: "정자역 *** 베이커리",
+    leakage_reason_comment: "⚠️ 신규 개업 4개월 차 일반 최고 요율 2.25% 적용 중 (법정 영세 우대요율 0.5% 미소급 전액 과오납)",
     category: "NEW_STORE",
     road_address: "경기도 성남시 분당구 정자일로 135 (정자동)",
     dong: "정자동",
@@ -210,6 +224,8 @@ export const MOCK_MFAD_TARGETS: MfadGeoTarget[] = [
   {
     id: "mfad-tgt-08",
     target_name: "역삼 웍앤파이어 중화비스트로",
+    masked_name: "역삼 **** 비스트로",
+    leakage_reason_comment: "⚠️ 신규 창업 5개월 매장 키오스크 PG(0.9%) 중복 가산 및 영세 우대율(0.5%) 미적용 총 3.2% 출혈 차감 중",
     category: "NEW_STORE",
     road_address: "서울특별시 강남구 테헤란로25길 19 (역삼동)",
     dong: "역삼동",
@@ -238,6 +254,8 @@ export const MOCK_MFAD_TARGETS: MfadGeoTarget[] = [
   {
     id: "mfad-tgt-09",
     target_name: "노원 상계 브루잉 펍",
+    masked_name: "상계 ** 펍",
+    leakage_reason_comment: "⚠️ 신규 개업 3개월 수제맥주 펍 일반가맹점 요율 2.2% 적용 중 (우대요율 0.5% 미적용 8개 카드사 즉시 환급 대상)",
     category: "NEW_STORE",
     road_address: "서울특별시 노원구 노해로 488 (상계동)",
     dong: "상계동",
