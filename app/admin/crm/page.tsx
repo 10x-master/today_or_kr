@@ -417,6 +417,13 @@ export default function AdminCrmPage() {
             >
               t.note 워크스페이스
             </Link>
+            <span className="text-slate-300">|</span>
+            <Link
+              href="/admin/radar"
+              className="text-xs font-semibold text-blue-600 hover:underline inline-flex items-center gap-1"
+            >
+              <span>🛰️ M-FAD 레이더</span>
+            </Link>
           </div>
 
           <div className="mt-2 flex items-baseline gap-2">

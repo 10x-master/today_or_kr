@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
   Building,
   Coins,
+  Compass,
 } from "lucide-react";
 import type { AuthProfile } from "@/types/auth";
 import { signOutKakao } from "@/lib/auth/kakaoAuth";
@@ -332,6 +333,21 @@ export default function UserAccountDropdown({
               </div>
               <span className="text-[10px] text-emerald-700 font-semibold font-mono bg-emerald-50 px-1.5 py-0.2 rounded group-hover:bg-emerald-100 transition-colors">
                 284,000원 →
+              </span>
+            </Link>
+
+            {/* 6. [🛰️ M-FAD 가맹점 수수료 레이더] */}
+            <Link
+              href="/admin/radar"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <Compass className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-slate-800">🛰️ M-FAD GIS 레이더 (실사)</span>
+              </div>
+              <span className="text-[10px] text-blue-700 font-semibold bg-blue-50 px-1.5 py-0.2 rounded group-hover:bg-blue-100 transition-colors">
+                실사 데스크 →
               </span>
             </Link>
           </div>
