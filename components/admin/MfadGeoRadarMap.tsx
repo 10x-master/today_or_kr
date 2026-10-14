@@ -56,6 +56,7 @@ import type {
 import { maskTargetName } from "@/types/mfad";
 import type { AuthProfile } from "@/types/auth";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
+import { UnifiedHomeReturnAnchor, TodayBreadcrumbs } from "@/components/Navigation";
 import MfadPrintReport from "./MfadPrintReport";
 import MfadOfficialDocument from "./MfadOfficialDocument";
 
@@ -1278,22 +1279,25 @@ export default function MfadGeoRadarMap({
           [1. 상단 슬림 헤더 (52px 단일 바 - t.note Sales + 동네명 강조 & 동적 카테고리)]
          ============================================================ */}
       <header className="h-[52px] w-full bg-white border-b border-slate-100 px-3 sm:px-4 flex items-center justify-between shrink-0 z-30 select-none">
-        {/* 좌측: t.note Sales 로고 + 선택된 동네명 (text-blue-600 font-bold text-xl) + 동적 카테고리 밀착 */}
-        <div className="flex items-center gap-2.5 sm:gap-4 shrink-0 overflow-x-auto py-1">
-          <Link
-            href="/admin/crm"
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-800 transition-colors py-1 px-1.5 rounded-md hover:bg-slate-50 shrink-0"
-            title="CRM 백오피스로 이동"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline font-normal">CRM</span>
-          </Link>
+        {/* 좌측: 통일된 홈 복귀 앵커 + 브레드크럼 (Today. > t.note > Sales) + 선택된 동네명 (text-blue-600 font-bold text-xl) + 동적 카테고리 밀착 */}
+        <div className="flex items-center gap-2.5 sm:gap-3.5 shrink-0 overflow-x-auto py-1">
+          <UnifiedHomeReturnAnchor />
 
           <span className="text-slate-200 shrink-0">|</span>
 
-          {/* t.note Sales 로고 & 동네명 강조 표기 */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="font-bold text-slate-950 text-sm tracking-tight shrink-0">t.note Sales</span>
+          {/* Today. > t.note > Sales 브레드크럼 네비게이션 */}
+          <TodayBreadcrumbs
+            items={[
+              { label: "t.note", href: "/desk" },
+              { label: "Sales", isCurrent: true },
+            ]}
+            className="hidden sm:flex shrink-0"
+          />
+
+          <span className="text-slate-200 hidden sm:inline shrink-0">|</span>
+
+          {/* 선택된 동네명 강조 표기 (text-blue-600 font-bold text-lg sm:text-xl) */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-blue-600 font-bold text-lg sm:text-xl tracking-tight shrink-0">
               {currentLocationTitle}
             </span>

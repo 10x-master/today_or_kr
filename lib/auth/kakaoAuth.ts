@@ -4,8 +4,8 @@ import type { AuthProfile } from "@/types/auth";
 /** 데모용 기본 카카오 프로필 (Supabase 미연동 환경 또는 로컬 테스트용) */
 export const DEMO_KAKAO_USER: AuthProfile = {
   id: "kakao-usr-20261013",
-  email: "kakao.user@kakao.com",
-  full_name: "카카오 입주민",
+  email: "resident@today.or.kr",
+  full_name: "투데이 회원",
   avatar_url: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&q=80",
   role: "USER",
   created_at: new Date().toISOString(),

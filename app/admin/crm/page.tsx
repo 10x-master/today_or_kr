@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
 import {
   ArrowLeft,
   Award,
@@ -395,14 +396,8 @@ export default function AdminCrmPage() {
       {/* 1. 상단 네비게이션 & 관리자 인증 바 */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              홈으로
-            </Link>
+          <div className="flex items-center gap-2.5">
+            <UnifiedHomeReturnAnchor />
             <span className="text-slate-300">|</span>
             <Link
               href="/partners"

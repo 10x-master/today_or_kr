@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import type { AuthProfile } from "@/types/auth";
 import { signOutKakao } from "@/lib/auth/kakaoAuth";
+import { SmartAppLauncherModal } from "@/components/Navigation";
 
 export interface UserAccountDropdownProps {
   currentUser: AuthProfile | null;
@@ -51,6 +52,7 @@ export default function UserAccountDropdown({
   triggerStyle = "full",
 }: UserAccountDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isLauncherOpen, setIsLauncherOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // 실시간 관심사 다중 선택 상태 (localStorage 연동)
@@ -62,7 +64,7 @@ export default function UserAccountDropdown({
   // 익명성 및 실명 전환 모드 상태 (기본: 익명 모드)
   const [isRealNameMode, setIsRealNameMode] = useState<boolean>(false);
 
-  // 로컬스토리지 상태 동기화
+  // 로컬스토리지 상태 동기화 및 런처 이벤트 수신
   useEffect(() => {
     try {
       const savedInterests = localStorage.getItem("today_user_interests");
@@ -74,6 +76,13 @@ export default function UserAccountDropdown({
         setIsRealNameMode(savedRealName === "true");
       }
     } catch {}
+
+    const handleOpenLauncher = () => {
+      setIsOpen(false);
+      setIsLauncherOpen(true);
+    };
+    window.addEventListener("today_open_app_launcher", handleOpenLauncher);
+    return () => window.removeEventListener("today_open_app_launcher", handleOpenLauncher);
   }, []);
 
   // 외부 클릭 및 ESC 키 바인딩
@@ -138,31 +147,45 @@ export default function UserAccountDropdown({
     window.dispatchEvent(new CustomEvent("today_auth_changed"));
   };
 
-  // 비로그인 상태: 깔끔한 [로그인 / 회원가입] 버튼 노출
+  // 비로그인 상태: 프로필/사람 아이콘 클릭 시 [스마트 마이 메뉴 허브] 팝업
   if (!currentUser) {
     return (
       <div className={`relative ${className}`} ref={containerRef}>
         {triggerStyle === "icon_only" ? (
           <button
             type="button"
-            onClick={onOpenLogin}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-amber-100 text-slate-700 hover:text-amber-800 transition-colors cursor-pointer"
-            title="로그인 / 회원가입"
-            aria-label="로그인"
+            onClick={() => setIsLauncherOpen(true)}
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 transition-colors cursor-pointer"
+            title="스마트 마이 메뉴 앱 런처 열기"
+            aria-label="스마트 마이 메뉴"
           >
             <User className="h-4 w-4" />
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={onOpenLogin}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer shadow-xs focus:outline-hidden"
-            title="카카오 1초 간편 로그인 / 회원가입"
-          >
-            <User className="h-3.5 w-3.5 text-amber-400" />
-            <span>로그인 / 회원가입</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setIsLauncherOpen(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors cursor-pointer"
+              title="스마트 마이 메뉴 앱 런처 열기"
+            >
+              <Sparkles className="h-3 w-3 text-blue-600" />
+              <span>마이 메뉴</span>
+            </button>
+            <button
+              type="button"
+              onClick={onOpenLogin}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors cursor-pointer shadow-xs focus:outline-hidden"
+              title="카카오 1초 간편 로그인 / 회원가입"
+            >
+              <User className="h-3.5 w-3.5 text-amber-400" />
+              <span>로그인</span>
+            </button>
+          </div>
         )}
+
+        {/* 스마트 마이 메뉴 앱 런처 허브 모달 */}
+        <SmartAppLauncherModal isOpen={isLauncherOpen} onClose={() => setIsLauncherOpen(false)} />
       </div>
     );
   }
@@ -239,23 +262,51 @@ export default function UserAccountDropdown({
 
               {/* 공식 등급 뱃지 표시부 */}
               <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-[10px] font-medium">
-                  <Crown className="h-3 w-3 text-amber-600" />
-                  👑 투데이 엠버서더
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-[10px] font-medium">
-                  <Star className="h-3 w-3 text-blue-600" />
-                  ⭐ 서포터즈
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 text-[10px] font-medium">
-                  🏢 아파트 관리소장
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 text-[10px] font-normal">
-                  ⚙️ 제조 회원사
-                </span>
+                {isSuperAdmin ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-900 text-[10px] font-bold">
+                    <Crown className="h-3 w-3 text-amber-600" />
+                    👑 최고관리자
+                  </span>
+                ) : currentUser.role === "STORE_OWNER" ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-[10px] font-bold">
+                    🏪 매장 파트너
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-900 text-[10px] font-medium">
+                    인증 회원
+                  </span>
+                )}
               </div>
             </div>
           </div>
+
+          {/* 🌟 [스마트 마이 메뉴 앱 런처 전체화면 허브 모달 열기] */}
+          <button
+            type="button"
+            onClick={() => {
+              setIsOpen(false);
+              setIsLauncherOpen(true);
+            }}
+            className="w-full my-2.5 flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-sm hover:from-blue-700 hover:to-indigo-800 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/20 backdrop-blur-xs text-amber-300">
+                <Sparkles className="h-3.5 w-3.5 fill-amber-300" />
+              </div>
+              <div className="text-left">
+                <p className="text-xs font-bold leading-tight flex items-center gap-1">
+                  스마트 마이 메뉴 허브
+                  <span className="text-[9px] bg-white/25 px-1.5 py-0.2 rounded-full font-bold">전체화면</span>
+                </p>
+                <p className="text-[10px] text-blue-100 font-normal">
+                  4대 핵심 서비스 그리드 & GNB 핀 등록
+                </p>
+              </div>
+            </div>
+            <span className="text-xs font-bold text-white group-hover:translate-x-0.5 transition-transform">
+              열기 →
+            </span>
+          </button>
 
           {/* 2) [4대 핵심 퀵 링크: LinkPick 허브, t.note 데스크, 비즈홈, 관리자 CRM] */}
           <div className="py-2.5 border-b border-slate-100 space-y-1">
@@ -497,6 +548,9 @@ export default function UserAccountDropdown({
           </div>
         </div>
       )}
+
+      {/* 스마트 마이 메뉴 앱 런처 허브 모달 */}
+      <SmartAppLauncherModal isOpen={isLauncherOpen} onClose={() => setIsLauncherOpen(false)} />
     </div>
   );
 }

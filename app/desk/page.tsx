@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
 import {
   ArrowLeft,
   Sparkles,
@@ -30,13 +31,7 @@ export default function DeskPage() {
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <Link
-              href="/"
-              className="p-1 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-              title="홈으로"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
+            <UnifiedHomeReturnAnchor />
 
             <div className="flex items-center gap-1.5">
               <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs">

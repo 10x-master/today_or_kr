@@ -52,6 +52,7 @@ import QuickVoiceCaptureModal from "@/components/note/QuickVoiceCaptureModal";
 import PersonaRoleSelector from "@/components/portal/PersonaRoleSelector";
 import GovPolicyFundWidget from "@/components/portal/GovPolicyFundWidget";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
+import { FastPinnedAppsBar, SmartAppLauncherModal } from "@/components/Navigation";
 import type { UserPersona } from "@/types/persona";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -190,6 +191,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
   // 카카오 OAuth & Supabase Auth 사용자 상태
   const [currentUser, setCurrentUser] = useState<AuthProfile | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isAppLauncherModalOpen, setIsAppLauncherModalOpen] = useState(false);
   const [userPopoverOpen, setUserPopoverOpen] = useState(false);
 
   // 상세 보기 시트 대상
@@ -267,10 +269,16 @@ export default function Home({ initialDong }: HomeProps = {}) {
     };
     window.addEventListener("today_open_terms_modal", handleOpenTermsModal);
 
+    const handleOpenAppLauncher = () => {
+      setIsAppLauncherModalOpen(true);
+    };
+    window.addEventListener("today_open_app_launcher", handleOpenAppLauncher);
+
     return () => {
       window.removeEventListener("today_auth_changed", handleAuthChange);
       window.removeEventListener("today_open_login_modal", handleOpenLoginModal);
       window.removeEventListener("today_open_terms_modal", handleOpenTermsModal);
+      window.removeEventListener("today_open_app_launcher", handleOpenAppLauncher);
       sub?.unsubscribe();
     };
   }, []);
@@ -688,24 +696,25 @@ export default function Home({ initialDong }: HomeProps = {}) {
             </div>
 
             {/* PC 헤더 바 (lg 이상에서 동네 및 팩트 요약 표시) */}
-            <div className="hidden lg:flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-white">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-100 text-amber-900 font-medium text-xs">
+            <div className="hidden lg:flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-white">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue-600 font-bold text-sm">
                   📍
                 </span>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h2 className="text-sm font-medium text-slate-900 tracking-tight">
-                      {region.sido} {region.gugun} {region.dong}
-                    </h2>
-                    <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-normal text-slate-600">
-                      실시간 팩트 피드
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-xl font-bold tracking-tight text-blue-600">
+                    {region.sido} {region.gugun} {region.dong}
+                  </h2>
+                  <span className="rounded-full bg-blue-50 border border-blue-200/80 px-2 py-0.5 text-[10.5px] font-bold text-blue-700">
+                    실시간 팩트 피드
+                  </span>
                 </div>
               </div>
 
               <div className="flex items-center gap-2">
+                {/* 상단 GNB 빠른 실행 핀 바 */}
+                <FastPinnedAppsBar className="hidden xl:flex mr-1.5" />
+
                 <button
                   type="button"
                   onClick={() => setIsGlobalSearchOpen(true)}
@@ -719,7 +728,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
                   onClick={fetchData}
                   className="flex items-center gap-1 rounded-lg bg-slate-50 hover:bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 transition-colors cursor-pointer border border-slate-100"
                 >
-                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin text-amber-600" : ""}`} />
+                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin text-blue-600" : ""}`} />
                   <span>새로고침</span>
                 </button>
 
@@ -1297,77 +1306,135 @@ export default function Home({ initialDong }: HomeProps = {}) {
           {/* Col 10~12 (우측 360px): 프로필/핀, t.note 퀵 등록, 링크픽 세일즈 */}
           {/* ============================================================== */}
           <aside className="hidden lg:flex lg:col-span-3 xl:col-span-3 flex-col gap-3 h-auto">
-            {/* 1. 👤 프로필 및 내 인증 동네 핀 관리 */}
-            <div className="border-b border-slate-100 pb-2.5 space-y-2">
-              <div className="flex items-center gap-2.5">
-                {currentUser?.avatar_url ? (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img
-                    src={currentUser.avatar_url}
-                    alt={currentUser.full_name || "프로필"}
-                    className="h-9 w-9 rounded-full object-cover ring-1 ring-amber-300"
-                  />
-                ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100 text-sm font-medium text-amber-900">
-                    {currentUser ? (currentUser.full_name?.slice(0, 1) || "U") : <User className="h-4 w-4 text-amber-700" />}
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-xs font-medium text-slate-900 truncate">
-                      {currentUser?.full_name || "게스트 방문자"}
-                    </p>
-                    {superAdmin && (
-                      <Crown className="h-3.5 w-3.5 text-amber-600 fill-amber-500 shrink-0" />
+            {/* 1. 👤 프로필 및 스마트 마이 메뉴 위젯 */}
+            <div className="border-b border-slate-100 pb-3 space-y-2.5">
+              {currentUser ? (
+                /* 로그인 사용자: 미니멀 사용자 프로필 요약 카드 */
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2.5">
+                    {currentUser.avatar_url ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={currentUser.avatar_url}
+                        alt={currentUser.full_name || "프로필"}
+                        className="h-10 w-10 rounded-full object-cover ring-1 ring-blue-200"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-xs">
+                        {currentUser.full_name?.slice(0, 1) || "U"}
+                      </div>
                     )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-bold text-slate-900 truncate">
+                          {currentUser.full_name || "회원"}
+                        </p>
+                        {superAdmin && (
+                          <Crown className="h-3.5 w-3.5 text-amber-500 fill-amber-400 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[10.5px] text-slate-400 truncate font-normal">
+                        {currentUser.email || "카카오 간편인증 회원"}
+                      </p>
+                      <div className="mt-0.5 flex items-center gap-1.5">
+                        <span className="rounded-full bg-blue-50 border border-blue-200/80 px-2 py-0.2 text-[9.5px] font-bold text-blue-700">
+                          {superAdmin
+                            ? "👑 최고관리자"
+                            : currentUser.role === "STORE_OWNER"
+                            ? "🏪 매장 파트너"
+                            : "인증 회원"}
+                        </span>
+                        {userPins.length > 0 && (
+                          <span className="text-[10px] font-normal text-slate-500">
+                            동네 핀 {userPins.length}곳
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 truncate font-normal">
-                    {currentUser?.email || "카카오 간편 로그인 지원"}
-                  </p>
-                  <div className="mt-0.5 flex items-center gap-1.5">
-                    <span className="rounded bg-amber-50 px-1.5 py-0.2 text-[9px] font-medium text-amber-800">
-                      {superAdmin ? "👑 최고관리자" : currentUser ? "인증 입주민" : "비회원 둘러보기"}
+
+                  {/* 스마트 마이 메뉴 허브 열기 버튼 */}
+                  <button
+                    type="button"
+                    onClick={() => setIsAppLauncherModalOpen(true)}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs transition-all shadow-xs cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="h-3.5 w-3.5 text-amber-300" />
+                      <span>스마트 마이 메뉴</span>
+                    </div>
+                    <span className="text-[11px] font-semibold text-blue-100 group-hover:translate-x-0.5 transition-transform">
+                      열기 →
                     </span>
-                    <span className="text-[10px] font-normal text-slate-500">
-                      핀 {userPins.length}개
-                    </span>
+                  </button>
+
+                  {/* 프로필 빠른 액션 버튼들 */}
+                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsTermsModalOpen(true)}
+                      className="flex items-center justify-center gap-1 rounded-lg bg-slate-50 hover:bg-slate-100 py-1.5 text-[11px] font-normal text-slate-700 transition-colors cursor-pointer border border-slate-100"
+                    >
+                      <Scale className="h-3 w-3 text-slate-500" />
+                      <span>약관·면책</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await signOutKakao();
+                        setCurrentUser(null);
+                      }}
+                      className="flex items-center justify-center gap-1 rounded-lg bg-rose-50 hover:bg-rose-100 py-1.5 text-[11px] font-normal text-rose-700 transition-colors cursor-pointer border border-rose-100"
+                    >
+                      <LogOut className="h-3 w-3 text-rose-500" />
+                      <span>로그아웃</span>
+                    </button>
                   </div>
                 </div>
-              </div>
+              ) : (
+                /* 비로그인 방문자: 깔끔한 바로가기 및 간편 로그인 안내 위젯 */
+                <div className="space-y-2.5">
+                  <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-600 text-white font-black text-[10px]">
+                        T.
+                      </div>
+                      <span className="text-xs font-bold text-slate-900">Today Link 포털</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 font-normal leading-relaxed">
+                      로그인하시면 관심 동네 등록 및 실시간 팩트 피드를 편리하게 이용하실 수 있습니다.
+                    </p>
+                  </div>
 
-              {/* 프로필 빠른 액션 버튼들 */}
-              <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => setIsTermsModalOpen(true)}
-                  className="flex items-center justify-center gap-1 rounded-lg bg-slate-50 hover:bg-slate-100 py-1.5 text-[11px] font-normal text-slate-700 transition-colors cursor-pointer"
-                >
-                  <Scale className="h-3 w-3 text-amber-600" />
-                  <span>약관·면책 확인</span>
-                </button>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsLoginModalOpen(true)}
+                      className="flex items-center justify-center gap-1 rounded-xl bg-amber-400 hover:bg-amber-500 py-2 text-xs font-bold text-slate-900 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <span>💬 간편 로그인</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsAppLauncherModalOpen(true)}
+                      className="flex items-center justify-center gap-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <Sparkles className="h-3 w-3 text-amber-300" />
+                      <span>마이 메뉴</span>
+                    </button>
+                  </div>
 
-                {currentUser ? (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      await signOutKakao();
-                      setCurrentUser(null);
-                    }}
-                    className="flex items-center justify-center gap-1 rounded-lg bg-rose-50 hover:bg-rose-100 py-1.5 text-[11px] font-normal text-rose-700 transition-colors cursor-pointer"
-                  >
-                    <LogOut className="h-3 w-3 text-rose-500" />
-                    <span>로그아웃</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setIsLoginModalOpen(true)}
-                    className="flex items-center justify-center gap-1 rounded-lg bg-amber-500 hover:bg-amber-600 py-1.5 text-[11px] font-medium text-white transition-colors cursor-pointer"
-                  >
-                    <span>💬 간편 로그인</span>
-                  </button>
-                )}
-              </div>
+                  <div className="flex justify-end pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsTermsModalOpen(true)}
+                      className="text-[10.5px] text-slate-400 hover:text-slate-600 transition-colors underline cursor-pointer"
+                    >
+                      [서비스 약관 및 면책조항]
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* 2. 🎙️ t.note 빠른 등록기 (구글 캘린더 오늘 일정 위젯 연동) */}
@@ -1664,6 +1731,12 @@ export default function Home({ initialDong }: HomeProps = {}) {
         onOpenCategorySheet={() => setIsCategorySheetOpen(true)}
         notesCount={bookmarkedIds.length}
         unreadTalkCount={2}
+      />
+
+      {/* 9. 전사 통합 스마트 마이 메뉴 앱 런처 허브 모달 */}
+      <SmartAppLauncherModal
+        isOpen={isAppLauncherModalOpen}
+        onClose={() => setIsAppLauncherModalOpen(false)}
       />
     </div>
   );

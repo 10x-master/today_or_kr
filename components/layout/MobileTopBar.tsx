@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Search, Bell } from "lucide-react";
+import { ChevronDown, Search, Bell, Sparkles } from "lucide-react";
 import type { AuthProfile } from "@/types/auth";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 
@@ -29,27 +29,38 @@ export default function MobileTopBar({
 }: MobileTopBarProps) {
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-100">
-      <div className="flex items-center justify-between px-4 h-14">
-        {/* 좌측: 현재 동네 이름 (당근마켓 스타일 볼드 + ▾) */}
+      <div className="flex items-center justify-between px-3 sm:px-4 h-14">
+        {/* 좌측: 현재 동네 이름 (투데이 대표 블루 컬러 text-blue-600 font-bold text-xl) */}
         <button
           type="button"
           onClick={onOpenDongSelector}
           className="group flex items-center gap-1.5 py-1 text-left focus:outline-hidden active:opacity-70 transition-opacity"
           aria-label="내 동네 핀 변경"
         >
-          <span className="text-lg font-black tracking-tight text-slate-900 group-hover:text-slate-700">
+          <span className="text-xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700">
             {dongName || "내 동네"}
           </span>
-          <ChevronDown className="h-4 w-4 text-slate-700 transition-transform group-hover:translate-y-0.5" />
+          <ChevronDown className="h-4 w-4 text-blue-600 transition-transform group-hover:translate-y-0.5" />
           {currentUser?.role === "SUPER_ADMIN" && (
-            <span className="ml-0.5 rounded-full bg-amber-100 px-1.5 py-0.2 text-[9px] font-black text-amber-800 border border-amber-300">
+            <span className="ml-0.5 rounded-full bg-blue-100 px-1.5 py-0.2 text-[9px] font-black text-blue-800 border border-blue-300">
               👑 관리
             </span>
           )}
         </button>
 
-        {/* 우측: 검색(🔍), 알림(🔔), 프로필/로그인(👤) 미니멀 아이콘 3종 */}
-        <div className="flex items-center gap-1">
+        {/* 우측: 마이 메뉴(✨), 검색(🔍), 알림(🔔), 프로필(👤) */}
+        <div className="flex items-center gap-1 sm:gap-1.5">
+          {/* 스마트 마이 메뉴 앱 런처 버튼 */}
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent("today_open_app_launcher"))}
+            className="flex h-8 sm:h-9 px-2 sm:px-2.5 items-center gap-1 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-bold text-xs active:scale-95 cursor-pointer border border-blue-200/80 shadow-2xs"
+            title="스마트 마이 메뉴 앱 런처 열기"
+            aria-label="마이 메뉴"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-400 shrink-0" />
+            <span className="hidden xs:inline">마이 메뉴</span>
+          </button>
           {/* 검색 아이콘 */}
           <button
             type="button"

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -148,13 +149,7 @@ export default function PartnersPage() {
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur-md">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2.5">
-            <Link
-              href="/"
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
-              title="홈으로 돌아가기"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
+            <UnifiedHomeReturnAnchor />
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-base font-black tracking-tight text-slate-900">
