@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import Script from "next/script";
 import Link from "next/link";
+import * as XLSX from "xlsx";
 import {
   MapPin,
   Crosshair,
@@ -367,7 +368,7 @@ export default function MfadGeoRadarMap({
   };
 
   // ============================================================
-  // [📥 엑셀 다운로드 (.xlsx / .csv - UTF-8 BOM 완벽 인코딩)]
+  // [📥 엑셀 다운로드 (.xlsx 바이너리 직접 생성 - SheetJS 탑재)]
   // ============================================================
   const handleDownloadExcel = () => {
     if (filteredTargets.length === 0) {
@@ -375,81 +376,68 @@ export default function MfadGeoRadarMap({
       return;
     }
 
-    const escapeCsvField = (val: string | number | undefined | null): string => {
-      if (val === undefined || val === null) return '""';
-      // 줄바꿈/공백 깨짐 방지 및 큰따옴표 이스케이프
-      const cleanStr = String(val).replace(/\r?\n/g, " ").replace(/"/g, '""');
-      return `"${cleanStr}"`;
-    };
-
-    const headers = [
-      "카테고리",
-      "가맹점명(마스킹)",
-      "정식상호명",
-      "대표자명",
-      "연락처",
-      "관할구",
-      "행정동",
-      "도로명 주소",
-      "월평균 카드매출(원)",
-      "현재 적용수수료율(%)",
-      "법정 우대수수료율(%)",
-      "추정 누수 금액(원)",
-      "초과 사유 코드",
-      "주요 누수 원인",
-      "실사 상태",
-    ];
-
-    const headerLine = headers.map((h) => escapeCsvField(h)).join(",");
-
-    const dataLines = filteredTargets.map((t) => {
-      const categoryLabel = CATEGORY_CONFIG[t.category]?.label || t.category;
-      const maskedName = t.masked_name || maskTargetName(t.target_name);
-      const fullName = userRole === "HQ_ADMIN" ? t.target_name : maskedName;
+    const excelData = filteredTargets.map((item) => {
+      const categoryLabel = CATEGORY_CONFIG[item.category]?.label || item.category;
+      const maskedName = item.masked_name || maskTargetName(item.target_name);
+      const fullName = userRole === "HQ_ADMIN" ? item.target_name : maskedName;
       const statusText =
-        t.visit_status === "VISITED"
-          ? "방문접수완료"
-          : t.visit_status === "ASSIGNED"
-          ? "서포터즈배정"
-          : "미방문발굴";
+        item.visit_status === "VISITED"
+          ? "누수 확정 (방문접수)"
+          : item.visit_status === "ASSIGNED"
+          ? "의심 탐지 (서포터즈 배정)"
+          : "의심 탐지 (미방문 발굴)";
 
-      return [
-        escapeCsvField(categoryLabel),
-        escapeCsvField(maskedName),
-        escapeCsvField(fullName),
-        escapeCsvField(t.representative_name),
-        escapeCsvField(t.contact_number),
-        escapeCsvField(t.district),
-        escapeCsvField(t.dong),
-        escapeCsvField(t.road_address),
-        escapeCsvField(t.metadata.monthly_card_sales || 0),
-        escapeCsvField(t.metadata.applied_rate),
-        escapeCsvField(t.metadata.statutory_rate),
-        escapeCsvField(t.metadata.estimated_refund),
-        escapeCsvField(t.metadata.primary_leak_code),
-        escapeCsvField(t.leakage_reason_comment || t.metadata.leakage_cause),
-        escapeCsvField(statusText),
-      ].join(",");
+      return {
+        "업종 카테고리": categoryLabel,
+        "가맹점명 (별칭)": maskedName,
+        "정식 상호명": fullName,
+        "대표자명": item.representative_name,
+        "연락처": item.contact_number || "02-***-****",
+        "관할 자치구": item.district,
+        "행정동": item.dong,
+        "도로명 주소": item.road_address,
+        "월평균 카드매출 (원)": item.metadata.monthly_card_sales || 0,
+        "현재 적용 요율(%)": item.metadata.applied_rate,
+        "정상 우대 요율(%)": item.metadata.statutory_rate,
+        "추정 누수 금액 (원)": item.metadata.estimated_refund,
+        "초과 사유 코드": item.metadata.primary_leak_code,
+        "초과 수수료 발생 사유": item.leakage_reason_comment || item.metadata.leakage_cause,
+        "점검 상태": statusText,
+      };
     });
 
-    // MS Excel 호환성을 위해 UTF-8 BOM(\uFEFF) 반드시 맨 앞에 삽입
-    const csvRows = [headerLine, ...dataLines];
-    const csvContent = "\uFEFF" + csvRows.join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // 열 너비 자동 최적화 설정
+    worksheet["!cols"] = [
+      { wch: 15 }, // 업종 카테고리
+      { wch: 22 }, // 가맹점명 (별칭)
+      { wch: 24 }, // 정식 상호명
+      { wch: 14 }, // 대표자명
+      { wch: 16 }, // 연락처
+      { wch: 14 }, // 관할 자치구
+      { wch: 12 }, // 행정동
+      { wch: 38 }, // 도로명 주소
+      { wch: 20 }, // 월평균 카드매출
+      { wch: 18 }, // 현재 적용 요율
+      { wch: 18 }, // 정상 우대 요율
+      { wch: 20 }, // 추정 누수 금액
+      { wch: 16 }, // 초과 사유 코드
+      { wch: 48 }, // 초과 수수료 발생 사유
+      { wch: 24 }, // 점검 상태
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "가맹점_수수료_누수목록");
+
     const todayStr = new Date().toISOString().slice(0, 10);
     const districtName = selectedDistrict === "ALL" ? "전국" : selectedDistrict;
     const dongName = selectedDong === "ALL" ? "전체동" : selectedDong;
+    const fileName = `M-FAD_수수료누수_가맹점목록_${districtName}_${dongName}_${todayStr}.xlsx`;
 
-    link.setAttribute("href", url);
-    link.setAttribute("download", `M-FAD_수수료누수_가맹점목록_${districtName}_${dongName}_${todayStr}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    XLSX.writeFile(workbook, fileName);
 
-    showToast(`📥 [${filteredTargets.length}개 가맹점] 엑셀(.csv) 다운로드가 완료되었습니다.`);
+    showToast(`📥 [${filteredTargets.length}개 가맹점] 진짜 엑셀(.xlsx) 다운로드가 완료되었습니다.`);
   };
 
   const handlePrintReport = (target: MfadGeoTarget) => {
@@ -796,15 +784,15 @@ export default function MfadGeoRadarMap({
                 />
               </div>
 
-              {/* [📥 엑셀 다운로드 (.xlsx / .csv)] 버튼 */}
+              {/* [📥 엑셀 다운로드 (.xlsx)] 버튼 */}
               <button
                 type="button"
                 onClick={handleDownloadExcel}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-2xs transition-colors shrink-0 cursor-pointer"
-                title="현재 필터 가맹점 엑셀/CSV 즉시 다운로드"
+                title="현재 필터 가맹점 .xlsx 엑셀 즉시 다운로드"
               >
                 <Download className="h-3.5 w-3.5" />
-                <span>엑셀 다운로드 (.xlsx / .csv)</span>
+                <span>엑셀 다운로드 (.xlsx)</span>
               </button>
             </div>
 
