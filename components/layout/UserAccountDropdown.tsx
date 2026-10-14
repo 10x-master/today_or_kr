@@ -307,6 +307,21 @@ export default function UserAccountDropdown({
               </span>
             </Link>
 
+            {/* 2-2. [📍 Today 로컬 안심 구인 피드] */}
+            <Link
+              href="/local"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-amber-600" />
+                <span className="font-medium text-slate-800">📍 Today 로컬 구인 피드</span>
+              </div>
+              <span className="text-[10px] text-amber-700 font-semibold bg-amber-50 px-1.5 py-0.2 rounded group-hover:bg-amber-100 transition-colors">
+                동네 일자리 →
+              </span>
+            </Link>
+
             {/* 3. [💼 비즈홈 공식 페이지] */}
             <Link
               href="/biz/apt-sanggye14"
