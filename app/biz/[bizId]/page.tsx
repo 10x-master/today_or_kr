@@ -2,7 +2,6 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import {
   ArrowLeft,
   Building,
@@ -548,12 +547,7 @@ function BizHomeContent() {
               <Phone className="h-3.5 w-3.5 text-emerald-600" />
               <span className="hidden sm:inline">전화상담</span>
             </a>
-            <Link
-              href="/"
-              className="px-2.5 py-1.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-medium border border-slate-200 transition-colors"
-            >
-              Today. 홈
-            </Link>
+            {/* 화이트라벨 원칙: 파트너사 페이지에는 today. 브랜드를 노출하지 않음 */}
           </div>
         </div>
       </header>
@@ -898,6 +892,13 @@ function BizHomeContent() {
           </div>
         )}
       </main>
+
+      {/* 화이트라벨 푸터: 파트너사 브랜딩만 노출, today. 표기는 최소한의 저작권 고지로만 */}
+      <footer className="max-w-4xl mx-auto px-4 py-6 text-center">
+        <p className="text-[10px] font-normal" style={{ color: "#9CA3AF" }}>
+          ⓒ today. all rights reserved.
+        </p>
+      </footer>
 
       {/* 모바일 1-Tap 홈 화면 설치 배너 탑재 */}
       <PwaInstallBanner

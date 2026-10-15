@@ -1,6 +1,7 @@
 "use client";
 
-import { Home, MapPin, NotebookPen, Building2, MoreHorizontal } from "lucide-react";
+import { MapPin, NotebookPen, Building2, MoreHorizontal } from "lucide-react";
+import { TodayAppIcon } from "@/components/brand/TodayLogo";
 
 export type NavTab =
   | "home"
@@ -37,7 +38,7 @@ export default function MobileBottomNav({
     id: NavTab;
     aliases: NavTab[];
     label: string;
-    icon: typeof Home;
+    icon: typeof MapPin | null;
     action: () => void;
     badge: string | null;
   }> = [
@@ -45,7 +46,7 @@ export default function MobileBottomNav({
       id: "home",
       aliases: ["today", "neighbors"],
       label: "홈",
-      icon: Home,
+      icon: null, // today. 브랜드 심볼로 대체 (아래 렌더링에서 처리)
       action: () => onChangeTab("home"),
       badge: null,
     },
@@ -105,13 +106,21 @@ export default function MobileBottomNav({
               }`}
             >
               <div className="relative">
-                <Icon
-                  className={`h-5 w-5 transition-transform group-hover:scale-105 ${
-                    isActive
-                      ? "stroke-[2.5px] text-amber-600"
-                      : "stroke-2 text-slate-400"
-                  }`}
-                />
+                {Icon ? (
+                  <Icon
+                    className={`h-5 w-5 transition-transform group-hover:scale-105 ${
+                      isActive ? "stroke-[2.5px] text-amber-600" : "stroke-2 text-slate-400"
+                    }`}
+                  />
+                ) : (
+                  <TodayAppIcon
+                    theme="light"
+                    size={22}
+                    className={`rounded-lg transition-all group-hover:scale-105 ${
+                      isActive ? "" : "opacity-40 grayscale"
+                    }`}
+                  />
+                )}
                 {badge && (
                   <span className="absolute -top-1.5 -right-2.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-black text-white shadow-2xs">
                     {badge}

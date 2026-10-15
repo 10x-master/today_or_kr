@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Lock, ShieldCheck } from "lucide-react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
+import { TMark } from "@/components/brand/TodayLogo";
 import TSignContractEngine from "@/components/tsign/TSignContractEngine";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 import KakaoLoginModal from "@/components/auth/KakaoLoginModal";
@@ -37,18 +38,13 @@ export default function TSignPage() {
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <UnifiedHomeReturnAnchor />
-            <div className="flex items-center gap-1.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs">
-                ✍️
+            <div className="flex items-baseline gap-1.5">
+              <h1>
+                <TMark theme="light" suffix="Sign" size="lg" />
+              </h1>
+              <span className="text-xs text-slate-400 font-normal hidden sm:inline">
+                AI 계약서 엔진 · 음성·통화 녹음에서 바로 전자계약까지
               </span>
-              <div className="flex items-baseline gap-1.5">
-                <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-                  t.sign AI 계약서 엔진
-                </h1>
-                <span className="text-xs text-slate-400 font-normal hidden sm:inline">
-                  음성·통화 녹음에서 바로 전자계약까지
-                </span>
-              </div>
             </div>
           </div>
 

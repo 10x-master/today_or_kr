@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
+import { TMark } from "@/components/brand/TodayLogo";
 import TRefundLeakCalculator from "@/components/trefund/TRefundLeakCalculator";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 import KakaoLoginModal from "@/components/auth/KakaoLoginModal";
@@ -26,18 +27,14 @@ export default function TRefundPage() {
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <UnifiedHomeReturnAnchor />
-            <div className="flex items-center gap-1.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs">
-                💳
+            <div className="flex items-baseline gap-1.5">
+              <h1 className="flex items-baseline gap-1">
+                <TMark theme="light" size="lg" />
+                <span className="text-base font-black text-slate-900 tracking-tight">환급</span>
+              </h1>
+              <span className="text-xs text-slate-400 font-normal hidden sm:inline">
+                결제수수료 정상화 & 무료환급 엔진
               </span>
-              <div className="flex items-baseline gap-1.5">
-                <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-                  t.환급
-                </h1>
-                <span className="text-xs text-slate-400 font-normal hidden sm:inline">
-                  결제수수료 정상화 & 무료환급 엔진
-                </span>
-              </div>
             </div>
           </div>
 

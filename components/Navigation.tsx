@@ -25,6 +25,7 @@ import {
   Search,
   Clock,
 } from "lucide-react";
+import { TodayAppIcon, TodayWordmark } from "@/components/brand/TodayLogo";
 
 /** ============================================================
     [1. 통일된 좌측 상단 복귀 앵커 컴포넌트: UnifiedHomeReturnAnchor]
@@ -45,13 +46,9 @@ export function UnifiedHomeReturnAnchor({
       title="Today. 최상위 포털 메인으로 이동"
     >
       <ArrowLeft className="h-3.5 w-3.5 text-slate-400 group-hover:-translate-x-0.5 group-hover:text-blue-600 transition-transform" />
-      <div className="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-[10.5px] shadow-2xs">
-        T.
-      </div>
+      <TodayAppIcon theme="light" size={20} />
       <div className="flex items-center gap-1">
-        <span className="font-extrabold tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
-          Today.
-        </span>
+        <TodayWordmark theme="light" size="sm" className="group-hover:text-blue-600 transition-colors" />
         <span className="text-[11px] text-slate-500 font-normal">홈으로</span>
       </div>
     </Link>
@@ -73,10 +70,8 @@ export function TodayBreadcrumbs({ items, className = "" }: TodayBreadcrumbsProp
         href="/"
         className="font-bold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-1 shrink-0"
       >
-        <div className="flex h-4 w-4 items-center justify-center rounded bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-[9px]">
-          T
-        </div>
-        <span>Today.</span>
+        <TodayAppIcon theme="light" size={16} />
+        <TodayWordmark theme="light" size="sm" />
       </Link>
 
       {items.map((item, idx) => (
@@ -661,9 +656,7 @@ export function SmartAppLauncherModal({ isOpen, onClose }: SmartAppLauncherModal
         {/* 모달 상단 헤더 */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-xl shadow-md">
-              T.
-            </div>
+            <TodayAppIcon theme="light" size={44} className="rounded-2xl shadow-md" />
             <div>
               <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
                 전체 서비스

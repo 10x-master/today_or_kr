@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
+import { TMark } from "@/components/brand/TodayLogo";
 import TCheckDiagnosisReport from "@/components/tcheck/TCheckDiagnosisReport";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 import KakaoLoginModal from "@/components/auth/KakaoLoginModal";
@@ -26,18 +27,13 @@ export default function TCheckPage() {
         <div className="max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <UnifiedHomeReturnAnchor />
-            <div className="flex items-center gap-1.5">
-              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-slate-900 text-white font-bold text-xs shadow-xs">
-                🔍
+            <div className="flex items-baseline gap-1.5">
+              <h1>
+                <TMark theme="light" suffix="Check" size="lg" />
+              </h1>
+              <span className="text-xs text-slate-400 font-normal hidden sm:inline">
+                자가진단 & 실사 리포트
               </span>
-              <div className="flex items-baseline gap-1.5">
-                <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-                  t.check
-                </h1>
-                <span className="text-xs text-slate-400 font-normal hidden sm:inline">
-                  자가진단 & 실사 리포트
-                </span>
-              </div>
             </div>
           </div>
 
