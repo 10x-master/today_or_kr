@@ -254,6 +254,17 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         badge: "무료 환급",
         keywords: "수수료 환급 카드 결제 PG 가맹점 누수 PWA 입점",
       },
+      {
+        id: "app-my-shop",
+        section: "STORE",
+        title: "내 매장 (My Shop) 관리 홈",
+        short: "내 매장",
+        description: "비즈홈·계약서 보관함·수수료 환급 현황을 한곳에서, 로그인 후 이용 가능",
+        href: "/my-shop",
+        icon: "🏪",
+        badge: "로그인 필요",
+        keywords: "내 매장 마이샵 비즈홈 계약서 보관함 수수료 환급",
+      },
     ],
   },
   {

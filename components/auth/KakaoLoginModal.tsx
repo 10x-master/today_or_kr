@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CheckCircle2, ShieldCheck, Sparkles, X, Calendar, ArrowRight, Loader2 } from "lucide-react";
 import { signInWithKakao, simulateDemoLogin, DEMO_KAKAO_USER } from "@/lib/auth/kakaoAuth";
+import { signInWithGoogle } from "@/lib/auth/googleAuth";
 import type { AuthProfile } from "@/types/auth";
 
 interface KakaoLoginModalProps {
@@ -44,6 +45,23 @@ export default function KakaoLoginModal({
       }
     } catch (err) {
       console.warn("Login exception:", err);
+      handleDemoInstantLogin();
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 구글 계정 로그인 실행 (영업사원·비즈니스용, 드라이브 연동)
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      const result = await signInWithGoogle(nextPath);
+      if (result.error) {
+        console.warn("Google login issue, falling back to demo:", result.error);
+        handleDemoInstantLogin();
+      }
+    } catch (err) {
+      console.warn("Google login exception:", err);
       handleDemoInstantLogin();
     } finally {
       setIsLoading(false);
@@ -177,9 +195,25 @@ export default function KakaoLoginModal({
                   <svg className="h-5 w-5 fill-[#191919] shrink-0" viewBox="0 0 24 24">
                     <path d="M12 3c-5.523 0-10 3.582-10 8 0 2.805 1.802 5.263 4.545 6.642l-.924 3.424c-.08.297.247.545.508.384l4.025-2.651c.594.072 1.206.111 1.846.111 5.523 0 10-3.582 10-8s-4.477-8-10-8z" />
                   </svg>
-                  <span>💬 카카오로 1초 간편 시작하기</span>
+                  <span>💬 카카오로 3초 만에 시작하기</span>
                 </>
               )}
+            </button>
+
+            {/* 구글 계정 로그인 버튼 (영업사원·비즈니스용, 드라이브 연동) */}
+            <button
+              type="button"
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+              className="flex w-full items-center justify-center gap-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-[0.99] py-3.5 px-4 text-sm font-bold text-slate-700 shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+            >
+              <svg className="h-4.5 w-4.5 shrink-0" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.48a5.55 5.55 0 0 1-2.4 3.64v3h3.88c2.27-2.09 3.56-5.17 3.56-8.83z" />
+                <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.9l-3.88-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.24v3.1A11.99 11.99 0 0 0 12 24z" />
+                <path fill="#FBBC05" d="M5.27 14.29A7.2 7.2 0 0 1 4.89 12c0-.8.14-1.57.38-2.29v-3.1H1.24A12 12 0 0 0 0 12c0 1.93.46 3.76 1.24 5.39l4.03-3.1z" />
+                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.24 6.61l4.03 3.1C6.22 6.86 8.87 4.75 12 4.75z" />
+              </svg>
+              <span>Google 계정으로 시작하기 (드라이브 연동)</span>
             </button>
 
             {/* 빠른 데모 원클릭 체험 버튼 */}

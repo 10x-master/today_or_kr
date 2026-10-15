@@ -1,9 +1,24 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
 import TRefundLeakCalculator from "@/components/trefund/TRefundLeakCalculator";
+import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
+import KakaoLoginModal from "@/components/auth/KakaoLoginModal";
+import { getCurrentAuthUser } from "@/lib/auth/kakaoAuth";
+import type { AuthProfile } from "@/types/auth";
 
 export default function TRefundPage() {
+  const [currentUser, setCurrentUser] = useState<AuthProfile | null>(null);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = () => getCurrentAuthUser().then(setCurrentUser);
+    checkAuth();
+    window.addEventListener("today_auth_changed", checkAuth);
+    return () => window.removeEventListener("today_auth_changed", checkAuth);
+  }, []);
+
   return (
     <div className="min-h-screen bg-white text-slate-900 pb-20 font-sans">
       {/* 1. 상단 네비게이션 헤더 */}
@@ -25,6 +40,15 @@ export default function TRefundPage() {
               </div>
             </div>
           </div>
+
+          {/* 로그인 / 프로필 위젯 */}
+          <UserAccountDropdown
+            currentUser={currentUser}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            onOpenTerms={() => window.dispatchEvent(new CustomEvent("today_open_terms_modal"))}
+            triggerStyle="icon_only"
+            align="right"
+          />
         </div>
       </header>
 
@@ -32,6 +56,16 @@ export default function TRefundPage() {
       <main className="max-w-3xl mx-auto px-4 py-5">
         <TRefundLeakCalculator />
       </main>
+
+      <KakaoLoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        nextPath="/t-refund"
+        onSuccess={(user) => {
+          setCurrentUser(user);
+          setIsLoginModalOpen(false);
+        }}
+      />
     </div>
   );
 }
