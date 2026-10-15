@@ -70,18 +70,19 @@ export default function PwaInstallBanner({
 
   return (
     <>
-      <aside aria-label="앱 설치 안내" className="mx-4 mt-2.5 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-600 via-indigo-700 to-indigo-800 p-3 text-white shadow-md sm:mx-6">
+      {/* 비로그인 방문자에게도 노출되는 클린 화이트 설치 유도 슬림 배너 */}
+      <aside aria-label="앱 설치 안내" className="mx-4 mt-2.5 rounded-2xl border border-slate-200 bg-white p-3 shadow-xs sm:mx-6">
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 backdrop-blur-xs">
-              <Smartphone className="h-5 w-5 text-white" />
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50">
+              <Smartphone className="h-5 w-5 text-blue-600" />
             </div>
-            <div>
-              <p className="text-xs font-bold leading-tight">
-                {appName} 앱으로 더 빠르고 편리하게!
+            <div className="min-w-0">
+              <p className="text-xs font-bold leading-tight text-slate-900">
+                홈 화면에 앱 추가하기
               </p>
-              <p className="text-[11px] text-indigo-100">
-                홈 화면에 추가하여 앱처럼 실시간 팩트 알림을 받아보세요.
+              <p className="text-[11px] text-slate-400 truncate">
+                {appName}을(를) 앱처럼 설치하고 실시간 알림을 받아보세요.
               </p>
             </div>
           </div>
@@ -90,15 +91,15 @@ export default function PwaInstallBanner({
             <button
               type="button"
               onClick={handleInstallClick}
-              className="inline-flex items-center gap-1 rounded-xl bg-white px-3 py-1.5 text-xs font-bold text-indigo-700 shadow-xs hover:bg-indigo-50 transition-colors"
+              className="inline-flex items-center gap-1 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-700 transition-colors"
             >
               <Download className="h-3.5 w-3.5" />
-              <span>앱 설치</span>
+              <span>추가하기</span>
             </button>
             <button
               type="button"
               onClick={() => setShowBanner(false)}
-              className="rounded-full p-1 text-white/70 hover:bg-white/10 hover:text-white"
+              className="rounded-full p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-500"
               aria-label="닫기"
             >
               <X className="h-4 w-4" />

@@ -3,6 +3,7 @@
 import { ChevronDown, Search, Bell, Sparkles } from "lucide-react";
 import type { AuthProfile } from "@/types/auth";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
+import InstallAppButton from "@/components/common/InstallAppButton";
 
 interface MobileTopBarProps {
   dongName: string;
@@ -92,6 +93,9 @@ export default function MobileTopBar({
               </span>
             )}
           </button>
+
+          {/* 앱 다운로드 버튼 (비로그인 방문자에게도 항상 노출) */}
+          <InstallAppButton appType="TODAY_MAIN" variant="icon" />
 
           {/* 구글 스타일 통합 계정 드롭다운 (원형 아바타 & 팝오버) */}
           <UserAccountDropdown

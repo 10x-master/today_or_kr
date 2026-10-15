@@ -59,7 +59,9 @@ import {
   personaToRoleGroup,
   type TopMode,
 } from "@/components/Navigation";
+import { TodayAppIcon, TodayWordmark } from "@/components/brand/TodayLogo";
 import QuickMenuGrid from "@/components/home/QuickMenuGrid";
+import InstallAppButton from "@/components/common/InstallAppButton";
 import type { UserPersona } from "@/types/persona";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -535,13 +537,9 @@ export default function Home({ initialDong }: HomeProps = {}) {
             {/* 로고 & 슬로건 */}
             <div className="border-b border-slate-100 pb-2.5 space-y-1">
               <Link href="/" className="inline-flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-amber-500 to-amber-600 text-white font-bold text-lg">
-                  T.
-                </div>
+                <TodayAppIcon theme="light" size={36} />
                 <div>
-                  <h1 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-1">
-                    Today<span className="text-amber-500">.</span>
-                  </h1>
+                  <TodayWordmark theme="light" size="lg" />
                   <p className="text-[10px] text-slate-400 font-normal">
                     하이퍼로컬 팩트 & 워크OS
                   </p>
@@ -550,6 +548,9 @@ export default function Home({ initialDong }: HomeProps = {}) {
 
               {/* 상단 모드 체인저: 이웃 주민 모드 ⟷ 사장님·기업 모드 */}
               <ModeChangerToggle mode={topMode} onChange={handleModeChange} className="mt-2" />
+
+              {/* 앱 다운로드 버튼 (비로그인 방문자도 항상 노출) */}
+              <InstallAppButton appType="TODAY_MAIN" variant="pill" className="mt-2 w-full justify-center" />
             </div>
 
             {/* 내 동네 핀 (2~5곳 전환) */}

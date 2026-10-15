@@ -42,13 +42,13 @@ export async function GET() {
     theme_color: setting.theme_color || "#FFFFFF",
     icons: [
       {
-        src: setting.icon_192_url || "/icons/today-192.png",
+        src: setting.icon_192_url || "/icons/today-192.png?v=2",
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: setting.icon_512_url || "/icons/today-512.png",
+        src: setting.icon_512_url || "/icons/today-512.png?v=2",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

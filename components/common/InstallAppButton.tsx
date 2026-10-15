@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import {
   Check,
   Copy,
+  Download,
   ExternalLink,
   QrCode,
   Share,
@@ -21,7 +22,7 @@ interface BeforeInstallPromptEvent extends Event {
 interface InstallAppButtonProps {
   appType: AppPwaTarget;
   className?: string;
-  variant?: "primary" | "secondary" | "header" | "pill";
+  variant?: "primary" | "secondary" | "header" | "pill" | "icon";
 }
 
 export default function InstallAppButton({
@@ -41,7 +42,7 @@ export default function InstallAppButton({
   const appDisplayName = isMain ? "Today." : "t.note";
   const appFullTitle = isMain ? "Today." : "티노트 (t.note)";
   const startPath = isMain ? "/" : "/workspace";
-  const iconPath = isMain ? "/icons/today-192.png" : "/icons/todaynote-192.png";
+  const iconPath = isMain ? "/icons/today-192.png?v=2" : "/icons/todaynote-192.png";
 
   useEffect(() => {
     // 환경 감지
@@ -109,7 +110,10 @@ export default function InstallAppButton({
   // 버튼 스타일 클래스
   let baseClasses =
     "inline-flex items-center gap-1.5 font-bold transition-all active:scale-95 cursor-pointer ";
-  if (variant === "header") {
+  if (variant === "icon") {
+    baseClasses +=
+      "h-10 w-10 justify-center rounded-full text-slate-700 hover:bg-slate-100 hover:text-slate-900";
+  } else if (variant === "header") {
     baseClasses += isMain
       ? "rounded-full bg-indigo-600 px-3 py-1.5 text-xs text-white shadow-xs hover:bg-indigo-700 hover:shadow-sm"
       : "rounded-full bg-slate-900 px-3 py-1.5 text-xs text-white shadow-xs hover:bg-slate-800 hover:shadow-sm";
@@ -131,10 +135,17 @@ export default function InstallAppButton({
         type="button"
         onClick={handleClick}
         className={`${baseClasses} ${className}`}
+        title={`${appDisplayName} 앱 다운로드`}
         aria-label={`${appDisplayName} 모바일 앱 등록`}
       >
-        <span className="text-sm">📲</span>
-        <span>{appDisplayName} 앱 등록</span>
+        {variant === "icon" ? (
+          <Download className="h-5 w-5" />
+        ) : (
+          <>
+            <span className="text-sm">📲</span>
+            <span>{appDisplayName} 앱 등록</span>
+          </>
+        )}
       </button>
 
       {/* 안내 모달 (iOS 공유 가이드 or PC QR코드 스캔) */}
@@ -217,10 +228,10 @@ export default function InstallAppButton({
                   />
                 </div>
                 <p className="mt-2.5 text-xs font-semibold text-indigo-700">
-                  스마트폰 기본 카메라로 QR코드를 스캔하세요
+                  스마트폰 카메라로 찍어 바로 설치하세요
                 </p>
                 <p className="mt-0.5 text-[11px] text-slate-400">
-                  모바일 브라우저에서 바로 홈 화면에 등록할 수 있습니다.
+                  https://today.or.kr 접속 후 홈 화면에 바로 추가할 수 있습니다.
                 </p>
 
                 <div className="mt-3.5 flex w-full gap-2">

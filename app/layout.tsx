@@ -26,8 +26,8 @@ export const metadata: Metadata = {
     "한국AI인테리어공간협회가 주관하는 전국 로컬 행정 고시 및 인프라 팩트 피드, 투데이(today.or.kr)",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/icons/today-192.png",
-    apple: "/icons/today-192.png",
+    icon: "/icons/today-192.png?v=2",
+    apple: "/icons/today-192.png?v=2",
   },
   appleWebApp: {
     capable: true,
