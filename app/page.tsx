@@ -55,8 +55,9 @@ import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 import {
   FastPinnedAppsBar,
   SmartAppLauncherModal,
-  WORK_TAB_LABEL,
+  ModeChangerToggle,
   personaToRoleGroup,
+  type TopMode,
 } from "@/components/Navigation";
 import QuickMenuGrid from "@/components/home/QuickMenuGrid";
 import type { UserPersona } from "@/types/persona";
@@ -191,6 +192,23 @@ export default function Home({ initialDong }: HomeProps = {}) {
     return () => window.removeEventListener("today_persona_changed", handlePersonaChange);
   }, []);
 
+  // 역할(페르소나) 변경 공용 핸들러 — 로컬스토리지 반영 및 전역 이벤트 브로드캐스트
+  const handlePersonaSelect = (persona: UserPersona) => {
+    setCurrentPersona(persona);
+    setRightStageView(persona === "APT_MANAGER" ? "APT_CONSULTING" : "POLICY_RADAR");
+    try {
+      localStorage.setItem("today_user_persona", persona);
+      window.dispatchEvent(new CustomEvent("today_persona_changed", { detail: persona }));
+    } catch {}
+  };
+
+  // 상단 모드 체인저: 이웃 주민 모드 ⟷ 사장님·기업 모드 (세부 6대 페르소나의 상위 2분류)
+  const topMode: TopMode =
+    currentPersona === "RESIDENT" || currentPersona === "APT_MANAGER" ? "RESIDENT" : "OWNER";
+  const handleModeChange = (mode: TopMode) => {
+    handlePersonaSelect(mode === "RESIDENT" ? "RESIDENT" : "RESTAURANT");
+  };
+
   // 동네 핀 상태
   const [userPins, setUserPins] = useState<UserDongPin[]>([]);
 
@@ -221,7 +239,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
 
   const superAdmin = isSuperAdmin(currentUser);
-  // 역할 그룹(주민/사장님/실무/관리) — 하단 '업무' 탭 라벨과 퀵메뉴 기본 구성에 사용
+  // 역할 그룹(주민/사장님/실무/관리) — 홈 퀵메뉴·전체 서비스 런처 기본 구성에 사용
   const roleGroup = personaToRoleGroup(currentPersona, superAdmin);
 
   // 카카오 비즈보드 배너 자동 롤링 (4.5초)
@@ -482,21 +500,21 @@ export default function Home({ initialDong }: HomeProps = {}) {
     fetchData();
   }, [region.dong, region.code, selectedCategory, selectedRole]);
 
-  // 바텀 네비게이션 탭 전환 핸들러 (5대 탭: 오늘, 동네, 혜택, 업무, MY)
+  // 바텀 네비게이션 탭 전환 핸들러 (5대 탭: 홈, 동네, t노트, t비즈홈, 더보기)
   const handleNavChange = (tab: NavTab) => {
-    if (tab === "today" || tab === "neighbors" || tab === "home") {
+    if (tab === "home" || tab === "today" || tab === "neighbors") {
       setActiveTab("home");
       setSelectedCategory("ALL");
     } else if (tab === "town" || tab === "talk" || tab === "feed") {
       setActiveTab("feed");
+    } else if (tab === "tnote") {
+      router.push("/t-note");
+    } else if (tab === "bizhome" || tab === "work") {
+      router.push("/biz/apt-sanggye14");
     } else if (tab === "benefits" || tab === "notes") {
       setActiveTab("notes");
-    } else if (tab === "work") {
-      router.push("/workspace");
-    } else if (tab === "my") {
+    } else if (tab === "more" || tab === "my" || tab === "menu") {
       setIsAppLauncherModalOpen(true);
-    } else if (tab === "more" || tab === "menu") {
-      setIsCategorySheetOpen(true);
     }
   };
 
@@ -529,6 +547,9 @@ export default function Home({ initialDong }: HomeProps = {}) {
                   </p>
                 </div>
               </Link>
+
+              {/* 상단 모드 체인저: 이웃 주민 모드 ⟷ 사장님·기업 모드 */}
+              <ModeChangerToggle mode={topMode} onChange={handleModeChange} className="mt-2" />
             </div>
 
             {/* 내 동네 핀 (2~5곳 전환) */}
@@ -703,6 +724,11 @@ export default function Home({ initialDong }: HomeProps = {}) {
                 unreadCount={2}
                 isSearchActive={isGlobalSearchOpen}
               />
+
+              {/* 상단 모드 체인저: 이웃 주민 모드 ⟷ 사장님·기업 모드 */}
+              <div className="flex items-center justify-center px-3 py-2 border-b border-slate-100 bg-white">
+                <ModeChangerToggle mode={topMode} onChange={handleModeChange} />
+              </div>
             </div>
 
             {/* PC 헤더 바 (lg 이상에서 동네 및 팩트 요약 표시) */}
@@ -871,14 +897,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
             <div className="px-3 pt-1 pb-1">
               <PersonaRoleSelector
                 activePersona={currentPersona}
-                onSelectPersona={(persona) => {
-                  setCurrentPersona(persona);
-                  if (persona === "APT_MANAGER") {
-                    setRightStageView("APT_CONSULTING");
-                  } else {
-                    setRightStageView("POLICY_RADAR");
-                  }
-                }}
+                onSelectPersona={handlePersonaSelect}
               />
             </div>
 
@@ -1734,22 +1753,20 @@ export default function Home({ initialDong }: HomeProps = {}) {
         userId={currentUser?.id || "user-001"}
       />
 
-      {/* 8. 하단 5대 고정 탭 바텀 네비게이션 ([오늘] [동네] [혜택] [업무] [MY]) - 모바일 전용 */}
+      {/* 8. 하단 5대 고정 탭 바텀 네비게이션 ([홈] [동네] [t노트] [t비즈홈] [더보기]) - 모바일 전용 */}
       <MobileBottomNav
         activeTab={
           isAppLauncherModalOpen
-            ? "my"
+            ? "more"
             : activeTab === "feed"
             ? "town"
             : activeTab === "notes"
-            ? "benefits"
-            : "today"
+            ? "more"
+            : "home"
         }
         onChangeTab={handleNavChange}
-        onOpenCategorySheet={() => setIsCategorySheetOpen(true)}
         notesCount={bookmarkedIds.length}
         unreadTalkCount={2}
-        workLabel={WORK_TAB_LABEL[roleGroup]}
       />
 
       {/* 9. 전사 통합 스마트 마이 메뉴 앱 런처 허브 모달 */}

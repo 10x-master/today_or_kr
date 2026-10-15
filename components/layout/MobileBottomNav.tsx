@@ -1,41 +1,38 @@
 "use client";
 
-import { Home, MapPin, Gift, Briefcase, User } from "lucide-react";
+import { Home, MapPin, NotebookPen, Building2, MoreHorizontal } from "lucide-react";
 
 export type NavTab =
-  | "today"
+  | "home"
   | "town"
-  | "benefits"
-  | "work"
-  | "my"
+  | "tnote"
+  | "bizhome"
+  | "more"
   // legacy ids (호환용)
+  | "today"
   | "neighbors"
   | "talk"
   | "feed"
-  | "more"
-  | "home"
+  | "benefits"
+  | "work"
+  | "my"
   | "notes"
   | "menu";
 
 interface MobileBottomNavProps {
   activeTab: NavTab;
   onChangeTab: (tab: NavTab) => void;
-  onOpenCategorySheet?: () => void;
   notesCount?: number;
   unreadTalkCount?: number;
-  /** 4번째 탭 라벨 (역할별: 우리아파트 / 내 가게 / 업무 / 관리) */
-  workLabel?: string;
 }
 
 export default function MobileBottomNav({
   activeTab,
   onChangeTab,
-  onOpenCategorySheet,
   notesCount = 0,
   unreadTalkCount = 2,
-  workLabel = "업무",
 }: MobileBottomNavProps) {
-  // 5대 고정 탭 (오늘 / 동네 / 혜택 / 업무 / MY) — PC 사이드바와 동일 구성
+  // 5대 고정 탭 (홈 / 동네 / t노트 / t비즈홈 / 더보기)
   const tabs: Array<{
     id: NavTab;
     aliases: NavTab[];
@@ -45,11 +42,11 @@ export default function MobileBottomNav({
     badge: string | null;
   }> = [
     {
-      id: "today",
-      aliases: ["home", "neighbors"],
-      label: "오늘",
+      id: "home",
+      aliases: ["today", "neighbors"],
+      label: "홈",
       icon: Home,
-      action: () => onChangeTab("today"),
+      action: () => onChangeTab("home"),
       badge: null,
     },
     {
@@ -61,28 +58,28 @@ export default function MobileBottomNav({
       badge: unreadTalkCount > 0 ? (unreadTalkCount > 99 ? "99+" : `${unreadTalkCount}`) : null,
     },
     {
-      id: "benefits",
-      aliases: ["notes"],
-      label: "혜택",
-      icon: Gift,
-      action: () => onChangeTab("benefits"),
-      badge: notesCount > 0 ? (notesCount > 99 ? "99+" : `${notesCount}`) : null,
-    },
-    {
-      id: "work",
+      id: "tnote",
       aliases: [],
-      label: workLabel,
-      icon: Briefcase,
-      action: () => onChangeTab("work"),
+      label: "t노트",
+      icon: NotebookPen,
+      action: () => onChangeTab("tnote"),
       badge: null,
     },
     {
-      id: "my",
-      aliases: ["more", "menu"],
-      label: "MY",
-      icon: User,
-      action: () => onChangeTab("my"),
+      id: "bizhome",
+      aliases: ["work"],
+      label: "t비즈홈",
+      icon: Building2,
+      action: () => onChangeTab("bizhome"),
       badge: null,
+    },
+    {
+      id: "more",
+      aliases: ["benefits", "notes", "my", "menu"],
+      label: "더보기",
+      icon: MoreHorizontal,
+      action: () => onChangeTab("more"),
+      badge: notesCount > 0 ? (notesCount > 99 ? "99+" : `${notesCount}`) : null,
     },
   ];
 

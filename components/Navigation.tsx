@@ -163,6 +163,17 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         badge: "자산 팩트",
         keywords: "관리비 감사 자산 보고서 청원 단지 분석",
       },
+      {
+        id: "app-tcheck-report",
+        section: "TOWN",
+        title: "t.check 자가진단 리포트",
+        short: "자가진단",
+        description: "K-apt 실거래 기반 CERA 입찰 적정성 진단 및 소상공인 매장 결제망·시설 자가점검",
+        href: "/t-check",
+        icon: "🔍",
+        badge: "CERA",
+        keywords: "자가진단 체크 K-apt CERA 장기수선 시설점검 매장 결제망",
+      },
     ],
   },
   {
@@ -232,6 +243,17 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         badge: "t.sign/t.check",
         keywords: "구인 알바 채용 근로계약 출결 직원 인사 급여",
       },
+      {
+        id: "app-trefund-calc",
+        section: "STORE",
+        title: "t.환급 결제수수료 무료진단",
+        short: "수수료환급",
+        description: "대표가맹점 요율 대비 누수 수수료 1% 무료 환급 청구 및 모바일 매장(PWA) 무료 입점",
+        href: "/t-refund",
+        icon: "💳",
+        badge: "무료 환급",
+        keywords: "수수료 환급 카드 결제 PG 가맹점 누수 PWA 입점",
+      },
     ],
   },
   {
@@ -270,6 +292,17 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         icon: "📋",
         keywords: "워크스페이스 협업 업무 작업 할일 프로젝트",
       },
+      {
+        id: "app-today-note-capture",
+        section: "WORK",
+        title: "투데이노트 2-Tap 빠른 등록",
+        short: "투데이노트",
+        description: "사진 1장 압축 촬영 + 10초 음성 녹음으로 즉시 등록, 소싱룸 연계 및 LinkPick 숏링크 자동 결합",
+        href: "/t-note",
+        icon: "📸",
+        badge: "2-Tap",
+        keywords: "투데이노트 사진 음성 소싱룸 숏링크 링크픽 등록",
+      },
     ],
   },
   {
@@ -302,13 +335,13 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
       {
         id: "app-tsign-contract",
         section: "ADMIN",
-        title: "t.sign 전자계약",
+        title: "t.sign AI 계약서 엔진",
         short: "전자계약",
-        description: "3개년 카드수수료 소급 청구 및 비대면 법적 효력 약정 체결",
-        href: "/partners",
+        description: "현장 음성·통화 녹음에서 AI가 당사자·단가·기간을 자동 추출해 표준계약서를 즉시 전자체결",
+        href: "/t-sign",
         icon: "✍️",
         badge: "1초 체결",
-        keywords: "계약 전자서명 서명 약정 청구 카드수수료",
+        keywords: "계약 전자서명 서명 약정 청구 카드수수료 녹음 AI파싱",
       },
       {
         id: "app-templates-center",
@@ -329,14 +362,6 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
     [3-1. 역할(Persona) 맞춤 · 최근 사용 유틸]
    ============================================================ */
 export type RoleGroup = "RESIDENT" | "OWNER" | "MANAGER" | "ADMIN";
-
-/** 하단탭 '업무' 라벨 — 역할에 따라 이름이 바뀝니다. */
-export const WORK_TAB_LABEL: Record<RoleGroup, string> = {
-  RESIDENT: "우리아파트",
-  OWNER: "내 가게",
-  MANAGER: "업무",
-  ADMIN: "관리",
-};
 
 /** 역할별 기본 퀵메뉴 구성 (최근 사용 · 핀 고정이 우선 노출됨) */
 export const ROLE_DEFAULT_QUICK: Record<RoleGroup, string[]> = {
@@ -441,6 +466,53 @@ export function readStoredPersona(): string | null {
 }
 
 export { RECENT_EVENT as RECENT_APPS_EVENT };
+
+/** ============================================================
+    [3-2. 상단 모드 체인저: 이웃 주민 모드 ⟷ 사장님·기업 모드]
+   ============================================================ */
+export type TopMode = "RESIDENT" | "OWNER";
+
+interface ModeChangerToggleProps {
+  mode: TopMode;
+  onChange: (mode: TopMode) => void;
+  className?: string;
+}
+
+/** 상단 고정 모드 체인저 — 홈·런처·퀵메뉴 전반의 역할 기본값을 한 번에 전환합니다. */
+export function ModeChangerToggle({ mode, onChange, className = "" }: ModeChangerToggleProps) {
+  return (
+    <div
+      role="tablist"
+      aria-label="이웃 주민 모드 / 사장님·기업 모드 전환"
+      className={`inline-flex items-center rounded-full bg-slate-100 p-0.5 text-xs font-bold select-none ${className}`}
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === "RESIDENT"}
+        onClick={() => onChange("RESIDENT")}
+        className={`flex items-center gap-1 rounded-full px-3 py-1.5 transition-all cursor-pointer ${
+          mode === "RESIDENT" ? "bg-white text-blue-700 shadow-2xs" : "text-slate-500 hover:text-slate-700"
+        }`}
+      >
+        <Users className="h-3.5 w-3.5" />
+        이웃 주민
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === "OWNER"}
+        onClick={() => onChange("OWNER")}
+        className={`flex items-center gap-1 rounded-full px-3 py-1.5 transition-all cursor-pointer ${
+          mode === "OWNER" ? "bg-white text-blue-700 shadow-2xs" : "text-slate-500 hover:text-slate-700"
+        }`}
+      >
+        <Briefcase className="h-3.5 w-3.5" />
+        사장님·기업
+      </button>
+    </div>
+  );
+}
 
 /** ============================================================
     [4. 전체 서비스 런처 모달 (검색 · 최근 사용 · 핀): SmartAppLauncherModal]
