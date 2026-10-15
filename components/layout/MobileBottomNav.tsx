@@ -1,18 +1,17 @@
 "use client";
 
-import {
-  Users,
-  MessageCircle,
-  Newspaper,
-  Sparkles,
-  MoreHorizontal,
-} from "lucide-react";
+import { Home, MapPin, Gift, Briefcase, User } from "lucide-react";
 
 export type NavTab =
+  | "today"
+  | "town"
+  | "benefits"
+  | "work"
+  | "my"
+  // legacy ids (호환용)
   | "neighbors"
   | "talk"
   | "feed"
-  | "benefits"
   | "more"
   | "home"
   | "notes"
@@ -24,6 +23,8 @@ interface MobileBottomNavProps {
   onOpenCategorySheet?: () => void;
   notesCount?: number;
   unreadTalkCount?: number;
+  /** 4번째 탭 라벨 (역할별: 우리아파트 / 내 가게 / 업무 / 관리) */
+  workLabel?: string;
 }
 
 export default function MobileBottomNav({
@@ -32,71 +33,73 @@ export default function MobileBottomNav({
   onOpenCategorySheet,
   notesCount = 0,
   unreadTalkCount = 2,
+  workLabel = "업무",
 }: MobileBottomNavProps) {
-  // 5대 탭 (이웃 / 톡 / 피드 / 혜택 / 더보기)
-  const tabs = [
+  // 5대 고정 탭 (오늘 / 동네 / 혜택 / 업무 / MY) — PC 사이드바와 동일 구성
+  const tabs: Array<{
+    id: NavTab;
+    aliases: NavTab[];
+    label: string;
+    icon: typeof Home;
+    action: () => void;
+    badge: string | null;
+  }> = [
     {
-      id: "neighbors" as NavTab,
-      alias: "home" as NavTab,
-      label: "이웃",
-      icon: Users,
-      action: () => onChangeTab("neighbors"),
+      id: "today",
+      aliases: ["home", "neighbors"],
+      label: "오늘",
+      icon: Home,
+      action: () => onChangeTab("today"),
       badge: null,
     },
     {
-      id: "talk" as NavTab,
-      alias: "talk" as NavTab,
-      label: "톡",
-      icon: MessageCircle,
-      action: () => onChangeTab("talk"),
+      id: "town",
+      aliases: ["feed", "talk"],
+      label: "동네",
+      icon: MapPin,
+      action: () => onChangeTab("town"),
       badge: unreadTalkCount > 0 ? (unreadTalkCount > 99 ? "99+" : `${unreadTalkCount}`) : null,
     },
     {
-      id: "feed" as NavTab,
-      alias: "feed" as NavTab,
-      label: "피드",
-      icon: Newspaper,
-      action: () => onChangeTab("feed"),
-      badge: null,
-    },
-    {
-      id: "benefits" as NavTab,
-      alias: "notes" as NavTab,
+      id: "benefits",
+      aliases: ["notes"],
       label: "혜택",
-      icon: Sparkles,
+      icon: Gift,
       action: () => onChangeTab("benefits"),
       badge: notesCount > 0 ? (notesCount > 99 ? "99+" : `${notesCount}`) : null,
     },
     {
-      id: "more" as NavTab,
-      alias: "menu" as NavTab,
-      label: "더보기",
-      icon: MoreHorizontal,
-      action: () => {
-        if (onOpenCategorySheet) {
-          onOpenCategorySheet();
-        } else {
-          onChangeTab("more");
-        }
-      },
+      id: "work",
+      aliases: [],
+      label: workLabel,
+      icon: Briefcase,
+      action: () => onChangeTab("work"),
+      badge: null,
+    },
+    {
+      id: "my",
+      aliases: ["more", "menu"],
+      label: "MY",
+      icon: User,
+      action: () => onChangeTab("my"),
       badge: null,
     },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-100 z-40 select-none pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden">
+    <nav
+      aria-label="주요 메뉴"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-100 z-40 select-none pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
+    >
       <div className="grid grid-cols-5 h-14">
-        {tabs.map(({ id, alias, label, icon: Icon, action, badge }) => {
-          const isActive =
-            activeTab === id ||
-            (id === "neighbors" && activeTab === "home") ||
-            (id === "benefits" && activeTab === "notes") ||
-            (id === "more" && activeTab === "menu");
+        {tabs.map(({ id, aliases, label, icon: Icon, action, badge }) => {
+          const isActive = activeTab === id || aliases.includes(activeTab);
 
           return (
             <button
               key={id}
               type="button"
+              aria-current={isActive ? "page" : undefined}
               onClick={action}
               className={`group flex flex-col items-center justify-center gap-1 transition-all active:scale-95 focus:outline-hidden ${
                 isActive

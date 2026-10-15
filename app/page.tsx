@@ -52,7 +52,13 @@ import QuickVoiceCaptureModal from "@/components/note/QuickVoiceCaptureModal";
 import PersonaRoleSelector from "@/components/portal/PersonaRoleSelector";
 import GovPolicyFundWidget from "@/components/portal/GovPolicyFundWidget";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
-import { FastPinnedAppsBar, SmartAppLauncherModal } from "@/components/Navigation";
+import {
+  FastPinnedAppsBar,
+  SmartAppLauncherModal,
+  WORK_TAB_LABEL,
+  personaToRoleGroup,
+} from "@/components/Navigation";
+import QuickMenuGrid from "@/components/home/QuickMenuGrid";
 import type { UserPersona } from "@/types/persona";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -215,6 +221,8 @@ export default function Home({ initialDong }: HomeProps = {}) {
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
 
   const superAdmin = isSuperAdmin(currentUser);
+  // 역할 그룹(주민/사장님/실무/관리) — 하단 '업무' 탭 라벨과 퀵메뉴 기본 구성에 사용
+  const roleGroup = personaToRoleGroup(currentPersona, superAdmin);
 
   // 카카오 비즈보드 배너 자동 롤링 (4.5초)
   useEffect(() => {
@@ -474,17 +482,19 @@ export default function Home({ initialDong }: HomeProps = {}) {
     fetchData();
   }, [region.dong, region.code, selectedCategory, selectedRole]);
 
-  // 바텀 네비게이션 탭 전환 핸들러 (5대 탭: 이웃, 톡, 피드, 혜택, 더보기)
+  // 바텀 네비게이션 탭 전환 핸들러 (5대 탭: 오늘, 동네, 혜택, 업무, MY)
   const handleNavChange = (tab: NavTab) => {
-    if (tab === "neighbors" || tab === "home") {
+    if (tab === "today" || tab === "neighbors" || tab === "home") {
       setActiveTab("home");
       setSelectedCategory("ALL");
-    } else if (tab === "talk") {
-      setActiveTab("feed");
-    } else if (tab === "feed") {
+    } else if (tab === "town" || tab === "talk" || tab === "feed") {
       setActiveTab("feed");
     } else if (tab === "benefits" || tab === "notes") {
       setActiveTab("notes");
+    } else if (tab === "work") {
+      router.push("/workspace");
+    } else if (tab === "my") {
+      setIsAppLauncherModalOpen(true);
     } else if (tab === "more" || tab === "menu") {
       setIsCategorySheetOpen(true);
     }
@@ -1110,6 +1120,14 @@ export default function Home({ initialDong }: HomeProps = {}) {
               {/* ============================================================== */}
               {(activeTab === "home" || activeTab === "feed") && (
                 <div>
+                  {/* 홈: 빠른 메뉴 (최근 사용 → 핀 → 역할 기본 순 자동 정렬) */}
+                  {activeTab === "home" && (
+                    <QuickMenuGrid
+                      roleGroup={roleGroup}
+                      onOpenHomeTab={(tab) => setActiveTab(tab)}
+                      onOpenAllServices={() => setIsAppLauncherModalOpen(true)}
+                    />
+                  )}
                   {/* 역할 선택 칩: [👤 입주민], [👔 동대표], [🏢 관리소장], [🏠 동네주민] */}
                   <div className="px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-slate-100 bg-white">
                     <span className="text-[10px] font-normal text-slate-400 shrink-0">
@@ -1716,21 +1734,22 @@ export default function Home({ initialDong }: HomeProps = {}) {
         userId={currentUser?.id || "user-001"}
       />
 
-      {/* 8. 하단 네이티브 5대 탭 바텀 네비게이션 ([이웃] [톡] [피드] [혜택] [더보기]) - 모바일 전용 */}
+      {/* 8. 하단 5대 고정 탭 바텀 네비게이션 ([오늘] [동네] [혜택] [업무] [MY]) - 모바일 전용 */}
       <MobileBottomNav
         activeTab={
-          activeTab === "home"
-            ? "neighbors"
+          isAppLauncherModalOpen
+            ? "my"
             : activeTab === "feed"
-            ? "feed"
+            ? "town"
             : activeTab === "notes"
             ? "benefits"
-            : "neighbors"
+            : "today"
         }
         onChangeTab={handleNavChange}
         onOpenCategorySheet={() => setIsCategorySheetOpen(true)}
         notesCount={bookmarkedIds.length}
         unreadTalkCount={2}
+        workLabel={WORK_TAB_LABEL[roleGroup]}
       />
 
       {/* 9. 전사 통합 스마트 마이 메뉴 앱 런처 허브 모달 */}

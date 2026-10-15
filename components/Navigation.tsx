@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -22,6 +22,8 @@ import {
   Shield,
   Layers,
   Sparkles,
+  Search,
+  Clock,
 } from "lucide-react";
 
 /** ============================================================
@@ -97,20 +99,26 @@ export function TodayBreadcrumbs({ items, className = "" }: TodayBreadcrumbsProp
 }
 
 /** ============================================================
-    [3. 스마트 마이 메뉴 앱 런처 데이터 구조]
+    [3. 목적 기반 서비스 런처 데이터 구조 (동네 / 혜택 / 내 가게 / 업무 / 관리)]
    ============================================================ */
+export type LauncherSectionId = "TOWN" | "BENEFIT" | "STORE" | "WORK" | "ADMIN";
+
 export interface AppLauncherItem {
   id: string;
-  section: "RESIDENT" | "STORE" | "SALES" | "PRODUCTIVITY";
+  section: LauncherSectionId;
   title: string;
+  /** 퀵메뉴·핀 바용 짧은 이름 (기억하기 쉬운 2~6글자) */
+  short: string;
   description: string;
   href: string;
   icon: string;
   badge?: string;
+  /** 통합 검색용 동의어 키워드 (공백 구분) */
+  keywords?: string;
 }
 
 export interface LauncherSection {
-  id: "RESIDENT" | "STORE" | "SALES" | "PRODUCTIVITY";
+  id: LauncherSectionId;
   title: string;
   subtitle: string;
   items: AppLauncherItem[];
@@ -118,169 +126,343 @@ export interface LauncherSection {
 
 export const LAUNCHER_SECTIONS: LauncherSection[] = [
   {
-    id: "RESIDENT",
-    title: "🏢 로컬 & 입주민",
-    subtitle: "동네 소식, 실시간 피드 및 아파트 자산 관리",
+    id: "TOWN",
+    title: "📍 동네 · 우리 아파트",
+    subtitle: "이웃 소식, 입주민 인증, 아파트 자산 관리",
     items: [
       {
         id: "app-local-feed",
-        section: "RESIDENT",
+        section: "TOWN",
         title: "투데이 로컬 피드",
+        short: "동네소식",
         description: "우리 동네 실시간 소식, 소통 톡, 입주민 인증 커뮤니티",
         href: "/local",
         icon: "📍",
         badge: "실시간",
+        keywords: "동네 이웃 피드 톡 소식 행사 구인 알바 커뮤니티",
       },
       {
         id: "app-aptlink-portal",
-        section: "RESIDENT",
+        section: "TOWN",
         title: "아파트링크 (AptLink) 공정입찰 포털",
+        short: "아파트링크",
         description: "내 아파트 공사비 적정성 진단, 주민인증 락인 및 2025 장기수선 실무스쿨",
         href: "/aptlink",
         icon: "🏢",
         badge: "NEW 순백",
+        keywords: "아파트 입찰 공사 장기수선 관리소 견적 주민인증",
       },
       {
         id: "app-apt-audit",
-        section: "RESIDENT",
+        section: "TOWN",
         title: "아파트 자산 진단 및 공구 청원",
+        short: "자산진단",
         description: "단지별 공용부 관리비 감사, 10인 청원 공동구매 및 자산 보고서",
         href: "/?tab=analysis",
         icon: "📊",
         badge: "자산 팩트",
+        keywords: "관리비 감사 자산 보고서 청원 단지 분석",
+      },
+    ],
+  },
+  {
+    id: "BENEFIT",
+    title: "🎁 혜택 · 수익",
+    subtitle: "싸게 사고, 추천하고, 받는 모든 혜택",
+    items: [
+      {
+        id: "app-group-buy",
+        section: "BENEFIT",
+        title: "공동구매 · 상품",
+        short: "공동구매",
+        description: "이웃과 함께 사는 10인 공구 특가와 플랫폼 상품",
+        href: "/products",
+        icon: "🛒",
+        badge: "공구",
+        keywords: "공구 공동구매 상품 쇼핑 특가 할인 구매",
+      },
+      {
+        id: "app-linkpick-hub",
+        section: "BENEFIT",
+        title: "링크픽(LinkPick) 수익 허브",
+        short: "링크픽",
+        description: "모바일 1-Page 제휴 솔루션 추천, N차 수수료 자동 정산 허브",
+        href: "/p/ambassador-01",
+        icon: "🔗",
+        badge: "수당 15%",
+        keywords: "제휴 추천 수익 수수료 정산 앰배서더 링크 리퍼럴 지갑",
       },
     ],
   },
   {
     id: "STORE",
-    title: "🏪 소상공인 & 매장",
-    subtitle: "스마트 매장 솔루션, 구인구직 및 로컬 비즈니스",
+    title: "🏪 내 가게",
+    subtitle: "매장 홈페이지, 광고, 구인 · 근로계약",
     items: [
       {
         id: "app-t-homepage",
         section: "STORE",
         title: "t.홈페이지 빌더",
+        short: "내 홈페이지",
         description: "모바일 원클릭 공식 매장 웹사이트, 카카오 채널 및 단말기 연동",
         href: "/biz/apt-sanggye14",
         icon: "🌐",
         badge: "멀티테넌트",
-      },
-      {
-        id: "app-templates-center",
-        section: "STORE",
-        title: "t.홈페이지 템플릿 센터",
-        description: "4대 표준 프리셋(아파트링크/제조사특판/동네매장/세일즈) 복제 엔진",
-        href: "/admin/templates",
-        icon: "📑",
-        badge: "템플릿 엔진",
-      },
-      {
-        id: "app-desk-recruitment",
-        section: "STORE",
-        title: "알바 ATS 구인 / 근로계약",
-        description: "모바일 1초 표준근로계약(t.sign), 지오펜싱 50m 출결 및 3.3% 원천세",
-        href: "/desk/recruitment",
-        icon: "👥",
-        badge: "t.sign/t.check",
+        keywords: "홈페이지 매장 웹사이트 사이트 가게 카카오 채널",
       },
       {
         id: "app-partners-ads",
         section: "STORE",
         title: "비즈보드 광고 센터",
+        short: "광고",
         description: "동네 주민 10,000명에게 즉시 알리는 하이퍼로컬 배너 광고",
         href: "/partners",
         icon: "📢",
         badge: "파트너스",
+        keywords: "광고 홍보 배너 비즈보드 파트너스 마케팅",
+      },
+      {
+        id: "app-desk-recruitment",
+        section: "STORE",
+        title: "알바 ATS 구인 / 근로계약",
+        short: "구인·계약",
+        description: "모바일 1초 표준근로계약(t.sign), 지오펜싱 50m 출결 및 3.3% 원천세",
+        href: "/desk/recruitment",
+        icon: "👥",
+        badge: "t.sign/t.check",
+        keywords: "구인 알바 채용 근로계약 출결 직원 인사 급여",
       },
     ],
   },
   {
-    id: "SALES",
-    title: "💼 전문 영업 & TM",
-    subtitle: "현장 필드 세일즈 레이더 및 TM CRM 전문 시스템",
-    items: [
-      {
-        id: "app-tnote-sales",
-        section: "SALES",
-        title: "t.note Sales (필드 세일즈 & TM CRM)",
-        description: "GIS 가맹점 레이더, 수수료 누수 환급 진단, 밀착 TM 동선 관리",
-        href: "/admin/radar",
-        icon: "🛰️",
-        badge: "M-FAD 레이더",
-      },
-      {
-        id: "app-admin-crm",
-        section: "SALES",
-        title: "최고관리자 통합 CRM",
-        description: "서포터즈 100점 배점 심사, 비즈홈 소유권 이전 및 광고 라이브 제어",
-        href: "/admin/crm",
-        icon: "🛡️",
-        badge: "HQ 전용",
-      },
-      {
-        id: "app-tsign-contract",
-        section: "SALES",
-        title: "t.sign 전자계약",
-        description: "3개년 카드수수료 소급 청구 및 비대면 법적 효력 약정 체결",
-        href: "/partners",
-        icon: "✍️",
-        badge: "1초 체결",
-      },
-    ],
-  },
-  {
-    id: "PRODUCTIVITY",
-    title: "⚡ 개인 생산성 & 수익",
-    subtitle: "AI 비서, 음성 캡처 및 제휴 수익 파이프라인",
+    id: "WORK",
+    title: "💼 업무 · 생산성",
+    subtitle: "AI 비서, 메모, 일정, 협업 워크스페이스",
     items: [
       {
         id: "app-tnote-desk",
-        section: "PRODUCTIVITY",
+        section: "WORK",
         title: "t.note 스마트 데스크",
+        short: "스마트데스크",
         description: "AI 일정 비서, 음성 퀵 캡처, 구글 캘린더 양방향 실시간 동기화",
         href: "/desk",
         icon: "⚡",
         badge: "AI 워크OS",
+        keywords: "데스크 일정 캘린더 비서 음성 AI 스케줄",
       },
       {
-        id: "app-linkpick-hub",
-        section: "PRODUCTIVITY",
-        title: "링크픽(LinkPick) 수익 허브",
-        description: "모바일 1-Page 제휴 솔루션 추천, N차 수수료 자동 정산 허브",
-        href: "/p/ambassador-01",
-        icon: "🔗",
-        badge: "수당 15%",
+        id: "app-tnote-note",
+        section: "WORK",
+        title: "t.note 빠른 메모",
+        short: "노트",
+        description: "음성·텍스트 즉시 메모와 공유",
+        href: "/note",
+        icon: "📝",
+        keywords: "노트 메모 기록 음성 공유 필기",
       },
       {
         id: "app-tnote-workspace",
-        section: "PRODUCTIVITY",
+        section: "WORK",
         title: "t.note 통합 워크스페이스",
+        short: "워크스페이스",
         description: "노트, 캘린더, 로컬 자산 및 협업 관리 전체 뷰포트",
         href: "/workspace",
         icon: "📋",
+        keywords: "워크스페이스 협업 업무 작업 할일 프로젝트",
+      },
+    ],
+  },
+  {
+    id: "ADMIN",
+    title: "🛡️ 관리 · 영업",
+    subtitle: "필드 세일즈 레이더, CRM, 전자계약, 템플릿",
+    items: [
+      {
+        id: "app-tnote-sales",
+        section: "ADMIN",
+        title: "t.note Sales (필드 세일즈 & TM CRM)",
+        short: "세일즈레이더",
+        description: "GIS 가맹점 레이더, 수수료 누수 환급 진단, 밀착 TM 동선 관리",
+        href: "/admin/radar",
+        icon: "🛰️",
+        badge: "M-FAD 레이더",
+        keywords: "영업 세일즈 레이더 TM 가맹점 지도 수수료",
+      },
+      {
+        id: "app-admin-crm",
+        section: "ADMIN",
+        title: "최고관리자 통합 CRM",
+        short: "통합CRM",
+        description: "서포터즈 100점 배점 심사, 비즈홈 소유권 이전 및 광고 라이브 제어",
+        href: "/admin/crm",
+        icon: "🛡️",
+        badge: "HQ 전용",
+        keywords: "관리자 CRM 승인 심사 서포터즈 소유권 어드민",
+      },
+      {
+        id: "app-tsign-contract",
+        section: "ADMIN",
+        title: "t.sign 전자계약",
+        short: "전자계약",
+        description: "3개년 카드수수료 소급 청구 및 비대면 법적 효력 약정 체결",
+        href: "/partners",
+        icon: "✍️",
+        badge: "1초 체결",
+        keywords: "계약 전자서명 서명 약정 청구 카드수수료",
+      },
+      {
+        id: "app-templates-center",
+        section: "ADMIN",
+        title: "t.홈페이지 템플릿 센터",
+        short: "템플릿",
+        description: "4대 표준 프리셋(아파트링크/제조사특판/동네매장/세일즈) 복제 엔진",
+        href: "/admin/templates",
+        icon: "📑",
+        badge: "템플릿 엔진",
+        keywords: "템플릿 프리셋 복제 홈페이지 디자인",
       },
     ],
   },
 ];
 
 /** ============================================================
-    [4. 스마트 마이 메뉴 허브 모달: SmartAppLauncherModal]
+    [3-1. 역할(Persona) 맞춤 · 최근 사용 유틸]
+   ============================================================ */
+export type RoleGroup = "RESIDENT" | "OWNER" | "MANAGER" | "ADMIN";
+
+/** 하단탭 '업무' 라벨 — 역할에 따라 이름이 바뀝니다. */
+export const WORK_TAB_LABEL: Record<RoleGroup, string> = {
+  RESIDENT: "우리아파트",
+  OWNER: "내 가게",
+  MANAGER: "업무",
+  ADMIN: "관리",
+};
+
+/** 역할별 기본 퀵메뉴 구성 (최근 사용 · 핀 고정이 우선 노출됨) */
+export const ROLE_DEFAULT_QUICK: Record<RoleGroup, string[]> = {
+  RESIDENT: [
+    "app-local-feed",
+    "app-apt-audit",
+    "app-aptlink-portal",
+    "app-group-buy",
+    "app-linkpick-hub",
+    "app-tnote-desk",
+    "app-tnote-note",
+  ],
+  OWNER: [
+    "app-partners-ads",
+    "app-desk-recruitment",
+    "app-t-homepage",
+    "app-local-feed",
+    "app-group-buy",
+    "app-tnote-desk",
+    "app-linkpick-hub",
+  ],
+  MANAGER: [
+    "app-aptlink-portal",
+    "app-apt-audit",
+    "app-tnote-desk",
+    "app-tnote-note",
+    "app-tnote-workspace",
+    "app-local-feed",
+    "app-group-buy",
+  ],
+  ADMIN: [
+    "app-tnote-sales",
+    "app-admin-crm",
+    "app-templates-center",
+    "app-tnote-desk",
+    "app-tsign-contract",
+    "app-local-feed",
+    "app-tnote-workspace",
+  ],
+};
+
+/** 역할별 런처 섹션 노출 순서 */
+export const ROLE_SECTION_ORDER: Record<RoleGroup, LauncherSectionId[]> = {
+  RESIDENT: ["TOWN", "BENEFIT", "WORK", "STORE", "ADMIN"],
+  OWNER: ["STORE", "BENEFIT", "TOWN", "WORK", "ADMIN"],
+  MANAGER: ["TOWN", "WORK", "BENEFIT", "STORE", "ADMIN"],
+  ADMIN: ["ADMIN", "WORK", "STORE", "TOWN", "BENEFIT"],
+};
+
+export function personaToRoleGroup(persona: string | null | undefined, isAdmin = false): RoleGroup {
+  if (isAdmin) return "ADMIN";
+  if (persona === "APT_MANAGER") return "MANAGER";
+  if (
+    persona === "RESTAURANT" ||
+    persona === "MANUFACTURER" ||
+    persona === "STORE_CLOSING" ||
+    persona === "AMBASSADOR"
+  ) {
+    return "OWNER";
+  }
+  return "RESIDENT";
+}
+
+export const ALL_LAUNCHER_APPS: AppLauncherItem[] = LAUNCHER_SECTIONS.flatMap((s) => s.items);
+
+const RECENT_KEY = "today_recent_apps";
+const RECENT_EVENT = "today_recent_apps_changed";
+const PERSONA_KEY = "today_user_persona";
+
+export function readRecentAppIds(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(RECENT_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((x) => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+export function recordRecentApp(appId: string) {
+  if (typeof window === "undefined") return;
+  try {
+    const next = [appId, ...readRecentAppIds().filter((id) => id !== appId)].slice(0, 6);
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent(RECENT_EVENT, { detail: next }));
+  } catch {}
+}
+
+/** 홈 URL(/?tab=...)과 같은 href 기준으로 앱 id를 역조회 */
+export function findAppByHref(href: string): AppLauncherItem | undefined {
+  return ALL_LAUNCHER_APPS.find((a) => a.href === href);
+}
+
+export function readStoredPersona(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(PERSONA_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export { RECENT_EVENT as RECENT_APPS_EVENT };
+
+/** ============================================================
+    [4. 전체 서비스 런처 모달 (검색 · 최근 사용 · 핀): SmartAppLauncherModal]
    ============================================================ */
 interface SmartAppLauncherModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+const DEFAULT_PINNED = ["app-local-feed", "app-tnote-sales", "app-desk-recruitment", "app-tnote-desk"];
+
 export function SmartAppLauncherModal({ isOpen, onClose }: SmartAppLauncherModalProps) {
+  const [query, setQuery] = useState("");
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [roleGroup, setRoleGroup] = useState<RoleGroup>("RESIDENT");
   const [pinnedAppIds, setPinnedAppIds] = useState<string[]>(() => {
-    if (typeof window === "undefined") {
-      return ["app-local-feed", "app-tnote-sales", "app-desk-recruitment", "app-tnote-desk"];
-    }
+    if (typeof window === "undefined") return DEFAULT_PINNED;
     try {
       const saved = localStorage.getItem("today_pinned_apps");
       if (saved) return JSON.parse(saved);
     } catch {}
-    return ["app-local-feed", "app-tnote-sales", "app-desk-recruitment", "app-tnote-desk"];
+    return DEFAULT_PINNED;
   });
 
   const handleTogglePin = (appId: string, e: React.MouseEvent) => {
@@ -303,32 +485,108 @@ export function SmartAppLauncherModal({ isOpen, onClose }: SmartAppLauncherModal
     };
     if (isOpen) {
       document.addEventListener("keydown", handleKeyDown);
+      setQuery("");
+      setRecentIds(readRecentAppIds());
+      setRoleGroup(personaToRoleGroup(readStoredPersona()));
     }
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
 
+  const orderedSections = useMemo(() => {
+    const order = ROLE_SECTION_ORDER[roleGroup];
+    return [...LAUNCHER_SECTIONS].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  }, [roleGroup]);
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const searchResults = useMemo(() => {
+    if (!normalizedQuery) return [];
+    return ALL_LAUNCHER_APPS.filter((a) =>
+      `${a.title} ${a.short} ${a.description} ${a.badge ?? ""} ${a.keywords ?? ""}`
+        .toLowerCase()
+        .includes(normalizedQuery)
+    );
+  }, [normalizedQuery]);
+
+  const recentApps = recentIds
+    .map((id) => ALL_LAUNCHER_APPS.find((a) => a.id === id))
+    .filter((a): a is AppLauncherItem => !!a);
+
   if (!isOpen) return null;
 
+  const handleOpenApp = (app: AppLauncherItem) => {
+    recordRecentApp(app.id);
+    onClose();
+  };
+
+  const renderAppRow = (app: AppLauncherItem) => {
+    const isPinned = pinnedAppIds.includes(app.id);
+    return (
+      <Link
+        key={app.id}
+        href={app.href}
+        onClick={() => handleOpenApp(app)}
+        className="group flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/80 hover:border-blue-400 hover:shadow-xs transition-all text-left"
+      >
+        <div className="flex items-start gap-2.5 min-w-0 flex-1">
+          <span className="text-xl shrink-0 mt-0.5">{app.icon}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-bold text-xs text-slate-900 group-hover:text-blue-600 transition-colors truncate">
+                {app.title}
+              </span>
+              {app.badge && (
+                <span className="text-[9.5px] font-semibold px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
+                  {app.badge}
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-slate-500 font-normal line-clamp-1 mt-0.5">
+              {app.description}
+            </p>
+          </div>
+        </div>
+
+        {/* 우측 핀(즐겨찾기) 버튼 */}
+        <button
+          type="button"
+          onClick={(e) => handleTogglePin(app.id, e)}
+          className={`p-1.5 rounded-lg transition-colors ml-2 cursor-pointer shrink-0 ${
+            isPinned
+              ? "text-amber-500 bg-amber-50 hover:bg-amber-100"
+              : "text-slate-300 hover:text-slate-600 hover:bg-slate-100"
+          }`}
+          title={isPinned ? "상단 빠른 실행 바에서 제거" : "상단 빠른 실행 바에 핀 고정"}
+          aria-label={isPinned ? "핀 제거" : "핀 고정"}
+        >
+          <Star className={`h-4 w-4 ${isPinned ? "fill-amber-400" : ""}`} />
+        </button>
+      </Link>
+    );
+  };
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl p-5 sm:p-7 space-y-6 my-auto max-h-[92vh] overflow-y-auto animate-in zoom-in-95 duration-150">
+    <div
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-5 animate-in fade-in duration-150"
+      role="dialog"
+      aria-modal="true"
+      aria-label="전체 서비스"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 w-full max-w-4xl p-5 sm:p-7 space-y-5 max-h-[92vh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
         {/* 모달 상단 헤더 */}
-        <div className="flex items-start justify-between border-b border-slate-100 pb-4">
+        <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-xl shadow-md">
               T.
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-                  스마트 마이 메뉴 앱 런처
-                </h2>
-                <span className="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-bold text-blue-700">
-                  전사 허브
-                </span>
-              </div>
+              <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
+                전체 서비스
+              </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                역할별 4대 핵심 서비스로 즉시 진입하고, [☆ 핀]을 눌러 상단 퀵 바에 등록하세요.
+                하고 싶은 일로 찾으세요. 이름이 기억나지 않아도 검색하면 바로 나옵니다.
               </p>
             </div>
           </div>
@@ -338,78 +596,88 @@ export function SmartAppLauncherModal({ isOpen, onClose }: SmartAppLauncherModal
             onClick={onClose}
             className="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
             title="닫기"
+            aria-label="닫기"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        {/* 4대 기능별 대형 카드 그리드 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {LAUNCHER_SECTIONS.map((sec) => (
-            <div
-              key={sec.id}
-              className="rounded-2xl border border-slate-200/90 bg-slate-50/50 p-4 space-y-3 hover:bg-slate-50 transition-colors"
-            >
-              <div className="flex items-baseline justify-between border-b border-slate-200/60 pb-2">
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight flex items-center gap-1.5">
-                  <span>{sec.title}</span>
-                </h3>
-                <span className="text-[10.5px] text-slate-400">{sec.subtitle}</span>
-              </div>
+        {/* 통합 검색 */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <input
+            id="launcher-search-input"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="예) 공구, 노트, 광고, 구인, 입찰, 일정…"
+            autoFocus
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-hidden focus:ring-4 focus:ring-blue-100 transition-all"
+          />
+        </div>
 
+        {normalizedQuery ? (
+          /* 검색 결과 */
+          <div className="space-y-2">
+            <p className="text-[11px] text-slate-400 font-medium">
+              검색 결과 {searchResults.length}건
+            </p>
+            {searchResults.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {searchResults.map(renderAppRow)}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-sm text-slate-400">
+                “{query}”에 해당하는 서비스가 없습니다. 다른 단어로 검색해 보세요.
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* 최근 사용 */}
+            {recentApps.length > 0 && (
               <div className="space-y-2">
-                {sec.items.map((app) => {
-                  const isPinned = pinnedAppIds.includes(app.id);
-                  return (
+                <h3 className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-slate-400" />
+                  최근 사용
+                </h3>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {recentApps.map((app) => (
                     <Link
                       key={app.id}
                       href={app.href}
-                      onClick={onClose}
-                      className="group flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200/80 hover:border-blue-400 hover:shadow-xs transition-all text-left"
+                      onClick={() => handleOpenApp(app)}
+                      className="shrink-0 flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-blue-400 hover:text-blue-600 transition-colors"
                     >
-                      <div className="flex items-start gap-2.5 min-w-0 flex-1">
-                        <span className="text-xl shrink-0 mt-0.5">{app.icon}</span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-xs text-slate-900 group-hover:text-blue-600 transition-colors truncate">
-                              {app.title}
-                            </span>
-                            {app.badge && (
-                              <span className="text-[9.5px] font-semibold px-1.5 py-0.2 rounded-full bg-blue-50 text-blue-700 border border-blue-200/60">
-                                {app.badge}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-slate-500 font-normal line-clamp-1 mt-0.5">
-                            {app.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* 우측 핀(즐겨찾기) 버튼 */}
-                      <button
-                        type="button"
-                        onClick={(e) => handleTogglePin(app.id, e)}
-                        className={`p-1.5 rounded-lg transition-colors ml-2 cursor-pointer shrink-0 ${
-                          isPinned
-                            ? "text-amber-500 bg-amber-50 hover:bg-amber-100"
-                            : "text-slate-300 hover:text-slate-600 hover:bg-slate-100"
-                        }`}
-                        title={isPinned ? "상단 빠른 실행 바에서 제거" : "상단 빠른 실행 바에 핀 고정"}
-                      >
-                        <Star className={`h-4 w-4 ${isPinned ? "fill-amber-400" : ""}`} />
-                      </button>
+                      <span>{app.icon}</span>
+                      <span>{app.short}</span>
                     </Link>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
+            )}
+
+            {/* 목적별 섹션 (역할에 맞춰 순서 정렬) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {orderedSections.map((sec) => (
+                <div
+                  key={sec.id}
+                  className="rounded-2xl border border-slate-200/90 bg-slate-50/50 p-4 space-y-3 hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-baseline justify-between gap-2 border-b border-slate-200/60 pb-2">
+                    <h3 className="text-sm font-bold text-slate-900 tracking-tight">{sec.title}</h3>
+                    <span className="text-[10.5px] text-slate-400 text-right">{sec.subtitle}</span>
+                  </div>
+                  <div className="space-y-2">{sec.items.map(renderAppRow)}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
 
         {/* 모달 하단 풋터 안내 */}
         <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-          <span>Today Link Ecosystem · 하이퍼로컬 팩트 & 워크OS</span>
+          <span>☆ 핀을 누르면 상단 빠른 실행 바에 고정됩니다</span>
           <div className="flex items-center gap-3">
             <Link href="/terms" onClick={onClose} className="hover:text-slate-600">
               이용약관
@@ -485,7 +753,7 @@ export function FastPinnedAppsBar({ className = "" }: { className?: string }) {
             className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-blue-600 border border-slate-200/80 transition-colors font-medium shrink-0"
           >
             <span className="text-[11px]">{app.icon}</span>
-            <span className="text-[11px]">{app.title.split(" (")[0]}</span>
+            <span className="text-[11px]">{app.short}</span>
           </Link>
         ))}
       </div>
