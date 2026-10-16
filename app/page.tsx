@@ -10,12 +10,10 @@ import {
   Coffee,
   Crown,
   Eye,
-  LogOut,
   MapPin,
   Mic,
   Plus,
   RefreshCw,
-  Scale,
   Search,
   Sparkles,
   TrendingUp,
@@ -23,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import KakaoLoginModal from "@/components/auth/KakaoLoginModal";
-import { getCurrentAuthUser, signOutKakao } from "@/lib/auth/kakaoAuth";
+import { getCurrentAuthUser } from "@/lib/auth/kakaoAuth";
 import type { AuthProfile, UserDongPin } from "@/types/auth";
 import ResidentVerifyModal from "@/components/apt/ResidentVerifyModal";
 import HeroProductRolling from "@/components/home/HeroProductRolling";
@@ -53,6 +51,7 @@ import QuickVoiceCaptureModal from "@/components/note/QuickVoiceCaptureModal";
 import PersonaRoleSelector from "@/components/portal/PersonaRoleSelector";
 import GovPolicyFundWidget from "@/components/portal/GovPolicyFundWidget";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
+import MQuickMenu from "@/components/layout/MQuickMenu";
 import {
   FastPinnedAppsBar,
   SmartAppLauncherModal,
@@ -733,24 +732,33 @@ export default function Home({ initialDong }: HomeProps = {}) {
               </div>
             </div>
 
-            {/* PC 헤더 바 (lg 이상에서 동네 및 팩트 요약 표시) */}
+            {/* 탑 글로벌 헤더 (단일화): 로고 + 동네 핀 선택기 + 핵심 내비게이션 + 미니멀 프로필 + M 퀵메뉴 */}
             <div className="hidden lg:flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-white">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue-600 font-bold text-sm">
-                  📍
-                </span>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold tracking-tight text-blue-600">
+              <div className="flex items-center gap-3">
+                <Link href="/" className="shrink-0">
+                  <TodayWordmark theme="light" size="md" />
+                </Link>
+                <span className="h-5 w-px bg-slate-200" />
+                <button
+                  type="button"
+                  onClick={() => setIsDongPinSheetOpen(true)}
+                  className="group flex items-center gap-2 cursor-pointer"
+                  title="내 동네 핀 선택"
+                >
+                  <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue-600 font-bold text-sm">
+                    📍
+                  </span>
+                  <h2 className="text-xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700">
                     {region.sido} {region.gugun} {region.dong}
                   </h2>
                   <span className="rounded-full bg-blue-50 border border-blue-200/80 px-2 py-0.5 text-[10.5px] font-bold text-blue-700">
                     실시간 팩트 피드
                   </span>
-                </div>
+                </button>
               </div>
 
               <div className="flex items-center gap-2">
-                {/* 상단 GNB 빠른 실행 핀 바 */}
+                {/* 핵심 내비게이션: 상단 GNB 빠른 실행 핀 바 */}
                 <FastPinnedAppsBar className="hidden xl:flex mr-1.5" />
 
                 <button
@@ -770,13 +778,17 @@ export default function Home({ initialDong }: HomeProps = {}) {
                   <span>새로고침</span>
                 </button>
 
-                {/* 🌟 구글 스타일 통합 계정 드롭다운 (PC 모드) */}
+                {/* 미니멀 프로필/로그인 아바타 */}
                 <UserAccountDropdown
                   currentUser={currentUser}
                   onOpenLogin={() => setIsLoginModalOpen(true)}
                   onOpenTerms={() => setIsTermsModalOpen(true)}
+                  triggerStyle="icon_only"
                   align="right"
                 />
+
+                {/* 볼드 [M] 퀵메뉴: t.다이어리·t.노트·t.홈페이지·t.싸인·t.refund·아파트링크·링크픽 */}
+                <MQuickMenu />
               </div>
             </div>
 
@@ -1345,141 +1357,10 @@ export default function Home({ initialDong }: HomeProps = {}) {
           </div>
 
           {/* ============================================================== */}
-          {/* Col 10~12 (우측 360px): 프로필/핀, t.note 퀵 등록, 링크픽 세일즈 */}
+          {/* Col 10~12 (우측 360px): t.note 퀵 등록, 링크픽 세일즈 — 프로필은 탑 글로벌 헤더로 단일화됨 */}
           {/* ============================================================== */}
           <aside className="hidden lg:flex lg:col-span-3 xl:col-span-3 flex-col gap-3 h-auto">
-            {/* 1. 👤 프로필 및 스마트 마이 메뉴 위젯 */}
-            <div className="border-b border-slate-100 pb-3 space-y-2.5">
-              {currentUser ? (
-                /* 로그인 사용자: 미니멀 사용자 프로필 요약 카드 */
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-2.5">
-                    {currentUser.avatar_url ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={currentUser.avatar_url}
-                        alt={currentUser.full_name || "프로필"}
-                        className="h-10 w-10 rounded-full object-cover ring-1 ring-blue-200"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-xs">
-                        {currentUser.full_name?.slice(0, 1) || "U"}
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-xs font-bold text-slate-900 truncate">
-                          {currentUser.full_name || "회원"}
-                        </p>
-                        {superAdmin && (
-                          <Crown className="h-3.5 w-3.5 text-amber-500 fill-amber-400 shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-[10.5px] text-slate-400 truncate font-normal">
-                        {currentUser.email || "카카오 간편인증 회원"}
-                      </p>
-                      <div className="mt-0.5 flex items-center gap-1.5">
-                        <span className="rounded-full bg-blue-50 border border-blue-200/80 px-2 py-0.2 text-[9.5px] font-bold text-blue-700">
-                          {superAdmin
-                            ? "👑 최고관리자"
-                            : currentUser.role === "STORE_OWNER"
-                            ? "🏪 매장 파트너"
-                            : "인증 회원"}
-                        </span>
-                        {userPins.length > 0 && (
-                          <span className="text-[10px] font-normal text-slate-500">
-                            동네 핀 {userPins.length}곳
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 스마트 마이 메뉴 허브 열기 버튼 */}
-                  <button
-                    type="button"
-                    onClick={() => setIsAppLauncherModalOpen(true)}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs transition-all shadow-xs cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-amber-300" />
-                      <span>스마트 마이 메뉴</span>
-                    </div>
-                    <span className="text-[11px] font-semibold text-blue-100 group-hover:translate-x-0.5 transition-transform">
-                      열기 →
-                    </span>
-                  </button>
-
-                  {/* 프로필 빠른 액션 버튼들 */}
-                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsTermsModalOpen(true)}
-                      className="flex items-center justify-center gap-1 rounded-lg bg-slate-50 hover:bg-slate-100 py-1.5 text-[11px] font-normal text-slate-700 transition-colors cursor-pointer border border-slate-100"
-                    >
-                      <Scale className="h-3 w-3 text-slate-500" />
-                      <span>약관·면책</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        await signOutKakao();
-                        setCurrentUser(null);
-                      }}
-                      className="flex items-center justify-center gap-1 rounded-lg bg-rose-50 hover:bg-rose-100 py-1.5 text-[11px] font-normal text-rose-700 transition-colors cursor-pointer border border-rose-100"
-                    >
-                      <LogOut className="h-3 w-3 text-rose-500" />
-                      <span>로그아웃</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* 비로그인 방문자: 깔끔한 바로가기 및 간편 로그인 안내 위젯 */
-                <div className="space-y-2.5">
-                  <div className="p-3 rounded-2xl bg-slate-50/80 border border-slate-100 space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <div className="flex h-5 w-5 items-center justify-center rounded-md bg-blue-600 text-white font-black text-[10px]">
-                        T.
-                      </div>
-                      <span className="text-xs font-bold text-slate-900">Today Link 포털</span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 font-normal leading-relaxed">
-                      로그인하시면 관심 동네 등록 및 실시간 팩트 피드를 편리하게 이용하실 수 있습니다.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsLoginModalOpen(true)}
-                      className="flex items-center justify-center gap-1 rounded-xl bg-amber-400 hover:bg-amber-500 py-2 text-xs font-bold text-slate-900 transition-colors cursor-pointer shadow-2xs"
-                    >
-                      <span>💬 간편 로그인</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsAppLauncherModalOpen(true)}
-                      className="flex items-center justify-center gap-1 rounded-xl bg-blue-600 hover:bg-blue-700 py-2 text-xs font-bold text-white transition-colors cursor-pointer shadow-2xs"
-                    >
-                      <Sparkles className="h-3 w-3 text-amber-300" />
-                      <span>마이 메뉴</span>
-                    </button>
-                  </div>
-
-                  <div className="flex justify-end pt-0.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsTermsModalOpen(true)}
-                      className="text-[10.5px] text-slate-400 hover:text-slate-600 transition-colors underline cursor-pointer"
-                    >
-                      [서비스 약관 및 면책조항]
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 2. 🎙️ t.note 빠른 등록기 (구글 캘린더 오늘 일정 위젯 연동) */}
+            {/* 1. 🎙️ t.note 빠른 등록기 (구글 캘린더 오늘 일정 위젯 연동) */}
             <div className="border-b border-slate-100 pb-2.5 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
