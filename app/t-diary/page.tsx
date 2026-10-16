@@ -11,11 +11,15 @@ import {
   Download,
   Mic,
   RefreshCw,
+  Search,
   Trash2,
 } from "lucide-react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
 import { getCurrentAuthUser } from "@/lib/auth/kakaoAuth";
 import VoiceTaskInput, { type ParsedVoiceTask } from "@/components/workspace/VoiceTaskInput";
+import ProviderSearchModal from "@/components/diary/ProviderSearchModal";
+import DiaryEventDetailModal from "@/components/diary/DiaryEventDetailModal";
+import { toDateStr } from "@/lib/diary/dateUtils";
 import type { DiaryBrand, DiaryEvent } from "@/types/diary";
 
 interface PersonalDiaryEvent {
@@ -27,13 +31,12 @@ interface PersonalDiaryEvent {
 
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
 
-function pad2(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function toDateStr(year: number, month: number, day: number) {
-  return `${year}-${pad2(month + 1)}-${pad2(day)}`;
-}
+const MEDIA_BADGE: Record<DiaryEvent["media_type"], string | null> = {
+  NONE: null,
+  YOUTUBE: "▶",
+  IMAGE: "🖼",
+  VOICE: "🎙",
+};
 
 function escapeIcsText(text: string) {
   return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
@@ -49,12 +52,27 @@ function TDiaryPageContent() {
   const [viewMonth, setViewMonth] = useState(today.getMonth()); // 0-indexed
   const [selectedDate, setSelectedDate] = useState(toDateStr(today.getFullYear(), today.getMonth(), today.getDate()));
 
+  // ?brand=xxx 고정 브랜딩 모드
   const [brand, setBrand] = useState<DiaryBrand | null>(null);
-  const [officialEvents, setOfficialEvents] = useState<DiaryEvent[]>([]);
+  const [brandEvents, setBrandEvents] = useState<DiaryEvent[]>([]);
   const [brandLoading, setBrandLoading] = useState(!!brandSlug);
 
+  // 일반 포털 모드: 제공자 탐색/구독
+  const [allProviders, setAllProviders] = useState<DiaryBrand[]>([]);
+  const [subscribedIds, setSubscribedIds] = useState<string[]>([]);
+  const [subscribedEvents, setSubscribedEvents] = useState<DiaryEvent[]>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // 레이어 토글
+  const [showPersonalLayer, setShowPersonalLayer] = useState(true);
+  const [showSubscribedLayer, setShowSubscribedLayer] = useState(true);
+
+  // 개인 일정
   const [personalEvents, setPersonalEvents] = useState<PersonalDiaryEvent[]>([]);
   const [manualTitle, setManualTitle] = useState("");
+
+  // 상세 모달
+  const [detailEvent, setDetailEvent] = useState<DiaryEvent | null>(null);
 
   const [userId, setUserId] = useState("user-001");
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -66,11 +84,11 @@ function TDiaryPageContent() {
     setTimeout(() => setToast(null), 2600);
   };
 
-  // 브랜드 정보 및 공식 행사 일정 조회
+  // 브랜드 고정 모드: 브랜드 정보 및 공식 행사 일정 조회
   useEffect(() => {
     if (!brandSlug) {
       setBrand(null);
-      setOfficialEvents([]);
+      setBrandEvents([]);
       setBrandLoading(false);
       return;
     }
@@ -79,14 +97,46 @@ function TDiaryPageContent() {
       .then((res) => res.json())
       .then((data) => {
         setBrand(data.brand || null);
-        setOfficialEvents(data.events || []);
+        setBrandEvents(data.events || []);
       })
       .catch(() => {
         setBrand(null);
-        setOfficialEvents([]);
+        setBrandEvents([]);
       })
       .finally(() => setBrandLoading(false));
   }, [brandSlug]);
+
+  // 일반 포털 모드: 전체 제공자 목록(탐색/구독 해석용) 조회
+  useEffect(() => {
+    if (brandSlug) return;
+    fetch("/api/t-diary/providers")
+      .then((res) => res.json())
+      .then((data) => setAllProviders(data.providers || []))
+      .catch(() => setAllProviders([]));
+  }, [brandSlug]);
+
+  // 구독 목록 로컬스토리지 복원
+  useEffect(() => {
+    if (brandSlug) return;
+    try {
+      const saved = localStorage.getItem("today_diary_subscriptions");
+      setSubscribedIds(saved ? JSON.parse(saved) : []);
+    } catch {
+      setSubscribedIds([]);
+    }
+  }, [brandSlug]);
+
+  // 구독 중인 제공자들의 공식 행사 일정 조회
+  useEffect(() => {
+    if (brandSlug || subscribedIds.length === 0) {
+      setSubscribedEvents([]);
+      return;
+    }
+    fetch(`/api/t-diary/events?diary_ids=${encodeURIComponent(subscribedIds.join(","))}`)
+      .then((res) => res.json())
+      .then((data) => setSubscribedEvents(data.events || []))
+      .catch(() => setSubscribedEvents([]));
+  }, [brandSlug, subscribedIds]);
 
   // 개인 일정 로컬스토리지 복원
   useEffect(() => {
@@ -158,6 +208,23 @@ function TDiaryPageContent() {
     savePersonalEvents(personalEvents.filter((e) => e.id !== id));
   };
 
+  const handleToggleSubscribe = (p: DiaryBrand) => {
+    const isSubscribed = subscribedIds.includes(p.id);
+    const next = isSubscribed ? subscribedIds.filter((id) => id !== p.id) : [...subscribedIds, p.id];
+    setSubscribedIds(next);
+    try {
+      localStorage.setItem("today_diary_subscriptions", JSON.stringify(next));
+    } catch {}
+
+    fetch("/api/t-diary/subscriptions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, diary_id: p.id, action: isSubscribed ? "unsubscribe" : "subscribe" }),
+    }).catch(() => {});
+
+    showToast(isSubscribed ? `${p.brand_name} 구독을 해제했습니다.` : `📌 ${p.brand_name}을(를) 구독했습니다.`);
+  };
+
   const handleToggleGoogleSync = () => {
     if (googleConnected) {
       fetch("/api/auth/google/status", {
@@ -176,10 +243,13 @@ function TDiaryPageContent() {
     window.location.href = `/api/auth/google?userId=${encodeURIComponent(userId)}&redirect=${encodeURIComponent(currentPath)}`;
   };
 
+  const officialEvents = brandSlug ? brandEvents : showSubscribedLayer ? subscribedEvents : [];
+  const visiblePersonalEvents = showPersonalLayer ? personalEvents : [];
+
   const handleExportIcs = () => {
     const allEvents = [
       ...officialEvents.map((e) => ({ id: e.id, date: e.event_date, title: e.title, description: e.description || "" })),
-      ...personalEvents.map((e) => ({ id: e.id, date: e.date, title: e.title, description: "" })),
+      ...visiblePersonalEvents.map((e) => ({ id: e.id, date: e.date, title: e.title, description: "" })),
     ];
 
     const nowStamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
@@ -229,12 +299,21 @@ END:VCALENDAR`;
       map[e.event_date] ??= { official: [], personal: [] };
       map[e.event_date].official.push(e);
     });
-    personalEvents.forEach((e) => {
+    visiblePersonalEvents.forEach((e) => {
       map[e.date] ??= { official: [], personal: [] };
       map[e.date].personal.push(e);
     });
     return map;
-  }, [officialEvents, personalEvents]);
+  }, [officialEvents, visiblePersonalEvents]);
+
+  const providerNameByDiaryId = useMemo(() => {
+    const map: Record<string, string> = {};
+    allProviders.forEach((p) => {
+      map[p.id] = p.brand_name;
+    });
+    if (brand) map[brand.id] = brand.brand_name;
+    return map;
+  }, [allProviders, brand]);
 
   const selectedDayEvents = eventsByDate[selectedDate] || { official: [], personal: [] };
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
@@ -267,9 +346,19 @@ END:VCALENDAR`;
         {/* 상단 네비게이션 */}
         <div className="flex items-center justify-between">
           <UnifiedHomeReturnAnchor currentModule="t-diary" />
+          {!brandSlug && (
+            <button
+              type="button"
+              onClick={() => setIsSearchOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              <Search className="h-3.5 w-3.5 text-blue-600" />
+              제공자 탐색 / 구독
+            </button>
+          )}
         </div>
 
-        {/* 브랜드 헤더 (?brand=xxx) */}
+        {/* 브랜드 헤더 (?brand=xxx 고정 브랜딩) */}
         {brandSlug && !brandLoading && brand && (
           <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
             {brand.logo_url ? (
@@ -294,7 +383,32 @@ END:VCALENDAR`;
         {!brandSlug && (
           <div className="mt-4">
             <h1 className="text-xl font-black text-slate-900 tracking-tight">t.다이어리 스마트 캘린더</h1>
-            <p className="mt-0.5 text-xs text-slate-400">지류 다이어리와 결합되는 공식 행사 일정 & 개인 일정 통합 캘린더</p>
+            <p className="mt-0.5 text-xs text-slate-400">다양한 제공자의 공식 행사 일정을 구독하고 개인 일정과 통합 관리하세요</p>
+          </div>
+        )}
+
+        {/* 레이어 토글 (일반 포털 모드) */}
+        {!brandSlug && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowPersonalLayer((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold cursor-pointer transition-colors ${
+                showPersonalLayer ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-400"
+              }`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />내 개인 일정
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSubscribedLayer((v) => !v)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold cursor-pointer transition-colors ${
+                showSubscribedLayer ? "border-amber-200 bg-amber-50 text-amber-700" : "border-slate-200 text-slate-400"
+              }`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              구독한 공식 행사 ({subscribedIds.length})
+            </button>
           </div>
         )}
 
@@ -349,6 +463,9 @@ END:VCALENDAR`;
               const dayData = eventsByDate[cell.dateStr];
               const isSelected = cell.dateStr === selectedDate;
               const isToday = cell.dateStr === todayStr;
+              const mediaBadges = Array.from(
+                new Set((dayData?.official || []).map((e) => MEDIA_BADGE[e.media_type]).filter((b): b is string => !!b))
+              );
               return (
                 <button
                   key={cell.dateStr}
@@ -363,6 +480,13 @@ END:VCALENDAR`;
                     {dayData?.official.length ? <span className="h-1 w-1 rounded-full bg-amber-400" /> : null}
                     {dayData?.personal.length ? <span className={`h-1 w-1 rounded-full ${isSelected ? "bg-white" : "bg-blue-500"}`} /> : null}
                   </span>
+                  {mediaBadges.length > 0 && (
+                    <span className="flex gap-0.5 text-[8px] leading-none">
+                      {mediaBadges.map((b) => (
+                        <span key={b}>{b}</span>
+                      ))}
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -374,14 +498,20 @@ END:VCALENDAR`;
           <h2 className="text-xs font-bold text-slate-400">{selectedDate} 일정</h2>
 
           {selectedDayEvents.official.map((e) => (
-            <div key={e.id} className="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => setDetailEvent(e)}
+              className="w-full text-left rounded-xl border border-amber-100 bg-amber-50/50 p-3 hover:bg-amber-50 transition-colors cursor-pointer"
+            >
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                 <span>공식 행사 일정</span>
+                {MEDIA_BADGE[e.media_type] && <span className="ml-auto text-xs">{MEDIA_BADGE[e.media_type]}</span>}
               </div>
               <p className="mt-1 text-xs font-bold text-slate-900">{e.title}</p>
-              {e.description && <p className="mt-0.5 text-[11px] text-slate-500">{e.description}</p>}
-            </div>
+              {e.description && <p className="mt-0.5 text-[11px] text-slate-500 line-clamp-1">{e.description}</p>}
+            </button>
           ))}
 
           {selectedDayEvents.personal.map((e) => (
@@ -433,6 +563,23 @@ END:VCALENDAR`;
           <VoiceTaskInput onTaskParsed={handleVoiceParsed} className="mt-3" />
         </div>
       </div>
+
+      {/* 제공자 탐색/구독 모달 */}
+      <ProviderSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+        subscribedIds={subscribedIds}
+        onToggleSubscribe={handleToggleSubscribe}
+      />
+
+      {/* 일정 상세 모달 */}
+      {detailEvent && (
+        <DiaryEventDetailModal
+          event={detailEvent}
+          providerName={providerNameByDiaryId[detailEvent.diary_id]}
+          onClose={() => setDetailEvent(null)}
+        />
+      )}
     </div>
   );
 }

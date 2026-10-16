@@ -165,6 +165,25 @@ export function getDiaryEvents(diaryId?: string | null): DiaryEvent[] {
   return mockDiaryEvents.filter((e) => e.diary_id === diaryId);
 }
 
+/** t.다이어리 제공자 탐색 — 승인완료/조건부승인 제공자만 노출 (PENDING 제외), 지역/카테고리 필터 */
+export function getDiaryProviders(filter?: {
+  region?: string | null;
+  category?: DiaryBrand["provider_type"] | null;
+}): DiaryBrand[] {
+  return mockDiaryBrands.filter((b) => {
+    if (b.approval_status === "PENDING") return false;
+    if (filter?.region && b.region_code !== filter.region) return false;
+    if (filter?.category && b.provider_type !== filter.category) return false;
+    return true;
+  });
+}
+
+/** t.다이어리 구독 복수 브랜드의 공식 행사 일정 조회 (공개 일정만) */
+export function getDiaryEventsByIds(diaryIds: string[]): DiaryEvent[] {
+  if (!diaryIds.length) return [];
+  return mockDiaryEvents.filter((e) => diaryIds.includes(e.diary_id) && e.is_public);
+}
+
 /** 티노트/티단노트(today_notes) 목록 조회 */
 export function getTodayNotes(filter?: { kaptCode?: string | null }): TodayNote[] {
   return mockTodayNotes.filter((note) => {

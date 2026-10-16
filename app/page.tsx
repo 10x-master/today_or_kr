@@ -30,6 +30,7 @@ import HeroProductRolling from "@/components/home/HeroProductRolling";
 import AptAnalysisTab from "@/components/home/AptAnalysisTab";
 import TodayNotesTab from "@/components/home/TodayNotesTab";
 import PwaInstallBanner from "@/components/home/PwaInstallBanner";
+import LocalDiaryEventsCard from "@/components/home/LocalDiaryEventsCard";
 import MyPageTab from "@/components/mobile/tabs/MyPageTab";
 
 // 모바일 퍼스트 당근마켓 스타일 신규 레이아웃 컴포넌트
@@ -868,6 +869,9 @@ export default function Home({ initialDong }: HomeProps = {}) {
 
             {/* PWA 설치 안내 인라인 배너 */}
             <PwaInstallBanner target="TODAY_MAIN" appName="Today" />
+
+            {/* 우리 동네 소식: 승인된 t.다이어리 제공자의 오늘/이번주 공식 행사 */}
+            <LocalDiaryEventsCard regionDong={region.dong} regionGugun={region.gugun} />
 
             {/* 1. 카카오 비즈보드형 와이드 롤링 배너 (h-14 / 56px) */}
             <div className="px-3 pt-2 pb-1">
