@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Check, CheckCircle2, ChevronRight, Loader2, ShoppingCart, X } from "lucide-react";
-import { TodayAppIcon, TodayWordmark } from "@/components/brand/TodayLogo";
+import { TMark, TodayAppIcon, TodayWordmark } from "@/components/brand/TodayLogo";
 import { DiaryCoverThumbnail } from "@/components/diary/DiaryCoverThumbnail";
 import { lightenHex } from "@/lib/diary/catalogUtils";
 import type { DiaryBrand } from "@/types/diary";
@@ -236,7 +236,10 @@ function BizCatalogContent() {
         <div className="flex items-center gap-2">
           <TodayAppIcon theme="light" size={32} />
           <div>
-            <p className="text-sm font-black text-slate-900">{brand?.brand_name || bizId} t.홈페이지 카탈로그</p>
+            <p className="flex items-center gap-1 text-sm font-black text-slate-900">
+              {brand?.brand_name || bizId} <TMark size="sm" />
+              홈페이지 카탈로그
+            </p>
             <p className="text-[11px] text-slate-400">32절 다이어리 B2B 도매 견적</p>
           </div>
         </div>
@@ -414,7 +417,10 @@ function BizCatalogContent() {
       {/* 하단 t.다이어리 브랜드 표기 */}
       <div className="mt-8 flex items-center justify-center gap-1.5 py-4 text-[10px] text-slate-300">
         <TodayWordmark theme="light" size="sm" />
-        <span>t.다이어리 B2B 카탈로그</span>
+        <span className="inline-flex items-center gap-1">
+          <TMark size="sm" />
+          다이어리 B2B 카탈로그
+        </span>
       </div>
     </div>
   );

@@ -2,26 +2,30 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { TMark } from "@/components/brand/TodayLogo";
 
 interface MQuickMenuItem {
-  label: string;
+  emoji: string;
+  name: string;
+  /** true면 이름 앞에 't.' 패밀리 심볼(TMark)을 렌더링 */
+  isFamily?: boolean;
   href: string;
 }
 
 const TIER_1: MQuickMenuItem[] = [
-  { label: "📅 t.다이어리", href: "/t-diary" },
-  { label: "🎙 t.노트", href: "/workspace" },
+  { emoji: "📅", name: "다이어리", isFamily: true, href: "/t-diary" },
+  { emoji: "🎙", name: "노트", isFamily: true, href: "/workspace" },
 ];
 
 const TIER_2: MQuickMenuItem[] = [
-  { label: "🏠 t.홈페이지", href: "/biz/sme-transform/catalog" },
-  { label: "✍️ t.싸인", href: "/t-sign" },
+  { emoji: "🏠", name: "홈페이지", isFamily: true, href: "/biz/sme-transform/catalog" },
+  { emoji: "✍️", name: "싸인", isFamily: true, href: "/t-sign" },
 ];
 
 const TIER_3: MQuickMenuItem[] = [
-  { label: "💳 t.환급", href: "/t-refund" },
-  { label: "🏢 아파트 링크", href: "/aptlink" },
-  { label: "🔗 링크픽", href: "/p/ambassador-01" },
+  { emoji: "💳", name: "환급", isFamily: true, href: "/t-refund" },
+  { emoji: "🏢", name: "아파트 링크", href: "/aptlink" },
+  { emoji: "🔗", name: "링크픽", href: "/p/ambassador-01" },
 ];
 
 export default function MQuickMenu({ className = "" }: { className?: string }) {
@@ -76,9 +80,11 @@ export default function MQuickMenu({ className = "" }: { className?: string }) {
           key={item.href}
           href={item.href}
           onClick={() => setIsOpen(false)}
-          className="rounded-lg px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors truncate"
+          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors truncate"
         >
-          {item.label}
+          <span className="shrink-0">{item.emoji}</span>
+          {item.isFamily && <TMark size="sm" className="shrink-0" />}
+          <span className="truncate">{item.name}</span>
         </Link>
       ))}
     </div>

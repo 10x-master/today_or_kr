@@ -17,6 +17,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { TMark } from "@/components/brand/TodayLogo";
 import type { DiaryBookmark } from "@/types/diary";
 
 // 브라우저 Web Speech API 타입 정의 (components/workspace/VoiceTaskInput.tsx와 동일 패턴)
@@ -286,7 +287,8 @@ export default function EnhancedNoteCaptureModal({
 
         <h3 className="flex items-center gap-1.5 pr-6 text-sm font-black text-slate-900">
           <Mic className="h-4 w-4 text-blue-600" />
-          t.노트 기록 {diaryEventId ? "(일정에 바인딩됨)" : ""}
+          <TMark size="sm" />
+          노트 기록 {diaryEventId ? "(일정에 바인딩됨)" : ""}
         </h3>
 
         {/* 제목 */}
@@ -493,7 +495,7 @@ export default function EnhancedNoteCaptureModal({
           className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-blue-600 py-3 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-40 cursor-pointer transition-colors"
         >
           {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          t.노트 기록 저장
+          노트 기록 저장
         </button>
       </div>
     </div>

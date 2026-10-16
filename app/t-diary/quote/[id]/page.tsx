@@ -169,7 +169,7 @@ function QuoteConfirmContent() {
                   className="flex w-full items-center justify-center gap-1.5 rounded-2xl bg-indigo-600 py-3 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-40 cursor-pointer transition-colors"
                 >
                   {isSigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />}
-                  ✍️ t.싸인 전자계약 체결하기
+                  ✍️ 싸인 전자계약 체결하기
                 </button>
               )}
               {quote.status === "SIGNED" && (

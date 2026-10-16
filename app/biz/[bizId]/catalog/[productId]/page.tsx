@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CheckCircle2, ChevronLeft, Loader2, Ruler, ShoppingCart, Sparkles } from "lucide-react";
-import { TodayWordmark } from "@/components/brand/TodayLogo";
+import { TMark, TodayWordmark } from "@/components/brand/TodayLogo";
 import { DiaryCoverThumbnail } from "@/components/diary/DiaryCoverThumbnail";
 import { lightenHex, PRINT_METHOD_INFO } from "@/lib/diary/catalogUtils";
 import type { CatalogCategory, DiaryProduct } from "@/types/quote";
@@ -192,7 +192,10 @@ function ProductDetailContent() {
 
       <div className="mt-8 flex items-center justify-center gap-1.5 py-4 text-[10px] text-slate-300">
         <TodayWordmark theme="light" size="sm" />
-        <span>t.다이어리 B2B 카탈로그</span>
+        <span className="inline-flex items-center gap-1">
+          <TMark size="sm" />
+          다이어리 B2B 카탈로그
+        </span>
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
+import { TMark } from "@/components/brand/TodayLogo";
 import { getCurrentAuthUser } from "@/lib/auth/kakaoAuth";
 import VoiceTaskInput, { type ParsedVoiceTask } from "@/components/workspace/VoiceTaskInput";
 import ProviderSearchModal from "@/components/diary/ProviderSearchModal";
@@ -491,7 +492,8 @@ END:VCALENDAR`;
                 className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 <Home className="h-3 w-3 text-blue-600" />
-                t.홈페이지
+                <TMark size="sm" />
+                홈페이지
               </a>
             )}
           </div>
@@ -595,7 +597,10 @@ END:VCALENDAR`;
 
         {!brandSlug && (
           <div className="mt-4">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight">t.다이어리 스마트 캘린더</h1>
+            <h1 className="flex items-center gap-1 text-xl font-black text-slate-900 tracking-tight">
+              <TMark size="lg" />
+              다이어리 스마트 캘린더
+            </h1>
             <p className="mt-0.5 text-xs text-slate-400">다양한 제공자의 공식 행사 일정을 구독하고 개인 일정과 통합 관리하세요</p>
           </div>
         )}

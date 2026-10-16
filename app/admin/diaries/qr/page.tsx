@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Download, QrCode } from "lucide-react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
-import { TodayAppIcon, TodayWordmark } from "@/components/brand/TodayLogo";
+import { TMark, TodayAppIcon, TodayWordmark } from "@/components/brand/TodayLogo";
 import type { DiaryBrand } from "@/types/diary";
 
 const SITE_ORIGIN = "https://today.or.kr";
@@ -137,7 +137,10 @@ export default function DiaryQrConsolePage() {
                         <TodayAppIcon theme="light" size={14} />
                         <TodayWordmark theme="light" size="sm" className="text-[10px]" />
                       </div>
-                      <p className="mt-0.5 text-[8px] text-slate-400">스캔하고 t.다이어리 시작하기</p>
+                      <p className="mt-0.5 flex items-center justify-center gap-0.5 text-[8px] text-slate-400">
+                        스캔하고 <TMark size="sm" />
+                        다이어리 시작하기
+                      </p>
                     </div>
                   </div>
                   <p className="mt-2 text-[10px] text-slate-400 text-center">

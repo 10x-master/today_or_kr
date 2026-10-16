@@ -45,7 +45,7 @@ export default function InstallAppButton({
   const appDisplayName = isMain ? "Today." : "t.note";
   const appFullTitle = isMain ? "Today." : "티노트 (t.note)";
   const startPath = isMain ? "/" : "/workspace";
-  const iconPath = isMain ? "/icons/today-192.png?v=5" : "/icons/todaynote-192.png";
+  const iconPath = isMain ? "/icons/today-192.png?v=6" : "/icons/todaynote-192.png";
 
   useEffect(() => {
     // 환경 감지
