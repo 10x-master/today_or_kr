@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   Check,
   CreditCard,
+  ChevronDown,
   ChevronRight,
   Crown,
   FileText,
@@ -32,7 +33,7 @@ export interface UserAccountDropdownProps {
   onOpenTerms: () => void;
   className?: string;
   align?: "right" | "left";
-  triggerStyle?: "full" | "icon_only";
+  triggerStyle?: "full" | "icon_only" | "name_only";
   /** true면 비로그인 상태에서 '마이 메뉴' 보조 버튼을 숨기고 [로그인] CTA 하나만 노출 */
   hideMyMenuPill?: boolean;
 }
@@ -203,45 +204,60 @@ export default function UserAccountDropdown({
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      {/* 구글 스타일 원형 프로필 아바타 버튼 — triggerStyle="full"일 때는 닉네임도 함께 노출 */}
-      <button
-        type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        className={`relative flex items-center rounded-full focus:outline-hidden transition-all cursor-pointer group ${
-          triggerStyle === "icon_only"
-            ? "justify-center p-0.5 ring-1 ring-slate-200 hover:ring-amber-400"
-            : "gap-1.5 pl-0.5 pr-2.5 py-0.5 ring-1 ring-slate-200 hover:ring-amber-400 hover:bg-slate-50"
-        }`}
-        title={`${currentUser.full_name || "회원"} 님의 계정`}
-        aria-label="통합 계정 메뉴 열기"
-        aria-expanded={isOpen}
-      >
-        <span className="relative shrink-0">
-          {currentUser.avatar_url ? (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={currentUser.avatar_url}
-              alt={currentUser.full_name || "프로필"}
-              className="h-8 w-8 rounded-full object-cover"
-            />
-          ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 to-amber-600 text-white text-xs font-bold shadow-xs">
-              {userInitial}
-            </div>
-          )}
-          {/* 최고관리자 점등 마커 */}
-          {isSuperAdmin && (
-            <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 text-[8px] text-white ring-2 ring-white">
-              👑
+      {triggerStyle === "name_only" ? (
+        /* 텍스트 전용 트리거 — "{닉네임} 님 ▾" (PC GNB용, 아바타 생략) */
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className="flex items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+          title={`${currentUser.full_name || "회원"} 님의 계정`}
+          aria-label="통합 계정 메뉴 열기"
+          aria-expanded={isOpen}
+        >
+          <span>{currentUser.full_name || "투데이 멤버"} 님</span>
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+        </button>
+      ) : (
+        /* 구글 스타일 원형 프로필 아바타 버튼 — triggerStyle="full"일 때는 닉네임도 함께 노출 */
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          className={`relative flex items-center rounded-full focus:outline-hidden transition-all cursor-pointer group ${
+            triggerStyle === "icon_only"
+              ? "justify-center p-0.5 ring-1 ring-slate-200 hover:ring-amber-400"
+              : "gap-1.5 pl-0.5 pr-2.5 py-0.5 ring-1 ring-slate-200 hover:ring-amber-400 hover:bg-slate-50"
+          }`}
+          title={`${currentUser.full_name || "회원"} 님의 계정`}
+          aria-label="통합 계정 메뉴 열기"
+          aria-expanded={isOpen}
+        >
+          <span className="relative shrink-0">
+            {currentUser.avatar_url ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={currentUser.avatar_url}
+                alt={currentUser.full_name || "프로필"}
+                className="h-8 w-8 rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 to-amber-600 text-white text-xs font-bold shadow-xs">
+                {userInitial}
+              </div>
+            )}
+            {/* 최고관리자 점등 마커 */}
+            {isSuperAdmin && (
+              <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 text-[8px] text-white ring-2 ring-white">
+                👑
+              </span>
+            )}
+          </span>
+          {triggerStyle !== "icon_only" && (
+            <span className="text-xs font-bold text-slate-800 truncate max-w-28">
+              {currentUser.full_name || "투데이 멤버"}
             </span>
           )}
-        </span>
-        {triggerStyle !== "icon_only" && (
-          <span className="text-xs font-bold text-slate-800 truncate max-w-28">
-            {currentUser.full_name || "투데이 멤버"}
-          </span>
-        )}
-      </button>
+        </button>
+      )}
 
       {/* 구글 스타일 통합 계정 드롭다운 패널 (w-84 sm:w-96) */}
       {isOpen && (

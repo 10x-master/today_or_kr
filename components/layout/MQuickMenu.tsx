@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { TMark } from "@/components/brand/TodayLogo";
 
 interface MQuickMenuItem {
@@ -28,7 +29,14 @@ const TIER_3: MQuickMenuItem[] = [
   { emoji: "🔗", name: "링크픽", href: "/p/ambassador-01" },
 ];
 
-export default function MQuickMenu({ className = "" }: { className?: string }) {
+export default function MQuickMenu({
+  className = "",
+  variant = "icon",
+}: {
+  className?: string;
+  /** "icon": 기존 둥근 M 뱃지 / "text": "투데이 서비스 ▾" 텍스트 트리거 (PC GNB용) */
+  variant?: "icon" | "text";
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [canHover, setCanHover] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -97,16 +105,30 @@ export default function MQuickMenu({ className = "" }: { className?: string }) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <button
-        type="button"
-        onClick={() => setIsOpen((v) => !v)}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white hover:bg-slate-800 transition-colors cursor-pointer shadow-xs"
-        title="t.솔루션 퀵메뉴"
-        aria-label="t.솔루션 퀵메뉴"
-        aria-expanded={isOpen}
-      >
-        M
-      </button>
+      {variant === "text" ? (
+        <button
+          type="button"
+          onClick={() => setIsOpen((v) => !v)}
+          className="flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-sm font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          title="투데이 서비스 전체보기"
+          aria-label="투데이 서비스 전체보기"
+          aria-expanded={isOpen}
+        >
+          <span>투데이 서비스</span>
+          <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setIsOpen((v) => !v)}
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-black text-white hover:bg-slate-800 transition-colors cursor-pointer shadow-xs"
+          title="t.솔루션 퀵메뉴"
+          aria-label="t.솔루션 퀵메뉴"
+          aria-expanded={isOpen}
+        >
+          M
+        </button>
+      )}
 
       {isOpen && (
         <div

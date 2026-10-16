@@ -28,6 +28,7 @@ import AptAnalysisTab from "@/components/home/AptAnalysisTab";
 import TodayNotesTab from "@/components/home/TodayNotesTab";
 import PwaInstallBanner from "@/components/home/PwaInstallBanner";
 import LocalDiaryEventsCard from "@/components/home/LocalDiaryEventsCard";
+import AptLinkNewsFeed from "@/components/home/AptLinkNewsFeed";
 import MyPageTab from "@/components/mobile/tabs/MyPageTab";
 
 // 모바일 퍼스트 당근마켓 스타일 신규 레이아웃 컴포넌트
@@ -57,7 +58,7 @@ import {
   personaToRoleGroup,
   type TopMode,
 } from "@/components/Navigation";
-import { TMark, TodayWordmark } from "@/components/brand/TodayLogo";
+import { TodayWordmark } from "@/components/brand/TodayLogo";
 import QuickMenuGrid from "@/components/home/QuickMenuGrid";
 import TopSolutionsGrid from "@/components/home/TopSolutionsGrid";
 import PriorityAlertFeed from "@/components/home/PriorityAlertFeed";
@@ -128,6 +129,14 @@ const BIZBOARD_CAMPAIGNS = [
     cta: "공구참여 ↗",
     url: "/partners",
   },
+];
+
+/** 상단 GNB 📢 롤링 티커 데모 카피 — 실제 고시(notices)가 로드되면 우선 사용되고, 없을 때만 폴백으로 노출 */
+const TICKER_FALLBACK = [
+  "📢 2026 하반기 노원구 소상공인 지원금 접수 안내",
+  "🏛️ 상계동 의정활동 리포트: 10월 정례회의 결과 공개",
+  "🎪 노원 가을 축제 일정 및 교통 통제 안내",
+  "🏗️ 상계주공 7단지 정밀안전진단 고시 등록",
 ];
 
 export interface HomeProps {
@@ -250,6 +259,16 @@ export default function Home({ initialDong }: HomeProps = {}) {
     }, 4500);
     return () => clearInterval(timer);
   }, []);
+
+  // 상단 GNB 📢 롤링 티커: 실제 고시(notices) 상위 5건 우선, 없으면 데모 카피로 자동 롤링 (3.8초)
+  const [tickerIndex, setTickerIndex] = useState(0);
+  const tickerItems = notices.length > 0 ? notices.slice(0, 5).map((n) => n.title) : TICKER_FALLBACK;
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTickerIndex((prev) => (prev + 1) % tickerItems.length);
+    }, 3800);
+    return () => clearInterval(timer);
+  }, [tickerItems.length]);
 
   // 동네 핀 동기화
   const syncPins = () => {
@@ -551,60 +570,97 @@ export default function Home({ initialDong }: HomeProps = {}) {
             <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
           </button>
 
-          {/* 중앙: 핵심 서비스 통합 GNB 내비게이션 */}
-          <nav className="flex flex-1 items-center justify-center gap-7 text-sm font-bold text-slate-600">
-            <Link href="/workspace" className="flex items-center gap-1 hover:text-blue-600 transition-colors">
-              <TMark size="sm" className="shrink-0" />
-              노트
-            </Link>
-            <Link href="/t-diary" className="flex items-center gap-1 hover:text-blue-600 transition-colors">
-              <TMark size="sm" className="shrink-0" />
-              다이어리
-            </Link>
-            <Link href="/biz/apt-sanggye14/catalog" className="hover:text-blue-600 transition-colors">
-              B2B 카탈로그
-            </Link>
-            <Link href="/t-sign" className="flex items-center gap-1 hover:text-blue-600 transition-colors">
-              <TMark size="sm" className="shrink-0" />
-              싸인
-            </Link>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("feed");
-                setSelectedCategory("ALL");
-              }}
-              className={`cursor-pointer transition-colors hover:text-blue-600 ${
-                activeTab === "feed" ? "text-blue-600" : ""
-              }`}
-            >
-              동네 소식
-            </button>
-          </nav>
+          {/* 중앙: 📢 지자체 소식·의정활동·행사·이벤트 공지 롤링 텍스트 티커 */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("feed")}
+            className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-full bg-slate-50 px-3 py-1.5 text-left transition-colors hover:bg-slate-100 cursor-pointer"
+            title="동네 소식 피드로 이동"
+          >
+            <span className="shrink-0 text-sm">📢</span>
+            <span key={tickerIndex} className="min-w-0 flex-1 truncate text-xs font-medium text-slate-600 animate-in fade-in slide-in-from-bottom-1 duration-300">
+              {tickerItems[tickerIndex % tickerItems.length]}
+            </span>
+          </button>
 
-          {/* 우측 끝: 동네 검색 + M 퀵메뉴 + 사용자 계정 영역 */}
-          <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIsGlobalSearchOpen(true)}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
-              title="전국 동네 검색"
-              aria-label="동네 검색"
-            >
-              <Search className="h-4 w-4" />
-            </button>
-            <MQuickMenu />
+          {/* 🔍 검색창 */}
+          <button
+            type="button"
+            onClick={() => setIsGlobalSearchOpen(true)}
+            className="hidden shrink-0 items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-400 hover:bg-slate-100 transition-colors cursor-pointer xl:flex w-36"
+            title="전국 동네 검색"
+          >
+            <Search className="h-3.5 w-3.5" />
+            <span>검색</span>
+          </button>
+
+          {/* 우측 끝: 투데이 서비스 ▾ + 사용자 계정 영역 */}
+          <div className="flex shrink-0 items-center gap-1">
+            <MQuickMenu variant="text" />
             <UserAccountDropdown
               currentUser={currentUser}
               onOpenLogin={() => setIsLoginModalOpen(true)}
               onOpenTerms={() => setIsTermsModalOpen(true)}
-              triggerStyle="full"
+              triggerStyle="name_only"
               hideMyMenuPill
               align="right"
             />
           </div>
         </div>
       </header>
+
+      {/* ============================================================== */}
+      {/* 상단 2단 50/50 소식 피드 (PC 전용): 좌측 동네 소식 스레드 / 우측 아파트링크 전용 소식&리포트 */}
+      {/* ============================================================== */}
+      <section className="hidden w-full border-b border-slate-100 bg-white lg:grid lg:grid-cols-2">
+        {/* 좌측 50%: 우리 동네 소식 — 스레드형 로컬 타임라인, 클릭 시 슬라이드오버로 상세 열림 */}
+        <div className="flex flex-col border-r border-slate-100">
+          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100">
+            <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+              {region.dong} 우리 동네 소식
+            </h3>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("feed");
+                setSelectedCategory("ALL");
+              }}
+              className="text-[11px] text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+            >
+              전체보기 →
+            </button>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {loading && (
+              <div className="py-10 text-center text-xs text-slate-400">
+                공식 행정 고시 데이터를 불러오는 중...
+              </div>
+            )}
+            {!loading && notices.length === 0 && (
+              <div className="py-10 text-center text-xs text-slate-400">
+                선택하신 조건에 해당하는 고시·소식이 없습니다.
+              </div>
+            )}
+            {!loading &&
+              notices.slice(0, 4).map((notice) => (
+                <CompactFeedItem
+                  key={notice.id}
+                  notice={notice}
+                  isBookmarked={bookmarkedIds.includes(notice.id)}
+                  onClick={() => {
+                    setDetailNotice(notice);
+                    setDetailCafe(null);
+                    setDetailEvent(null);
+                  }}
+                />
+              ))}
+          </div>
+        </div>
+
+        {/* 우측 50%: 아파트링크 전용 소식 & 리포트 */}
+        <AptLinkNewsFeed />
+      </section>
 
       {/* PC 대화면 3열 포털 컨테이너 (lg:grid-cols-12) */}
       <div className="mx-auto w-full max-w-md lg:max-w-7xl xl:max-w-[1440px] lg:px-4 lg:py-3">
