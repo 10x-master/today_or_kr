@@ -11,6 +11,18 @@ function formatWon(n: number) {
   return `${n.toLocaleString("ko-KR")}원`;
 }
 
+/** 본문 콘텐츠 하단 여백(페이지 푸터 높이 포함) — 이 선 아래로는 새 콘텐츠를 시작하지 않는다 */
+const CONTENT_BOTTOM_MARGIN = 70;
+
+/** y 위치에서 neededHeight만큼 더 쓸 공간이 없으면 새 페이지를 추가하고 갱신된 y를 반환 */
+function ensureSpace(doc: PDFKit.PDFDocument, y: number, neededHeight: number): number {
+  if (y + neededHeight > doc.page.height - CONTENT_BOTTOM_MARGIN) {
+    doc.addPage();
+    return 50;
+  }
+  return y;
+}
+
 async function fetchImageBuffer(url: string | null): Promise<Buffer | null> {
   if (!url) return null;
   try {
@@ -125,11 +137,12 @@ export async function POST(request: NextRequest) {
       }
 
       let y = doc.y + 10;
+      const nameColWidth = 170;
+      const specColWidth = showPrice ? 140 : 190;
+
       for (const [categoryName, items] of grouped) {
-        if (y > doc.page.height - 150) {
-          doc.addPage();
-          y = 50;
-        }
+        // 카테고리 헤더 + 표 헤더(고정 높이 42) 만큼의 공간을 미리 확보
+        y = ensureSpace(doc, y, 42);
         doc.font("kr-bold").fontSize(12).fillColor("#2563EB").text(categoryName, 50, y);
         y += 20;
 
@@ -137,7 +150,7 @@ export async function POST(request: NextRequest) {
         doc.font("kr-bold").fontSize(8).fillColor("#64748B");
         doc.text("코드", colX.code, y);
         doc.text("품목명", colX.name, y);
-        doc.text("규격/스펙", colX.spec, y, { width: showPrice ? 140 : 190 });
+        doc.text("규격/스펙", colX.spec, y, { width: specColWidth });
         if (showPrice) doc.text("권장소비자가", colX.price, y, { width: 85, align: "right" });
         y += 14;
         doc.moveTo(50, y).lineTo(545, y).strokeColor("#E2E8F0").stroke();
@@ -145,50 +158,54 @@ export async function POST(request: NextRequest) {
 
         doc.font("kr").fontSize(9).fillColor("#334155");
         for (const item of items) {
-          if (y > doc.page.height - 100) {
-            doc.addPage();
-            y = 50;
-          }
-          doc.text(item.product_code, colX.code, y, { width: 70 });
-          doc.text(item.name, colX.name, y, { width: 170 });
-          doc.fontSize(8).fillColor("#64748B").text(item.spec || "", colX.spec, y, { width: showPrice ? 140 : 190 });
+          // 품목명/스펙이 길어 줄바꿈될 경우를 감안해 실제 필요 높이를 측정 후 공간 확보
+          const nameHeight = doc.font("kr").fontSize(9).heightOfString(item.name, { width: nameColWidth });
+          const specHeight = doc.font("kr").fontSize(8).heightOfString(item.spec || "", { width: specColWidth });
+          const rowHeight = Math.max(nameHeight, specHeight, 14) + 8;
+          y = ensureSpace(doc, y, rowHeight);
+
+          doc.font("kr").fontSize(9).fillColor("#334155").text(item.product_code, colX.code, y, { width: 70 });
+          doc.text(item.name, colX.name, y, { width: nameColWidth });
+          doc.fontSize(8).fillColor("#64748B").text(item.spec || "", colX.spec, y, { width: specColWidth });
           doc.fontSize(9).fillColor("#334155");
           if (showPrice) doc.text(formatWon(item.sell_price), colX.price, y, { width: 85, align: "right" });
-          y += 24;
+          y += rowHeight;
         }
         y += 10;
       }
 
       if (!showPrice) {
-        doc.moveDown(1);
-        doc
-          .font("kr")
-          .fontSize(9)
-          .fillColor("#94A3B8")
-          .text("가격은 견적 요청 시 별도 안내드립니다.", 50, y, { width: 495 });
-        y += 20;
+        const notice = "가격은 견적 요청 시 별도 안내드립니다.";
+        const noticeHeight = doc.font("kr").fontSize(9).heightOfString(notice, { width: 495 });
+        y = ensureSpace(doc, y, noticeHeight + 10);
+        doc.fillColor("#94A3B8").text(notice, 50, y, { width: 495 });
+        y += noticeHeight + 10;
       }
 
       if (branding.footer_note) {
-        if (y > doc.page.height - 120) {
-          doc.addPage();
-          y = 50;
-        }
-        doc.moveDown(1);
+        const footerNoteHeight = doc.font("kr").fontSize(9).heightOfString(branding.footer_note, { width: 495 });
+        const neededHeight = 16 + footerNoteHeight;
+        y = ensureSpace(doc, y, neededHeight);
         doc.font("kr-bold").fontSize(10).fillColor("#0F172A").text("안내사항", 50, y);
         doc.font("kr").fontSize(9).fillColor("#334155").text(branding.footer_note, 50, y + 16, { width: 495 });
       }
 
       // ===== 매 페이지 하단 딜러 연락처 푸터 =====
+      // 주의: 푸터는 본문 하단 여백(margins.bottom) 안쪽에 그려지는데, pdfkit은 margins.bottom
+      // 밖으로 벗어나는 .text() 호출을 "넘침"으로 간주해 자동으로 빈 페이지를 추가해버린다.
+      // 각 페이지마다 bottom margin을 일시적으로 0으로 낮춰 그 오탐을 막는다.
       const pageRange = doc.bufferedPageRange();
       const footerText = [branding.dealer_name, branding.contact_phone, branding.contact_email].filter(Boolean).join("  ·  ");
       for (let i = 1; i < pageRange.count; i++) {
         doc.switchToPage(i);
+        const savedBottomMargin = doc.page.margins.bottom;
+        doc.page.margins.bottom = 0;
         doc
           .font("kr")
           .fontSize(7.5)
           .fillColor("#94A3B8")
           .text(footerText, 50, doc.page.height - 36, { width: doc.page.width - 100, align: "center" });
+        doc.page.margins.bottom = savedBottomMargin;
       }
 
       doc.end();
