@@ -21,7 +21,7 @@ import type {
   DiaryPost,
   DiaryComment,
 } from "@/types/diary";
-import type { DiaryCategory, DiaryProduct, QuoteRequest } from "@/types/quote";
+import type { CatalogCategory, DiaryProduct, QuoteRequest } from "@/types/quote";
 
 /** 상대 시간 계산 헬퍼 (예: '방금 전', '12분 전', '2시간 전', '어제', '3일 전') */
 export function formatRelativeTime(dateString?: string): string {
@@ -2500,20 +2500,36 @@ export const mockDiaryComments: DiaryComment[] = [
   },
 ];
 
-/** 중소기업사업전환지원단 T.홈페이지 B2B 32절 다이어리 카탈로그 — 카테고리 시드 (관리자 콘솔에서 추가/순서변경/노출토글 가능) */
-export const mockDiaryCategories: DiaryCategory[] = [
-  { id: "cat-sme-transform-01", diary_id: "diary-brand-sme-transform", name: "양장", sort_order: 1, is_visible: true, created_at: "2026-10-16T00:00:00.000Z" },
-  { id: "cat-sme-transform-02", diary_id: "diary-brand-sme-transform", name: "스프링", sort_order: 2, is_visible: true, created_at: "2026-10-16T00:00:00.000Z" },
-  { id: "cat-sme-transform-03", diary_id: "diary-brand-sme-transform", name: "시스템", sort_order: 3, is_visible: true, created_at: "2026-10-16T00:00:00.000Z" },
-  { id: "cat-sme-transform-04", diary_id: "diary-brand-sme-transform", name: "한정특가", sort_order: 4, is_visible: true, created_at: "2026-10-16T00:00:00.000Z" },
+/**
+ * B2B 카탈로그 3단계 계층형 카테고리 시드 (대분류 -> 중분류 -> 소분류).
+ * 중소기업사업전환지원단 / 조달인프라사업단 공통 기본 트리: [인쇄물] -> [다이어리] -> [양장/스프링/시스템/한정특가 32절]
+ * 관리자 콘솔에서 자유롭게 추가/이름변경/순서변경/노출토글 가능.
+ */
+function buildDefaultCatalogTree(diaryId: string, prefix: string): CatalogCategory[] {
+  const ts = "2026-10-16T00:00:00.000Z";
+  const l1Id = `cat-${prefix}-l1-print`;
+  const l2Id = `cat-${prefix}-l2-diary`;
+  return [
+    { id: l1Id, diary_id: diaryId, parent_id: null, depth: 1, name: "인쇄물", slug: "print", sort_order: 1, is_visible: true, created_at: ts },
+    { id: l2Id, diary_id: diaryId, parent_id: l1Id, depth: 2, name: "다이어리", slug: "diary", sort_order: 1, is_visible: true, created_at: ts },
+    { id: `cat-${prefix}-l3-hardcover`, diary_id: diaryId, parent_id: l2Id, depth: 3, name: "양장 32절", slug: "hardcover-32", sort_order: 1, is_visible: true, created_at: ts },
+    { id: `cat-${prefix}-l3-spring`, diary_id: diaryId, parent_id: l2Id, depth: 3, name: "스프링 32절", slug: "spring-32", sort_order: 2, is_visible: true, created_at: ts },
+    { id: `cat-${prefix}-l3-system`, diary_id: diaryId, parent_id: l2Id, depth: 3, name: "시스템 32절", slug: "system-32", sort_order: 3, is_visible: true, created_at: ts },
+    { id: `cat-${prefix}-l3-special`, diary_id: diaryId, parent_id: l2Id, depth: 3, name: "한정특가 32절", slug: "special-32", sort_order: 4, is_visible: true, created_at: ts },
+  ];
+}
+
+export const mockCatalogCategories: CatalogCategory[] = [
+  ...buildDefaultCatalogTree("diary-brand-sme-transform", "sme-transform"),
+  ...buildDefaultCatalogTree("diary-brand-procurement-infra", "procurement-infra"),
 ];
 
-/** 중소기업사업전환지원단 T.홈페이지 B2B 32절 다이어리 카탈로그 시드 (공급가 * 200% = 판매가) */
+/** 중소기업사업전환지원단 T.홈페이지 B2B 32절 다이어리 카탈로그 시드 (sell_price = 관리자가 등록한 권장소비자가) */
 export const mockDiaryProducts: DiaryProduct[] = [
   {
     id: "product-mo-07",
     diary_id: "diary-brand-sme-transform",
-    category: "양장",
+    category_id: "cat-sme-transform-l3-hardcover",
     product_code: "MO-07",
     name: "32절 양장 다이어리 — 피콕그린",
     spec: "PU가죽 표지 · 금박/은박 각인 가능 · 밴드 고정형",
@@ -2529,7 +2545,7 @@ export const mockDiaryProducts: DiaryProduct[] = [
   {
     id: "product-mo-73",
     diary_id: "diary-brand-sme-transform",
-    category: "양장",
+    category_id: "cat-sme-transform-l3-hardcover",
     product_code: "MO-73",
     name: "32절 양장 다이어리 — 모스그린",
     spec: "PU가죽 표지 · 금박/은박 각인 가능 · 무광 텍스처 커버",
@@ -2545,7 +2561,7 @@ export const mockDiaryProducts: DiaryProduct[] = [
   {
     id: "product-mi-03",
     diary_id: "diary-brand-sme-transform",
-    category: "스프링",
+    category_id: "cat-sme-transform-l3-spring",
     product_code: "MI-03",
     name: "32절 스프링 다이어리 — 3단 투톤 핑크",
     spec: "트윈링 제본 · 3단 접이식 커버 · 투톤 배색 디자인",
@@ -2561,7 +2577,7 @@ export const mockDiaryProducts: DiaryProduct[] = [
   {
     id: "product-mu-21",
     diary_id: "diary-brand-sme-transform",
-    category: "스프링",
+    category_id: "cat-sme-transform-l3-spring",
     product_code: "MU-21",
     name: "32절 스프링 다이어리 — 매직오션",
     spec: "트윈링 제본 · 180도 평펼침 · 그라데이션 프리미엄 커버",
@@ -2577,7 +2593,7 @@ export const mockDiaryProducts: DiaryProduct[] = [
   {
     id: "product-mj-11",
     diary_id: "diary-brand-sme-transform",
-    category: "시스템",
+    category_id: "cat-sme-transform-l3-system",
     product_code: "MJ-11",
     name: "32절 시스템 다이어리 — 라인포켓 마린블루",
     spec: "6공 시스템 바인더 · 내측 라인 포켓 · 명함/카드 수납",
@@ -2593,7 +2609,7 @@ export const mockDiaryProducts: DiaryProduct[] = [
   {
     id: "product-mz-22",
     diary_id: "diary-brand-sme-transform",
-    category: "한정특가",
+    category_id: "cat-sme-transform-l3-special",
     product_code: "MZ-22",
     name: "32절 한정특가 다이어리 — 스마트 검정 특가",
     spec: "무광 블랙 커버 · 미니멀 디자인 · 재고 한정 특가",

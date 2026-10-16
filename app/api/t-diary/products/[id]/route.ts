@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getDiaryProductById, updateDiaryProduct } from "@/lib/db/store";
-import { calcSellPrice } from "@/lib/diary/catalogUtils";
+import { normalizeImageUrl } from "@/lib/diary/catalogUtils";
 import type { DiaryProduct } from "@/types/quote";
 
 /**
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
 }
 
 /**
- * 관리자 — 상품 수정 (cost_price 변경 시 sell_price 자동 재계산)
+ * 관리자 — 상품 수정. sell_price는 cost_price와 독립적으로 직접 수정 가능
  * PATCH /api/t-diary/products/[id]
  */
 export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -42,8 +42,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
     const supabase = await createSupabaseServerClient();
     if (supabase) {
       const updatePayload = { ...patch };
-      if (typeof patch.cost_price === "number") {
-        updatePayload.sell_price = calcSellPrice(patch.cost_price);
+      if (patch.image_url !== undefined) {
+        updatePayload.image_url = normalizeImageUrl(patch.image_url);
       }
       const { data, error } = await supabase
         .from("diary_products")

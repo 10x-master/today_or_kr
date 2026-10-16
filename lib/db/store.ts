@@ -20,7 +20,7 @@ import {
   mockDiaryMembers,
   mockDiaryPosts,
   mockDiaryComments,
-  mockDiaryCategories,
+  mockCatalogCategories,
   mockDiaryProducts,
   mockQuoteRequests,
 } from "@/lib/db/mockSeed";
@@ -62,8 +62,8 @@ import type {
   DiaryPost,
   DiaryComment,
 } from "@/types/diary";
-import type { DiaryCategory, DiaryProduct, QuoteItem, QuoteRequest, QuoteStatus } from "@/types/quote";
-import { calcSellPrice } from "@/lib/diary/catalogUtils";
+import type { CatalogCategory, DiaryProduct, QuoteItem, QuoteRequest, QuoteStatus } from "@/types/quote";
+import { normalizeImageUrl, suggestSellPrice } from "@/lib/diary/catalogUtils";
 
 const AUTO_BLIND_THRESHOLD = 3;
 
@@ -947,39 +947,85 @@ export function toggleLocalAdActive(id: string, isActive?: boolean): LocalAd | n
   return ad;
 }
 
-/** T.홈페이지 B2B 카탈로그 — 다이어리별 카테고리 목록 조회 (노출 순서대로) */
-export function getDiaryCategories(diaryId: string): DiaryCategory[] {
-  return [...mockDiaryCategories]
+/** T.홈페이지 B2B 카탈로그 — 다이어리별 3단 카테고리 트리 전체 조회 (노출 순서대로) */
+export function getCatalogCategories(diaryId: string): CatalogCategory[] {
+  return [...mockCatalogCategories]
     .filter((c) => c.diary_id === diaryId)
-    .sort((a, b) => a.sort_order - b.sort_order);
+    .sort((a, b) => a.depth - b.depth || a.sort_order - b.sort_order);
 }
 
-/** 관리자 — 카테고리 신규 추가 (맨 뒤 순서로) */
-export function createDiaryCategory(input: { diary_id: string; name: string }): DiaryCategory {
-  const existing = mockDiaryCategories.filter((c) => c.diary_id === input.diary_id);
-  const category: DiaryCategory = {
-    id: `cat-${input.diary_id}-${Date.now()}`,
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9가-힣]+/g, "-")
+    .replace(/^-+|-+$/g, "") || `cat-${Date.now()}`;
+}
+
+/** 관리자 — 카테고리 신규 추가 (부모 하위 맨 뒤 순서로). parent_id가 없으면 depth=1(대분류) */
+export function createCatalogCategory(input: { diary_id: string; parent_id: string | null; name: string }): CatalogCategory {
+  const parent = input.parent_id ? mockCatalogCategories.find((c) => c.id === input.parent_id) : null;
+  const depth = (parent ? parent.depth + 1 : 1) as 1 | 2 | 3;
+  const siblings = mockCatalogCategories.filter((c) => c.diary_id === input.diary_id && c.parent_id === input.parent_id);
+  const category: CatalogCategory = {
+    id: `cat-${crypto.randomUUID()}`,
     diary_id: input.diary_id,
+    parent_id: input.parent_id,
+    depth,
     name: input.name,
-    sort_order: existing.length > 0 ? Math.max(...existing.map((c) => c.sort_order)) + 1 : 1,
+    slug: slugify(input.name),
+    sort_order: siblings.length > 0 ? Math.max(...siblings.map((c) => c.sort_order)) + 1 : 1,
     is_visible: true,
     created_at: new Date().toISOString(),
   };
-  mockDiaryCategories.push(category);
+  mockCatalogCategories.push(category);
   return category;
 }
 
 /** 관리자 — 카테고리 이름/순서/노출여부 수정 */
-export function updateDiaryCategory(
+export function updateCatalogCategory(
   id: string,
   patch: { name?: string; sort_order?: number; is_visible?: boolean }
-): DiaryCategory | null {
-  const category = mockDiaryCategories.find((c) => c.id === id);
+): CatalogCategory | null {
+  const category = mockCatalogCategories.find((c) => c.id === id);
   if (!category) return null;
-  if (patch.name !== undefined) category.name = patch.name;
+  if (patch.name !== undefined) {
+    category.name = patch.name;
+    category.slug = slugify(patch.name);
+  }
   if (patch.sort_order !== undefined) category.sort_order = patch.sort_order;
   if (patch.is_visible !== undefined) category.is_visible = patch.is_visible;
   return category;
+}
+
+/** 소분류(depth=3) id로부터 대분류/중분류/소분류 이름 경로를 역으로 조회 (엑셀 내보내기용) */
+export function getCategoryPathNames(categoryId: string): { l1: string; l2: string; l3: string } {
+  const l3 = mockCatalogCategories.find((c) => c.id === categoryId);
+  const l2 = l3?.parent_id ? mockCatalogCategories.find((c) => c.id === l3.parent_id) : undefined;
+  const l1 = l2?.parent_id ? mockCatalogCategories.find((c) => c.id === l2.parent_id) : undefined;
+  return { l1: l1?.name || "", l2: l2?.name || "", l3: l3?.name || "" };
+}
+
+/** 이름으로 소분류(depth=3) 카테고리를 찾거나, 없으면 대/중/소 전체 경로를 자동 생성 (엑셀 대량 등록용) */
+export function resolveOrCreateLeafCategory(
+  diaryId: string,
+  l1Name: string,
+  l2Name: string,
+  l3Name: string
+): CatalogCategory {
+  const findChild = (parentId: string | null, name: string) =>
+    mockCatalogCategories.find((c) => c.diary_id === diaryId && c.parent_id === parentId && c.name === name);
+
+  let l1 = findChild(null, l1Name);
+  if (!l1) l1 = createCatalogCategory({ diary_id: diaryId, parent_id: null, name: l1Name });
+
+  let l2 = findChild(l1.id, l2Name);
+  if (!l2) l2 = createCatalogCategory({ diary_id: diaryId, parent_id: l1.id, name: l2Name });
+
+  let l3 = findChild(l2.id, l3Name);
+  if (!l3) l3 = createCatalogCategory({ diary_id: diaryId, parent_id: l2.id, name: l3Name });
+
+  return l3;
 }
 
 /** T.홈페이지 B2B 카탈로그 — 다이어리별 상품 목록 조회 */
@@ -992,14 +1038,15 @@ export function getDiaryProductById(id: string): DiaryProduct | null {
   return mockDiaryProducts.find((p) => p.id === id) || null;
 }
 
-/** 관리자 — 상품 신규 등록 (판매가는 공급가 * 200%로 자동 계산) */
+/** 관리자 — 상품 신규 등록. sell_price를 직접 지정하지 않으면 cost_price 기반 제안가를 사용 */
 export function createDiaryProduct(input: {
   diary_id: string;
-  category: string;
+  category_id: string;
   product_code: string;
   name: string;
   spec?: string | null;
   cost_price: number;
+  sell_price?: number;
   color_hex: string;
   image_url?: string | null;
   cover_size?: string;
@@ -1007,16 +1054,16 @@ export function createDiaryProduct(input: {
   material_info?: string;
 }): DiaryProduct {
   const product: DiaryProduct = {
-    id: `product-${input.product_code.toLowerCase().replace(/[^a-z0-9]/g, "")}-${Date.now()}`,
+    id: `product-${input.product_code.toLowerCase().replace(/[^a-z0-9]/g, "")}-${crypto.randomUUID()}`,
     diary_id: input.diary_id,
-    category: input.category,
+    category_id: input.category_id,
     product_code: input.product_code,
     name: input.name,
     spec: input.spec || null,
     cost_price: input.cost_price,
-    sell_price: calcSellPrice(input.cost_price),
+    sell_price: input.sell_price ?? suggestSellPrice(input.cost_price),
     color_hex: input.color_hex,
-    image_url: input.image_url || null,
+    image_url: normalizeImageUrl(input.image_url),
     cover_size: input.cover_size || "커버 124×180mm / 123×185mm",
     page_count: input.page_count ?? 256,
     material_info: input.material_info || "이태리 습식 원단",
@@ -1026,18 +1073,54 @@ export function createDiaryProduct(input: {
   return product;
 }
 
-/** 관리자 — 상품 수정 (cost_price 변경 시 sell_price 자동 재계산) */
+/** 관리자 — 상품 수정. sell_price는 독립적으로 수정 가능 (더 이상 cost_price에 강제 연동되지 않음) */
 export function updateDiaryProduct(
   id: string,
-  patch: Partial<Omit<DiaryProduct, "id" | "diary_id" | "created_at" | "sell_price">>
+  patch: Partial<Omit<DiaryProduct, "id" | "diary_id" | "created_at">>
 ): DiaryProduct | null {
   const product = mockDiaryProducts.find((p) => p.id === id);
   if (!product) return null;
+  if (patch.image_url !== undefined) patch = { ...patch, image_url: normalizeImageUrl(patch.image_url) };
   Object.assign(product, patch);
-  if (patch.cost_price !== undefined) {
-    product.sell_price = calcSellPrice(patch.cost_price);
-  }
   return product;
+}
+
+/** 품목코드 기준 upsert (엑셀/CSV/구글시트 대량 등록용) */
+export function upsertDiaryProductByCode(
+  diaryId: string,
+  productCode: string,
+  patch: {
+    category_id: string;
+    name: string;
+    spec?: string | null;
+    cost_price: number;
+    sell_price?: number;
+    color_hex?: string;
+    image_url?: string | null;
+  }
+): DiaryProduct {
+  const existing = mockDiaryProducts.find((p) => p.diary_id === diaryId && p.product_code === productCode);
+  if (existing) {
+    existing.category_id = patch.category_id;
+    existing.name = patch.name;
+    existing.spec = patch.spec ?? existing.spec;
+    existing.cost_price = patch.cost_price;
+    existing.sell_price = patch.sell_price ?? suggestSellPrice(patch.cost_price);
+    if (patch.color_hex) existing.color_hex = patch.color_hex;
+    if (patch.image_url !== undefined) existing.image_url = normalizeImageUrl(patch.image_url);
+    return existing;
+  }
+  return createDiaryProduct({
+    diary_id: diaryId,
+    category_id: patch.category_id,
+    product_code: productCode,
+    name: patch.name,
+    spec: patch.spec,
+    cost_price: patch.cost_price,
+    sell_price: patch.sell_price,
+    color_hex: patch.color_hex || "#1B3A5C",
+    image_url: patch.image_url,
+  });
 }
 
 function computeQuoteAmounts(items: QuoteItem[], packagingFee: number, shippingFee: number) {

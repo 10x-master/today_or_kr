@@ -83,14 +83,14 @@ export function DiaryCoverThumbnail({
       {/* 책등 그림자 */}
       <rect x="2" y="2" width="6" height={h - 4} fill="black" opacity="0.18" />
 
-      {category === "양장" && (
+      {category.includes("양장") && (
         <>
           <rect x="9" y="9" width={w - 18} height={h - 18} rx="3" fill="none" stroke="#F2D98A" strokeWidth="1" opacity="0.55" />
           <rect x={w - 20} y="0" width="7" height="22" fill="#B91C1C" opacity="0.85" />
         </>
       )}
 
-      {category === "스프링" && (
+      {category.includes("스프링") && (
         <g opacity="0.9">
           {Array.from({ length: 7 }).map((_, i) => (
             <circle key={i} cx="9" cy={10 + i * ((h - 20) / 6)} r="2.6" fill="#E5E7EB" stroke="#9CA3AF" strokeWidth="0.6" />
@@ -98,7 +98,7 @@ export function DiaryCoverThumbnail({
         </g>
       )}
 
-      {category === "시스템" && (
+      {category.includes("시스템") && (
         <g opacity="0.85">
           {Array.from({ length: 6 }).map((_, i) => (
             <circle key={i} cx="11" cy={14 + i * ((h - 28) / 5)} r="1.6" fill="#1F2937" />
@@ -106,7 +106,7 @@ export function DiaryCoverThumbnail({
         </g>
       )}
 
-      {category === "한정특가" && (
+      {category.includes("한정특가") && (
         <g>
           <polygon points={`${w - 1},0 ${w - 1},26 ${w - 27},0`} fill="#FACC15" />
           <text x={w - 9} y="12" fontSize="6" fontWeight="900" fill="#78350F" textAnchor="end">

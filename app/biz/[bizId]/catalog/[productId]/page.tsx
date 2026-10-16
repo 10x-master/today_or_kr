@@ -6,7 +6,7 @@ import { CheckCircle2, ChevronLeft, Loader2, Ruler, ShoppingCart, Sparkles } fro
 import { TodayWordmark } from "@/components/brand/TodayLogo";
 import { DiaryCoverThumbnail } from "@/components/diary/DiaryCoverThumbnail";
 import { lightenHex, PRINT_METHOD_INFO } from "@/lib/diary/catalogUtils";
-import type { DiaryProduct } from "@/types/quote";
+import type { CatalogCategory, DiaryProduct } from "@/types/quote";
 
 function formatWon(n: number) {
   return `${n.toLocaleString("ko-KR")}원`;
@@ -23,6 +23,7 @@ function ProductDetailContent() {
   const productId = (params?.productId as string) || "";
 
   const [product, setProduct] = useState<DiaryProduct | null>(null);
+  const [categoryName, setCategoryName] = useState("");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [added, setAdded] = useState(false);
@@ -32,12 +33,20 @@ function ProductDetailContent() {
     fetch(`/api/t-diary/products/${encodeURIComponent(productId)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.product) setProduct(data.product);
-        else setNotFound(true);
+        if (data.product) {
+          setProduct(data.product);
+          return fetch(`/api/t-diary/categories?brand=${encodeURIComponent(bizId)}`)
+            .then((res) => res.json())
+            .then((catData) => {
+              const found = (catData.categories || []).find((c: CatalogCategory) => c.id === data.product.category_id);
+              if (found) setCategoryName(found.name);
+            });
+        }
+        setNotFound(true);
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
-  }, [productId]);
+  }, [productId, bizId]);
 
   const handleAddToQuote = () => {
     if (!product) return;
@@ -92,15 +101,20 @@ function ProductDetailContent() {
         {/* 표지 + 내지 펼침 */}
         <div className="mt-4 grid grid-cols-2 gap-4">
           <div className="flex items-center justify-center rounded-2xl bg-slate-50 py-8">
-            <DiaryCoverThumbnail
-              colorHex={product.color_hex}
-              secondaryColorHex={isTwoTone ? lightenHex(product.color_hex, 0.4) : undefined}
-              category={product.category}
-              size={140}
-            />
+            {product.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={product.image_url} alt={product.name} className="max-h-40 rounded-xl object-contain" />
+            ) : (
+              <DiaryCoverThumbnail
+                colorHex={product.color_hex}
+                secondaryColorHex={isTwoTone ? lightenHex(product.color_hex, 0.4) : undefined}
+                category={categoryName}
+                size={140}
+              />
+            )}
           </div>
           <div className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-slate-50 p-4">
-            <DiaryCoverThumbnail colorHex={product.color_hex} category={product.category} variant="spread" size={160} />
+            <DiaryCoverThumbnail colorHex={product.color_hex} category={categoryName} variant="spread" size={160} />
             <p className="text-[10px] text-slate-400">내지 펼침 · {product.page_count}p 괘선</p>
           </div>
         </div>
@@ -108,15 +122,14 @@ function ProductDetailContent() {
         {/* 제품 정보 */}
         <div className="mt-5 flex items-center gap-1.5 flex-wrap">
           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">{product.product_code}</span>
-          <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-600">{product.category}</span>
+          {categoryName && <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-600">{categoryName}</span>}
         </div>
         <h1 className="mt-1 text-lg font-black text-slate-900 leading-snug">{product.name}</h1>
         {product.spec && <p className="mt-1 text-xs text-slate-500">{product.spec}</p>}
 
-        <div className="mt-3 flex items-baseline gap-2">
+        <div className="mt-3">
           <p className="text-2xl font-black text-blue-700">{formatWon(product.sell_price)}</p>
-          <p className="text-[11px] text-slate-300 line-through">공급가 {formatWon(product.cost_price)}</p>
-          <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-600">판매가 200%</span>
+          <p className="text-[10px] text-slate-400">권장소비자가</p>
         </div>
 
         {/* 규격 */}
@@ -152,7 +165,7 @@ function ProductDetailContent() {
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-100 bg-white/95 backdrop-blur-md px-4 py-3">
         <div className="mx-auto flex w-full max-w-2xl items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] text-slate-400">판매가 (200%)</p>
+            <p className="text-[11px] text-slate-400">권장소비자가</p>
             <p className="text-sm font-black text-slate-900">{formatWon(product.sell_price)}</p>
           </div>
           {added ? (

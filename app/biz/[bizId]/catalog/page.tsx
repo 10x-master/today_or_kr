@@ -7,7 +7,7 @@ import { TodayAppIcon, TodayWordmark } from "@/components/brand/TodayLogo";
 import { DiaryCoverThumbnail } from "@/components/diary/DiaryCoverThumbnail";
 import { lightenHex } from "@/lib/diary/catalogUtils";
 import type { DiaryBrand } from "@/types/diary";
-import type { DiaryCategory, DiaryProduct, QuoteItem } from "@/types/quote";
+import type { CatalogCategory, DiaryProduct, QuoteItem } from "@/types/quote";
 
 function formatWon(n: number) {
   return `${n.toLocaleString("ko-KR")}원`;
@@ -17,16 +17,47 @@ function cartKey(bizId: string) {
   return `today_diary_catalog_cart_${bizId}`;
 }
 
+function CategoryTabRow({
+  items,
+  activeId,
+  onSelect,
+}: {
+  items: CatalogCategory[];
+  activeId: string;
+  onSelect: (id: string) => void;
+}) {
+  if (items.length <= 1) return null;
+  return (
+    <div className="flex flex-wrap gap-1.5 border-b border-slate-100 pb-0.5">
+      {items.map((cat) => (
+        <button
+          key={cat.id}
+          type="button"
+          onClick={() => onSelect(cat.id)}
+          className={`px-3 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+            activeId === cat.id ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+          }`}
+        >
+          {cat.name}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function BizCatalogContent() {
   const params = useParams();
   const router = useRouter();
   const bizId = (params?.bizId as string) || "";
 
   const [brand, setBrand] = useState<DiaryBrand | null>(null);
-  const [categories, setCategories] = useState<DiaryCategory[]>([]);
+  const [categories, setCategories] = useState<CatalogCategory[]>([]);
   const [products, setProducts] = useState<DiaryProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<string>("");
+
+  const [activeL1, setActiveL1] = useState("");
+  const [activeL2, setActiveL2] = useState("");
+  const [activeL3, setActiveL3] = useState("");
 
   // 선택 상품: productId -> 수량 (상세 페이지와 localStorage로 공유)
   const [selectedQty, setSelectedQty] = useState<Record<string, number>>({});
@@ -50,12 +81,25 @@ function BizCatalogContent() {
       .then(([productData, categoryData]) => {
         setBrand(productData.brand || null);
         setProducts(productData.products || []);
-        const visible: DiaryCategory[] = (categoryData.categories || []).filter((c: DiaryCategory) => c.is_visible);
+        const visible: CatalogCategory[] = (categoryData.categories || []).filter((c: CatalogCategory) => c.is_visible);
         setCategories(visible);
-        if (visible.length > 0) setActiveCategory(visible[0].name);
+        const l1List = visible.filter((c) => c.depth === 1);
+        if (l1List.length > 0) setActiveL1(l1List[0].id);
       })
       .finally(() => setLoading(false));
   }, [bizId]);
+
+  const l1Items = useMemo(() => categories.filter((c) => c.depth === 1), [categories]);
+  const l2Items = useMemo(() => categories.filter((c) => c.depth === 2 && c.parent_id === activeL1), [categories, activeL1]);
+  const l3Items = useMemo(() => categories.filter((c) => c.depth === 3 && c.parent_id === activeL2), [categories, activeL2]);
+
+  useEffect(() => {
+    if (l2Items.length > 0 && !l2Items.some((c) => c.id === activeL2)) setActiveL2(l2Items[0].id);
+  }, [l2Items, activeL2]);
+
+  useEffect(() => {
+    if (l3Items.length > 0 && !l3Items.some((c) => c.id === activeL3)) setActiveL3(l3Items[0].id);
+  }, [l3Items, activeL3]);
 
   useEffect(() => {
     try {
@@ -78,9 +122,15 @@ function BizCatalogContent() {
   }, [selectedQty, bizId, cartLoaded]);
 
   const categoryProducts = useMemo(
-    () => products.filter((p) => p.category === activeCategory),
-    [products, activeCategory]
+    () => products.filter((p) => p.category_id === activeL3),
+    [products, activeL3]
   );
+
+  const categoryNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const c of categories) map[c.id] = c.name;
+    return map;
+  }, [categories]);
 
   const toggleSelect = (e: React.MouseEvent, product: DiaryProduct) => {
     e.stopPropagation();
@@ -187,24 +237,15 @@ function BizCatalogContent() {
           <TodayAppIcon theme="light" size={32} />
           <div>
             <p className="text-sm font-black text-slate-900">{brand?.brand_name || bizId} T.홈페이지 카탈로그</p>
-            <p className="text-[11px] text-slate-400">32절 다이어리 B2B 도매 견적 · 판매가는 공급가의 200%입니다</p>
+            <p className="text-[11px] text-slate-400">32절 다이어리 B2B 도매 견적</p>
           </div>
         </div>
 
-        {/* 카테고리 탭 */}
-        <div className="mt-5 flex flex-wrap gap-1.5 border-b border-slate-100">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setActiveCategory(cat.name)}
-              className={`px-3 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
-                activeCategory === cat.name ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
-              }`}
-            >
-              {cat.name}
-            </button>
-          ))}
+        {/* 3단 카테고리 탭 (대분류 -> 중분류 -> 소분류) */}
+        <div className="mt-5 space-y-1.5">
+          <CategoryTabRow items={l1Items} activeId={activeL1} onSelect={setActiveL1} />
+          <CategoryTabRow items={l2Items} activeId={activeL2} onSelect={setActiveL2} />
+          <CategoryTabRow items={l3Items} activeId={activeL3} onSelect={setActiveL3} />
         </div>
 
         {/* 상품 목록 */}
@@ -226,12 +267,17 @@ function BizCatalogContent() {
               >
                 <div className="flex items-start justify-between gap-1.5">
                   <div className="flex-1 overflow-hidden rounded-xl bg-slate-50 flex items-center justify-center">
-                    <DiaryCoverThumbnail
-                      colorHex={product.color_hex}
-                      secondaryColorHex={isTwoTone ? lightenHex(product.color_hex, 0.4) : undefined}
-                      category={product.category}
-                      size={64}
-                    />
+                    {product.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={product.image_url} alt={product.name} className="h-16 w-full object-cover rounded-xl" />
+                    ) : (
+                      <DiaryCoverThumbnail
+                        colorHex={product.color_hex}
+                        secondaryColorHex={isTwoTone ? lightenHex(product.color_hex, 0.4) : undefined}
+                        category={categoryNameById[product.category_id] || ""}
+                        size={64}
+                      />
+                    )}
                   </div>
                   <button
                     type="button"
