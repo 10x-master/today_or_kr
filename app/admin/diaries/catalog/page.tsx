@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import * as XLSX from "xlsx";
 import {
   ArrowDown,
@@ -303,7 +304,11 @@ export default function AdminDiaryCatalogConsolePage() {
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(`${data.created}건 신규 등록, ${data.updated}건 갱신 완료${data.errors?.length ? ` (오류 ${data.errors.length}건)` : ""}`);
+        showToast(
+          `${data.created}건 신규 등록, ${data.updated}건 갱신 완료${
+            data.unmatched?.length ? ` (카테고리 미매칭 ${data.unmatched.length}건 — 사전 카테고리 등록 후 재업로드 필요)` : ""
+          }${data.errors?.length ? ` (오류 ${data.errors.length}건)` : ""}`
+        );
         setPreviewRows([]);
         if (fileInputRef.current) fileInputRef.current.value = "";
         loadAll();
@@ -431,7 +436,15 @@ export default function AdminDiaryCatalogConsolePage() {
           <>
             {/* 카테고리 관리 (3단 트리) */}
             <section className="mt-5 rounded-2xl border border-slate-100 p-4">
-              <h2 className="text-xs font-black text-slate-700">카테고리 관리 (대분류 → 중분류 → 소분류)</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-black text-slate-700">카테고리 관리 (대분류 → 중분류 → 소분류)</h2>
+                <Link
+                  href="/admin/diaries/catalog/categories"
+                  className="shrink-0 text-[11px] font-bold text-blue-600 hover:underline"
+                >
+                  전체 관리 화면 ↗
+                </Link>
+              </div>
               <div className="mt-3 space-y-1">
                 {l1Items.map((l1) => (
                   <div key={l1.id}>

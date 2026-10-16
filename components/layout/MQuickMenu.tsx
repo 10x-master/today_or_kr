@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { TMark } from "@/components/brand/TodayLogo";
+import TodayServicesModal from "@/components/layout/TodayServicesModal";
 
 interface MQuickMenuItem {
   emoji: string;
@@ -71,13 +72,14 @@ export default function MQuickMenu({
   }, [isOpen]);
 
   const handleMouseEnter = () => {
-    if (!canHover) return;
+    // "text" variant는 전체화면 모달을 열므로 호버만으로 열리지 않고 클릭으로만 연다
+    if (variant !== "icon" || !canHover) return;
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     setIsOpen(true);
   };
 
   const handleMouseLeave = () => {
-    if (!canHover) return;
+    if (variant !== "icon" || !canHover) return;
     closeTimerRef.current = setTimeout(() => setIsOpen(false), 150);
   };
 
@@ -130,17 +132,21 @@ export default function MQuickMenu({
         </button>
       )}
 
-      {isOpen && (
-        <div
-          className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {renderTier(TIER_1)}
-          <div className="my-1.5 border-t border-slate-100" />
-          {renderTier(TIER_2)}
-          <div className="my-1.5 border-t border-slate-100" />
-          {renderTier(TIER_3)}
-        </div>
+      {variant === "text" ? (
+        <TodayServicesModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      ) : (
+        isOpen && (
+          <div
+            className="absolute right-0 top-full mt-2 w-56 max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-100 bg-white p-2 shadow-2xl z-50 animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {renderTier(TIER_1)}
+            <div className="my-1.5 border-t border-slate-100" />
+            {renderTier(TIER_2)}
+            <div className="my-1.5 border-t border-slate-100" />
+            {renderTier(TIER_3)}
+          </div>
+        )
       )}
     </div>
   );

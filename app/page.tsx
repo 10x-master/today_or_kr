@@ -556,18 +556,18 @@ export default function Home({ initialDong }: HomeProps = {}) {
             <TodayWordmark theme="light" size="lg" className="text-2xl" />
           </Link>
 
-          {/* 좌측 중앙: 동네 선택 단일 드롭다운 뱃지 */}
+          {/* 좌측 중앙: 동네 선택 단일 드롭다운 뱃지 — 완전 투명 배경, 선명한 블루 텍스트/꺾쇠로 시각적 유목성 강화 */}
           <button
             type="button"
             onClick={() => setIsDongPinSheetOpen(true)}
-            className="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="flex shrink-0 items-center gap-1 bg-transparent px-1 py-1.5 text-base font-medium text-[#2066FF] hover:text-[#2066FF]/80 transition-colors cursor-pointer"
             title="내 동네 핀 선택"
           >
-            <MapPin className="h-3.5 w-3.5 text-blue-600" />
+            <MapPin className="h-4 w-4 text-[#2066FF]" />
             <span>
               {region.sido} {region.gugun} {region.dong}
             </span>
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+            <ChevronDown className="h-4 w-4 text-[#2066FF]" />
           </button>
 
           {/* 중앙: 📢 지자체 소식·의정활동·행사·이벤트 공지 롤링 텍스트 티커 */}

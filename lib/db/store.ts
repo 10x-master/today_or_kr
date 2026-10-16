@@ -1028,6 +1028,53 @@ export function resolveOrCreateLeafCategory(
   return l3;
 }
 
+/**
+ * 이름으로 소분류(depth=3) 카테고리를 찾되, 하나라도 없으면 생성하지 않고 null을 반환한다
+ * (엑셀 대량 등록 시 "즉석 자동 생성" 대신 사전 정의된 카테고리로만 매핑하도록 강제하기 위함).
+ */
+export function resolveLeafCategoryStrict(
+  diaryId: string,
+  l1Name: string,
+  l2Name: string,
+  l3Name: string
+): CatalogCategory | null {
+  const findChild = (parentId: string | null, name: string) =>
+    mockCatalogCategories.find((c) => c.diary_id === diaryId && c.parent_id === parentId && c.name === name);
+
+  const l1 = findChild(null, l1Name);
+  if (!l1) return null;
+  const l2 = findChild(l1.id, l2Name);
+  if (!l2) return null;
+  const l3 = findChild(l2.id, l3Name);
+  if (!l3) return null;
+  return l3;
+}
+
+/**
+ * 관리자 — 카테고리 삭제. 하위 카테고리가 있거나(중/소분류 보유) 소분류에 연결된 상품이 있으면
+ * 거부하고 사유를 반환한다 (데이터 유실 방지).
+ */
+export function deleteCatalogCategory(id: string): { ok: boolean; reason?: string } {
+  const category = mockCatalogCategories.find((c) => c.id === id);
+  if (!category) return { ok: false, reason: "카테고리를 찾을 수 없습니다." };
+
+  const hasChildren = mockCatalogCategories.some((c) => c.parent_id === id);
+  if (hasChildren) {
+    return { ok: false, reason: "하위 카테고리가 남아 있어 삭제할 수 없습니다. 먼저 하위 카테고리를 삭제해주세요." };
+  }
+
+  if (category.depth === 3) {
+    const hasProducts = mockDiaryProducts.some((p) => p.category_id === id);
+    if (hasProducts) {
+      return { ok: false, reason: "이 카테고리에 등록된 상품이 있어 삭제할 수 없습니다. 먼저 상품을 다른 카테고리로 이동하거나 삭제해주세요." };
+    }
+  }
+
+  const idx = mockCatalogCategories.findIndex((c) => c.id === id);
+  if (idx >= 0) mockCatalogCategories.splice(idx, 1);
+  return { ok: true };
+}
+
 /** t.홈페이지 B2B 카탈로그 — 다이어리별 상품 목록 조회 */
 export function getDiaryProducts(diaryId: string): DiaryProduct[] {
   return mockDiaryProducts.filter((p) => p.diary_id === diaryId);
