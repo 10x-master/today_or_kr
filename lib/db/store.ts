@@ -20,6 +20,8 @@ import {
   mockDiaryMembers,
   mockDiaryPosts,
   mockDiaryComments,
+  mockDiaryProducts,
+  mockQuoteRequests,
 } from "@/lib/db/mockSeed";
 import type {
   LocalPickCategory,
@@ -59,6 +61,7 @@ import type {
   DiaryPost,
   DiaryComment,
 } from "@/types/diary";
+import type { DiaryProduct, QuoteItem, QuoteRequest, QuoteStatus } from "@/types/quote";
 
 const AUTO_BLIND_THRESHOLD = 3;
 
@@ -940,6 +943,129 @@ export function toggleLocalAdActive(id: string, isActive?: boolean): LocalAd | n
   ad.is_active = isActive !== undefined ? isActive : !ad.is_active;
   ad.updated_at = new Date().toISOString();
   return ad;
+}
+
+/** T.홈페이지 B2B 카탈로그 — 다이어리별 상품 목록 조회 */
+export function getDiaryProducts(diaryId: string): DiaryProduct[] {
+  return mockDiaryProducts.filter((p) => p.diary_id === diaryId);
+}
+
+/** 수량 구간에 맞는 단가 계산 (가장 높은 minQty 구간 중 수량 이하인 것) */
+export function resolveUnitPrice(product: DiaryProduct, quantity: number): number {
+  const sorted = [...product.price_tiers].sort((a, b) => a.minQty - b.minQty);
+  let price = sorted[0]?.unitPrice ?? 0;
+  for (const tier of sorted) {
+    if (quantity >= tier.minQty) price = tier.unitPrice;
+  }
+  return price;
+}
+
+function computeQuoteAmounts(items: QuoteItem[], packagingFee: number, shippingFee: number) {
+  const subtotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+  return { subtotal, final_amount: subtotal + packagingFee + shippingFee };
+}
+
+/** 견적 요청 목록 조회 (다이어리 미지정 시 전체) */
+export function getQuoteRequests(diaryId?: string): QuoteRequest[] {
+  const list = diaryId ? mockQuoteRequests.filter((q) => q.diary_id === diaryId) : mockQuoteRequests;
+  return [...list].sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+/** 견적 요청 단건 조회 */
+export function getQuoteRequestById(id: string): QuoteRequest | null {
+  return mockQuoteRequests.find((q) => q.id === id) || null;
+}
+
+/** 카탈로그 다중 선택 → 견적 요청서 접수 (항상 status='REQUESTED') */
+export function createQuoteRequest(input: {
+  diary_id: string;
+  company_name: string;
+  contact_name: string;
+  contact_phone: string;
+  items: QuoteItem[];
+  print_options?: string | null;
+}): QuoteRequest {
+  const { subtotal, final_amount } = computeQuoteAmounts(input.items, 0, 0);
+  const now = new Date().toISOString();
+  const quote: QuoteRequest = {
+    id: `quote-${Date.now()}`,
+    diary_id: input.diary_id,
+    company_name: input.company_name,
+    contact_name: input.contact_name,
+    contact_phone: input.contact_phone,
+    items: input.items,
+    print_options: input.print_options || null,
+    status: "REQUESTED",
+    packaging_fee: 0,
+    shipping_fee: 0,
+    subtotal,
+    final_amount,
+    admin_memo: null,
+    t_sign_doc_id: null,
+    sign_status: "NONE",
+    payment_requested: false,
+    created_at: now,
+    updated_at: now,
+  };
+  mockQuoteRequests.unshift(quote);
+  return quote;
+}
+
+/** 관리자 — 맞춤 수량 단가/박비/배송비 확정 및 메모·상태 갱신 */
+export function updateQuoteRequest(
+  id: string,
+  patch: {
+    items?: QuoteItem[];
+    packaging_fee?: number;
+    shipping_fee?: number;
+    admin_memo?: string | null;
+    status?: QuoteStatus;
+  }
+): QuoteRequest | null {
+  const quote = mockQuoteRequests.find((q) => q.id === id);
+  if (!quote) return null;
+
+  if (patch.items) quote.items = patch.items;
+  if (patch.packaging_fee !== undefined) quote.packaging_fee = patch.packaging_fee;
+  if (patch.shipping_fee !== undefined) quote.shipping_fee = patch.shipping_fee;
+  if (patch.admin_memo !== undefined) quote.admin_memo = patch.admin_memo;
+  if (patch.status) quote.status = patch.status;
+
+  const { subtotal, final_amount } = computeQuoteAmounts(quote.items, quote.packaging_fee, quote.shipping_fee);
+  quote.subtotal = subtotal;
+  quote.final_amount = final_amount;
+  quote.updated_at = new Date().toISOString();
+  return quote;
+}
+
+/** 카카오 알림톡 견적서 푸시 발송 (데모) — REQUESTED → QUOTED 전이 */
+export function markQuoteSent(id: string): QuoteRequest | null {
+  const quote = mockQuoteRequests.find((q) => q.id === id);
+  if (!quote) return null;
+  if (quote.status === "REQUESTED") quote.status = "QUOTED";
+  quote.updated_at = new Date().toISOString();
+  return quote;
+}
+
+/** T.싸인 전자계약 체결 완료 (데모) — QUOTED → SIGNED 전이 */
+export function markQuoteSigned(id: string): QuoteRequest | null {
+  const quote = mockQuoteRequests.find((q) => q.id === id);
+  if (!quote) return null;
+  quote.t_sign_doc_id = quote.t_sign_doc_id || `sign-doc-quote-${Date.now()}`;
+  quote.sign_status = "COMPLETED";
+  quote.status = "SIGNED";
+  quote.updated_at = new Date().toISOString();
+  return quote;
+}
+
+/** 결제/전자세금계산서 발행 요청 (데모) — SIGNED → PAID 전이 */
+export function markQuotePaymentRequested(id: string): QuoteRequest | null {
+  const quote = mockQuoteRequests.find((q) => q.id === id);
+  if (!quote) return null;
+  quote.payment_requested = true;
+  quote.status = "PAID";
+  quote.updated_at = new Date().toISOString();
+  return quote;
 }
 
 

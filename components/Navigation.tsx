@@ -405,6 +405,17 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         badge: "HQ 전용",
         keywords: "QR 인쇄 다이어리 탁상달력 발급 스티커",
       },
+      {
+        id: "app-diary-quotes-console",
+        section: "ADMIN",
+        title: "B2B 견적서 발송 콘솔",
+        short: "견적콘솔",
+        description: "다이어리 도매 견적 요청 확인, 단가·박비·배송비 확정, PDF 견적서/카카오 알림톡 발송",
+        href: "/admin/quotes",
+        icon: "🧾",
+        badge: "HQ 전용",
+        keywords: "견적 도매 다이어리 PDF 알림톡 세금계산서 전자계약",
+      },
     ],
   },
 ];

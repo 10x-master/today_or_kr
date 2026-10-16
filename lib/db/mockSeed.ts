@@ -21,6 +21,7 @@ import type {
   DiaryPost,
   DiaryComment,
 } from "@/types/diary";
+import type { DiaryProduct, QuoteRequest } from "@/types/quote";
 
 /** 상대 시간 계산 헬퍼 (예: '방금 전', '12분 전', '2시간 전', '어제', '3일 전') */
 export function formatRelativeTime(dateString?: string): string {
@@ -1828,7 +1829,7 @@ export const mockDiaryBrands: DiaryBrand[] = [
     plan: "ENTERPRISE",
     valid_until: "2027-03-01T00:00:00.000Z",
     max_members: 100,
-    connected_homepage_slug: null,
+    connected_homepage_slug: "/biz/sme-transform/catalog",
   },
   // --- t.홈피-t.노트-t.싸인 3각 연계 + 라이선스 엔진: 8대 핵심 시드 ---
   {
@@ -2496,6 +2497,165 @@ export const mockDiaryComments: DiaryComment[] = [
     author_id: "user-001",
     content: "선생님 감사합니다! 아이가 정말 즐거워했어요 :)",
     created_at: "2026-10-19T10:15:00.000Z",
+  },
+];
+
+/** 중소기업사업전환지원단 T.홈페이지 B2B 32절 다이어리 카탈로그 시드 */
+export const mockDiaryProducts: DiaryProduct[] = [
+  {
+    id: "product-mo-07",
+    diary_id: "diary-brand-sme-transform",
+    category: "양장",
+    product_code: "MO-07",
+    name: "32절 양장 다이어리 블루",
+    spec: "PU가죽 표지 · 금박 로고 각인 가능 · 밴드 고정형",
+    price_tiers: [
+      { minQty: 100, unitPrice: 3200 },
+      { minQty: 200, unitPrice: 2800 },
+      { minQty: 400, unitPrice: 2500 },
+      { minQty: 800, unitPrice: 2200 },
+    ],
+    image_url: null,
+    created_at: "2026-10-16T00:00:00.000Z",
+  },
+  {
+    id: "product-mo-12",
+    diary_id: "diary-brand-sme-transform",
+    category: "양장",
+    product_code: "MO-12",
+    name: "32절 양장 다이어리 네이비",
+    spec: "PU가죽 표지 · 금박 로고 각인 가능 · 내지 스케줄형",
+    price_tiers: [
+      { minQty: 100, unitPrice: 3100 },
+      { minQty: 200, unitPrice: 2700 },
+      { minQty: 400, unitPrice: 2400 },
+      { minQty: 800, unitPrice: 2100 },
+    ],
+    image_url: null,
+    created_at: "2026-10-16T00:00:00.000Z",
+  },
+  {
+    id: "product-mu-21",
+    diary_id: "diary-brand-sme-transform",
+    category: "스프링",
+    product_code: "MU-21",
+    name: "32절 스프링 다이어리 그레이",
+    spec: "트윈링 제본 · 180도 평펼침 · 무광 표지",
+    price_tiers: [
+      { minQty: 100, unitPrice: 2400 },
+      { minQty: 200, unitPrice: 2100 },
+      { minQty: 400, unitPrice: 1850 },
+      { minQty: 800, unitPrice: 1600 },
+    ],
+    image_url: null,
+    created_at: "2026-10-16T00:00:00.000Z",
+  },
+  {
+    id: "product-mu-25",
+    diary_id: "diary-brand-sme-transform",
+    category: "스프링",
+    product_code: "MU-25",
+    name: "32절 스프링 다이어리 베이지",
+    spec: "트윈링 제본 · 180도 평펼침 · 크라프트 표지",
+    price_tiers: [
+      { minQty: 100, unitPrice: 2300 },
+      { minQty: 200, unitPrice: 2000 },
+      { minQty: 400, unitPrice: 1750 },
+      { minQty: 800, unitPrice: 1500 },
+    ],
+    image_url: null,
+    created_at: "2026-10-16T00:00:00.000Z",
+  },
+  {
+    id: "product-sy-03",
+    diary_id: "diary-brand-sme-transform",
+    category: "시스템",
+    product_code: "SY-03",
+    name: "32절 시스템 다이어리 (6공 리필형)",
+    spec: "6공 바인더 · 리필 속지 교체 가능 · 가죽 커버",
+    price_tiers: [
+      { minQty: 100, unitPrice: 4200 },
+      { minQty: 200, unitPrice: 3800 },
+      { minQty: 400, unitPrice: 3400 },
+      { minQty: 800, unitPrice: 3000 },
+    ],
+    image_url: null,
+    created_at: "2026-10-16T00:00:00.000Z",
+  },
+  {
+    id: "product-sy-08",
+    diary_id: "diary-brand-sme-transform",
+    category: "시스템",
+    product_code: "SY-08",
+    name: "32절 시스템 다이어리 프리미엄",
+    spec: "6공 바인더 · 프리미엄 가죽 커버 · 명함 포켓 내장",
+    price_tiers: [
+      { minQty: 100, unitPrice: 4800 },
+      { minQty: 200, unitPrice: 4300 },
+      { minQty: 400, unitPrice: 3900 },
+      { minQty: 800, unitPrice: 3400 },
+    ],
+    image_url: null,
+    created_at: "2026-10-16T00:00:00.000Z",
+  },
+  {
+    id: "product-lt-99",
+    diary_id: "diary-brand-sme-transform",
+    category: "한정특가",
+    product_code: "LT-99",
+    name: "32절 한정특가 다이어리 (재고소진 특가)",
+    spec: "전년도 재고 소진 특가 · 색상 랜덤 출고",
+    price_tiers: [
+      { minQty: 100, unitPrice: 1800 },
+      { minQty: 200, unitPrice: 1500 },
+      { minQty: 400, unitPrice: 1300 },
+      { minQty: 800, unitPrice: 1100 },
+    ],
+    image_url: null,
+    created_at: "2026-10-16T00:00:00.000Z",
+  },
+  {
+    id: "product-lt-05",
+    diary_id: "diary-brand-sme-transform",
+    category: "한정특가",
+    product_code: "LT-05",
+    name: "32절 한정특가 캘린더형 다이어리",
+    spec: "월간 캘린더형 내지 · 한정 수량 특가",
+    price_tiers: [
+      { minQty: 100, unitPrice: 2000 },
+      { minQty: 200, unitPrice: 1700 },
+      { minQty: 400, unitPrice: 1450 },
+      { minQty: 800, unitPrice: 1200 },
+    ],
+    image_url: null,
+    created_at: "2026-10-16T00:00:00.000Z",
+  },
+];
+
+/** B2B 견적 요청 시드 (관리자 견적서 발송 콘솔 데모용) */
+export const mockQuoteRequests: QuoteRequest[] = [
+  {
+    id: "quote-0001",
+    diary_id: "diary-brand-sme-transform",
+    company_name: "A사",
+    contact_name: "김철수",
+    contact_phone: "010-1234-5678",
+    items: [
+      { product_id: "product-mo-07", product_code: "MO-07", product_name: "32절 양장 다이어리 블루", quantity: 300, unit_price: 2500 },
+      { product_id: "product-mu-21", product_code: "MU-21", product_name: "32절 스프링 다이어리 그레이", quantity: 200, unit_price: 2100 },
+    ],
+    print_options: "표지 로고 금박 각인 (A사 로고), 내지 1월 시작",
+    status: "REQUESTED",
+    packaging_fee: 0,
+    shipping_fee: 0,
+    subtotal: 300 * 2500 + 200 * 2100,
+    final_amount: 300 * 2500 + 200 * 2100,
+    admin_memo: null,
+    t_sign_doc_id: null,
+    sign_status: "NONE",
+    payment_requested: false,
+    created_at: "2026-10-16T09:00:00.000Z",
+    updated_at: "2026-10-16T09:00:00.000Z",
   },
 ];
 
