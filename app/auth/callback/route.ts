@@ -33,13 +33,25 @@ export async function GET(request: NextRequest) {
         const email = user.email || user.user_metadata?.email || null;
 
         try {
+          // 기존 프로필(수동 승격된 ADMIN/SUPER_ADMIN 등)이 있으면 role을 보존하고,
+          // 신규 가입자만 공급자 기준 기본 역할(구글=영업사원·비즈니스 / 카카오=주민·소상공인)을 부여
+          const { data: existingProfile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          const provider = user.app_metadata?.provider;
+          const defaultRole = provider === "google" ? "STORE_OWNER" : "USER";
+          const role = existingProfile?.role || defaultRole;
+
           await supabase.from("profiles").upsert(
             {
               id: user.id,
               email,
               full_name: fullName,
               avatar_url: avatarUrl,
-              role: "USER",
+              role,
               updated_at: new Date().toISOString(),
             },
             { onConflict: "id" }
