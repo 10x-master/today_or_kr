@@ -4,7 +4,7 @@ import { createCatalogCategory, getCatalogCategories, getDiaryBrandBySlug } from
 import type { CatalogCategory } from "@/types/quote";
 
 /**
- * T.홈페이지 B2B 카탈로그 3단 카테고리 트리 조회 (대분류/중분류/소분류 전체를 평탄한 배열로)
+ * t.홈페이지 B2B 카탈로그 3단 카테고리 트리 조회 (대분류/중분류/소분류 전체를 평탄한 배열로)
  * GET /api/t-diary/categories?brand=sme-transform
  */
 export async function GET(request: NextRequest) {

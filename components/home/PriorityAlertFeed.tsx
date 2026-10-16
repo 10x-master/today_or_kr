@@ -9,7 +9,7 @@ import type { TodayNote } from "@/types/officialNotice";
 import type { DiaryBrand, DiaryEvent } from "@/types/diary";
 
 /**
- * T.노트 스마트 알림 큐 — 메인 피드 최상단 선제 알림.
+ * t.노트 스마트 알림 큐 — 메인 피드 최상단 선제 알림.
  * ① 중요도(D-7) 항목을 골드 뱃지로, ② 당일 항목을 최신순으로 노출한다.
  * 표시할 항목이 없으면 아무것도 렌더링하지 않는다(조용히 숨김).
  */
@@ -27,7 +27,7 @@ export default function PriorityAlertFeed({ className = "" }: { className?: stri
 
       const items: AlertSourceItem[] = [];
 
-      // 1. 내 T.노트 (today_notes)
+      // 1. 내 t.노트 (today_notes)
       try {
         const res = await fetch(`/api/today-notes?user_id=${encodeURIComponent(userId)}`);
         const data = await res.json();
@@ -42,7 +42,7 @@ export default function PriorityAlertFeed({ className = "" }: { className?: stri
             targetAlertDate: n.target_alert_date || null,
             sortTimestamp: n.updated_at || n.created_at || null,
             href: "/workspace",
-            sourceLabel: "T.노트",
+            sourceLabel: "t.노트",
           });
         }
       } catch {}
@@ -77,7 +77,7 @@ export default function PriorityAlertFeed({ className = "" }: { className?: stri
               targetAlertDate: e.target_alert_date || null,
               sortTimestamp: e.event_date,
               href: slug ? `/t-diary?brand=${encodeURIComponent(slug)}` : "/t-diary",
-              sourceLabel: nameById[e.diary_id] || "T.다이어리",
+              sourceLabel: nameById[e.diary_id] || "t.다이어리",
             });
           }
         }
@@ -100,7 +100,7 @@ export default function PriorityAlertFeed({ className = "" }: { className?: stri
   if (!loaded || (important.length === 0 && today.length === 0)) return null;
 
   return (
-    <section aria-label="T.노트 스마트 알림 큐" className={`px-3 pt-3 space-y-1.5 bg-white ${className}`}>
+    <section aria-label="t.노트 스마트 알림 큐" className={`px-3 pt-3 space-y-1.5 bg-white ${className}`}>
       {important.map((item) => (
         <Link
           key={item.id}

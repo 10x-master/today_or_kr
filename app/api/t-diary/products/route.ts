@@ -5,7 +5,7 @@ import { normalizeImageUrl, suggestSellPrice } from "@/lib/diary/catalogUtils";
 import type { DiaryProduct } from "@/types/quote";
 
 /**
- * T.홈페이지 B2B 카탈로그 상품 목록 조회
+ * t.홈페이지 B2B 카탈로그 상품 목록 조회
  * GET /api/t-diary/products?brand=sme-transform
  */
 export async function GET(request: NextRequest) {

@@ -947,7 +947,7 @@ export function toggleLocalAdActive(id: string, isActive?: boolean): LocalAd | n
   return ad;
 }
 
-/** T.홈페이지 B2B 카탈로그 — 다이어리별 3단 카테고리 트리 전체 조회 (노출 순서대로) */
+/** t.홈페이지 B2B 카탈로그 — 다이어리별 3단 카테고리 트리 전체 조회 (노출 순서대로) */
 export function getCatalogCategories(diaryId: string): CatalogCategory[] {
   return [...mockCatalogCategories]
     .filter((c) => c.diary_id === diaryId)
@@ -1028,7 +1028,7 @@ export function resolveOrCreateLeafCategory(
   return l3;
 }
 
-/** T.홈페이지 B2B 카탈로그 — 다이어리별 상품 목록 조회 */
+/** t.홈페이지 B2B 카탈로그 — 다이어리별 상품 목록 조회 */
 export function getDiaryProducts(diaryId: string): DiaryProduct[] {
   return mockDiaryProducts.filter((p) => p.diary_id === diaryId);
 }
@@ -1210,7 +1210,7 @@ export function markQuoteSent(id: string): QuoteRequest | null {
   return quote;
 }
 
-/** T.싸인 전자계약 체결 완료 (데모) — QUOTED → SIGNED 전이 */
+/** t.싸인 전자계약 체결 완료 (데모) — QUOTED → SIGNED 전이 */
 export function markQuoteSigned(id: string): QuoteRequest | null {
   const quote = mockQuoteRequests.find((q) => q.id === id);
   if (!quote) return null;

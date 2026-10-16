@@ -9,17 +9,17 @@ interface MQuickMenuItem {
 }
 
 const TIER_1: MQuickMenuItem[] = [
-  { label: "📅 T.다이어리", href: "/t-diary" },
-  { label: "🎙 T.노트", href: "/workspace" },
+  { label: "📅 t.다이어리", href: "/t-diary" },
+  { label: "🎙 t.노트", href: "/workspace" },
 ];
 
 const TIER_2: MQuickMenuItem[] = [
-  { label: "🏠 T.홈페이지", href: "/biz/sme-transform/catalog" },
-  { label: "✍️ T.싸인", href: "/t-sign" },
+  { label: "🏠 t.홈페이지", href: "/biz/sme-transform/catalog" },
+  { label: "✍️ t.싸인", href: "/t-sign" },
 ];
 
 const TIER_3: MQuickMenuItem[] = [
-  { label: "💳 T.환급", href: "/t-refund" },
+  { label: "💳 t.환급", href: "/t-refund" },
   { label: "🏢 아파트 링크", href: "/aptlink" },
   { label: "🔗 링크픽", href: "/p/ambassador-01" },
 ];

@@ -1,5 +1,5 @@
 /**
- * T.노트 스마트 알림 큐 — 공통 정렬 알고리즘.
+ * t.노트 스마트 알림 큐 — 공통 정렬 알고리즘.
  * ① 중요도(is_important) 항목: target_alert_date 기준 D-7부터 최상단 (가까운 순)
  * ② 당일(Today) 항목: 최근 작성/업데이트 순 (Latest First)
  * today_notes/diary_events 등 서로 다른 출처를 공통 모양으로 정규화해 함께 정렬한다.

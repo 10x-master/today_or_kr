@@ -1477,8 +1477,8 @@ export const mockAppPwaSettings: AppPwaSetting[] = [
     app_name: "Today.",
     short_name: "Today.",
     start_url: "/",
-    icon_192_url: "/icons/today-192.png?v=4",
-    icon_512_url: "/icons/today-512.png?v=4",
+    icon_192_url: "/icons/today-192.png?v=5",
+    icon_512_url: "/icons/today-512.png?v=5",
     theme_color: "#FFFFFF",
     background_color: "#FFFFFF",
   },
@@ -2281,7 +2281,7 @@ export const mockDiaryEvents: DiaryEvent[] = [
     t_sign_doc_id: "sign-doc-procurement-0001",
     sign_status: "REQUESTED",
   },
-  // --- T.노트 스마트 알림 큐 데모: 8대 핵심 시드 당일 일정 / D-7 중요 행사 ---
+  // --- t.노트 스마트 알림 큐 데모: 8대 핵심 시드 당일 일정 / D-7 중요 행사 ---
   {
     id: "diary-evt-linkpick-today",
     diary_id: "diary-brand-linkpick",
@@ -2524,7 +2524,7 @@ export const mockCatalogCategories: CatalogCategory[] = [
   ...buildDefaultCatalogTree("diary-brand-procurement-infra", "procurement-infra"),
 ];
 
-/** 중소기업사업전환지원단 T.홈페이지 B2B 32절 다이어리 카탈로그 시드 (sell_price = 관리자가 등록한 권장소비자가) */
+/** 중소기업사업전환지원단 t.홈페이지 B2B 32절 다이어리 카탈로그 시드 (sell_price = 관리자가 등록한 권장소비자가) */
 export const mockDiaryProducts: DiaryProduct[] = [
   {
     id: "product-mo-07",

@@ -53,7 +53,7 @@ function escapeIcsText(text: string) {
   return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
 }
 
-/** 연결된 T.홈페이지 슬러그 → 실제 경로 ("/"로 시작하면 절대경로 그대로, 아니면 /biz/<slug>) */
+/** 연결된 t.홈페이지 슬러그 → 실제 경로 ("/"로 시작하면 절대경로 그대로, 아니면 /biz/<slug>) */
 function resolveHomepageHref(slug: string | null | undefined): string | null {
   if (!slug) return null;
   return slug.startsWith("/") ? slug : `/biz/${slug}`;
@@ -491,7 +491,7 @@ END:VCALENDAR`;
                 className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition-colors"
               >
                 <Home className="h-3 w-3 text-blue-600" />
-                T.홈페이지
+                t.홈페이지
               </a>
             )}
           </div>

@@ -37,12 +37,15 @@ export default function InstallAppButton({
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"ios" | "desktop">("desktop");
   const [copied, setCopied] = useState(false);
+  // PC/태블릿 전면 차단: 터치 환경 + 430px 이하 뷰포트에서만 설치 유도 버튼 자체를 렌더링한다.
+  // 기본값 false로 시작해, 조건이 확인되기 전까지는(및 데스크톱에서는 영구히) 아무것도 그리지 않는다.
+  const [canShowInstallPrompt, setCanShowInstallPrompt] = useState(false);
 
   const isMain = appType === "TODAY_MAIN";
   const appDisplayName = isMain ? "Today." : "t.note";
   const appFullTitle = isMain ? "Today." : "티노트 (t.note)";
   const startPath = isMain ? "/" : "/workspace";
-  const iconPath = isMain ? "/icons/today-192.png?v=4" : "/icons/todaynote-192.png";
+  const iconPath = isMain ? "/icons/today-192.png?v=5" : "/icons/todaynote-192.png";
 
   useEffect(() => {
     // 환경 감지
@@ -53,6 +56,12 @@ export default function InstallAppButton({
     setIsIos(isIosDevice);
     setIsMobile(isMobileDevice);
 
+    // PC/태블릿에서는 설치 유도 버튼 자체를 숨긴다 — 터치 환경 + 430px 이하 뷰포트에서만 노출
+    const mq = window.matchMedia("(max-width: 430px) and (pointer: coarse)");
+    setCanShowInstallPrompt(mq.matches);
+    const handleViewportChange = (e: MediaQueryListEvent) => setCanShowInstallPrompt(e.matches);
+    mq.addEventListener("change", handleViewportChange);
+
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -61,6 +70,7 @@ export default function InstallAppButton({
     window.addEventListener("beforeinstallprompt", handleBeforeInstall);
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      mq.removeEventListener("change", handleViewportChange);
     };
   }, []);
 
@@ -128,6 +138,9 @@ export default function InstallAppButton({
   const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&format=svg&data=${encodeURIComponent(
     getTargetUrl()
   )}`;
+
+  // PC/태블릿(터치가 아니거나 430px 초과 뷰포트)에서는 버튼과 모달을 아예 렌더링하지 않는다.
+  if (!canShowInstallPrompt) return null;
 
   return (
     <>

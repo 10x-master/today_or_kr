@@ -233,7 +233,7 @@ export default function EnhancedNoteCaptureModal({
 
   const handleSubmit = async () => {
     const persistedImageUrls = images.filter((img) => img.isPersisted).map((img) => img.url);
-    const noteTitle = title.trim() || accumulatedText.slice(0, 30) || "새 T.노트 기록";
+    const noteTitle = title.trim() || accumulatedText.slice(0, 30) || "새 t.노트 기록";
 
     if (!accumulatedText.trim() && persistedImageUrls.length === 0 && bookmarks.length === 0) {
       setFeedbackMsg("음성 기록, 사진, 웹링크 중 최소 하나는 추가해주세요.");
@@ -286,7 +286,7 @@ export default function EnhancedNoteCaptureModal({
 
         <h3 className="flex items-center gap-1.5 pr-6 text-sm font-black text-slate-900">
           <Mic className="h-4 w-4 text-blue-600" />
-          T.노트 기록 {diaryEventId ? "(일정에 바인딩됨)" : ""}
+          t.노트 기록 {diaryEventId ? "(일정에 바인딩됨)" : ""}
         </h3>
 
         {/* 제목 */}
@@ -493,7 +493,7 @@ export default function EnhancedNoteCaptureModal({
           className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-blue-600 py-3 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-40 cursor-pointer transition-colors"
         >
           {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          T.노트 기록 저장
+          t.노트 기록 저장
         </button>
       </div>
     </div>

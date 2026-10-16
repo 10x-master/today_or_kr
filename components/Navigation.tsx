@@ -421,7 +421,7 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         section: "ADMIN",
         title: "카테고리 & 제품 등록 콘솔",
         short: "카탈로그관리",
-        description: "T.홈페이지 B2B 카탈로그 3단 카테고리 관리, 제품 등록·엑셀 대량등록, 딜러 맞춤 카탈로그 PDF/인쇄 생성",
+        description: "t.홈페이지 B2B 카탈로그 3단 카테고리 관리, 제품 등록·엑셀 대량등록, 딜러 맞춤 카탈로그 PDF/인쇄 생성",
         href: "/admin/diaries/catalog",
         icon: "🗂️",
         badge: "HQ 전용",

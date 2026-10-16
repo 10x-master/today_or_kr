@@ -192,7 +192,7 @@ function ProductDetailContent() {
 
       <div className="mt-8 flex items-center justify-center gap-1.5 py-4 text-[10px] text-slate-300">
         <TodayWordmark theme="light" size="sm" />
-        <span>T.다이어리 B2B 카탈로그</span>
+        <span>t.다이어리 B2B 카탈로그</span>
       </div>
     </div>
   );

@@ -21,9 +21,9 @@ export default function DiaryEventDetailModal({
 }: {
   event: DiaryEvent;
   providerName?: string;
-  /** 선생님/운영자 등 액션바(T.노트·T.싸인) 노출 여부 */
+  /** 선생님/운영자 등 액션바(t.노트·t.싸인) 노출 여부 */
   canManage?: boolean;
-  /** 연결된 T.홈페이지 경로 — 있으면 액션바에 [🏠 T.홈페이지] 버튼 노출 */
+  /** 연결된 t.홈페이지 경로 — 있으면 액션바에 [🏠 t.홈페이지] 버튼 노출 */
   homepageHref?: string | null;
   onClose: () => void;
   onOpenNote?: () => void;
@@ -156,7 +156,7 @@ export default function DiaryEventDetailModal({
           </a>
         )}
 
-        {/* 통합 액션바: T.노트 / T.싸인 / T.홈페이지 */}
+        {/* 통합 액션바: t.노트 / t.싸인 / t.홈페이지 */}
         {(onOpenNote || (canManage && onOpenSign) || homepageHref) && (
           <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
             {onOpenNote && (
@@ -166,7 +166,7 @@ export default function DiaryEventDetailModal({
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-indigo-200 bg-indigo-50 py-2.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors cursor-pointer"
               >
                 <Mic className="h-3.5 w-3.5" />
-                T.노트
+                t.노트
               </button>
             )}
             {canManage && onOpenSign && (
@@ -176,7 +176,7 @@ export default function DiaryEventDetailModal({
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
               >
                 <FileSignature className="h-3.5 w-3.5" />
-                T.싸인
+                t.싸인
               </button>
             )}
             {homepageHref && (
@@ -185,7 +185,7 @@ export default function DiaryEventDetailModal({
                 className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
               >
                 <Home className="h-3.5 w-3.5 text-blue-600" />
-                T.홈페이지
+                t.홈페이지
               </a>
             )}
           </div>

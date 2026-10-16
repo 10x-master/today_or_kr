@@ -63,7 +63,6 @@ import { TodayWordmark } from "@/components/brand/TodayLogo";
 import QuickMenuGrid from "@/components/home/QuickMenuGrid";
 import CoreSolutionsGrid from "@/components/home/CoreSolutionsGrid";
 import PriorityAlertFeed from "@/components/home/PriorityAlertFeed";
-import InstallAppButton from "@/components/common/InstallAppButton";
 import type { UserPersona } from "@/types/persona";
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -550,9 +549,6 @@ export default function Home({ initialDong }: HomeProps = {}) {
 
               {/* 상단 모드 체인저: 이웃 주민 모드 ⟷ 사장님·기업 모드 */}
               <ModeChangerToggle mode={topMode} onChange={handleModeChange} className="mt-2" />
-
-              {/* 앱 다운로드 버튼 (비로그인 방문자도 항상 노출) */}
-              <InstallAppButton appType="TODAY_MAIN" variant="pill" className="mt-2 w-full justify-center" />
             </div>
 
             {/* 내 동네 핀 (2~5곳 전환) */}
@@ -1158,7 +1154,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
               {/* ============================================================== */}
               {(activeTab === "home" || activeTab === "feed") && (
                 <div>
-                  {/* T.노트 스마트 알림 큐 — 최상단 선제 알림(⭐ D-7 중요 / 오늘 실시간) */}
+                  {/* t.노트 스마트 알림 큐 — 최상단 선제 알림(⭐ D-7 중요 / 오늘 실시간) */}
                   <PriorityAlertFeed />
 
                   {/* 8대 핵심 솔루션 아이콘 그리드 (모바일 4x2 / PC 8x1) — 상단 전면 배치, 가로 스크롤 없음 */}
