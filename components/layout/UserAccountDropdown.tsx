@@ -33,6 +33,8 @@ export interface UserAccountDropdownProps {
   className?: string;
   align?: "right" | "left";
   triggerStyle?: "full" | "icon_only";
+  /** true면 비로그인 상태에서 '마이 메뉴' 보조 버튼을 숨기고 [로그인] CTA 하나만 노출 */
+  hideMyMenuPill?: boolean;
 }
 
 // 6대 관심사 카테고리
@@ -52,6 +54,7 @@ export default function UserAccountDropdown({
   className = "",
   align = "right",
   triggerStyle = "full",
+  hideMyMenuPill = false,
 }: UserAccountDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLauncherOpen, setIsLauncherOpen] = useState(false);
@@ -165,15 +168,17 @@ export default function UserAccountDropdown({
           </button>
         ) : (
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setIsLauncherOpen(true)}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors cursor-pointer"
-              title="스마트 마이 메뉴 앱 런처 열기"
-            >
-              <Sparkles className="h-3 w-3 text-blue-600" />
-              <span>마이 메뉴</span>
-            </button>
+            {!hideMyMenuPill && (
+              <button
+                type="button"
+                onClick={() => setIsLauncherOpen(true)}
+                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors cursor-pointer"
+                title="스마트 마이 메뉴 앱 런처 열기"
+              >
+                <Sparkles className="h-3 w-3 text-blue-600" />
+                <span>마이 메뉴</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onOpenLogin}
@@ -198,31 +203,42 @@ export default function UserAccountDropdown({
 
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      {/* 구글 스타일 원형 프로필 아바타 버튼 */}
+      {/* 구글 스타일 원형 프로필 아바타 버튼 — triggerStyle="full"일 때는 닉네임도 함께 노출 */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative flex items-center justify-center rounded-full p-0.5 ring-1 ring-slate-200 hover:ring-amber-400 focus:outline-hidden transition-all cursor-pointer group"
+        className={`relative flex items-center rounded-full focus:outline-hidden transition-all cursor-pointer group ${
+          triggerStyle === "icon_only"
+            ? "justify-center p-0.5 ring-1 ring-slate-200 hover:ring-amber-400"
+            : "gap-1.5 pl-0.5 pr-2.5 py-0.5 ring-1 ring-slate-200 hover:ring-amber-400 hover:bg-slate-50"
+        }`}
         title={`${currentUser.full_name || "회원"} 님의 계정`}
         aria-label="통합 계정 메뉴 열기"
         aria-expanded={isOpen}
       >
-        {currentUser.avatar_url ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={currentUser.avatar_url}
-            alt={currentUser.full_name || "프로필"}
-            className="h-8 w-8 rounded-full object-cover"
-          />
-        ) : (
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 to-amber-600 text-white text-xs font-bold shadow-xs">
-            {userInitial}
-          </div>
-        )}
-        {/* 최고관리자 점등 마커 */}
-        {isSuperAdmin && (
-          <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 text-[8px] text-white ring-2 ring-white">
-            👑
+        <span className="relative shrink-0">
+          {currentUser.avatar_url ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={currentUser.avatar_url}
+              alt={currentUser.full_name || "프로필"}
+              className="h-8 w-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 to-amber-600 text-white text-xs font-bold shadow-xs">
+              {userInitial}
+            </div>
+          )}
+          {/* 최고관리자 점등 마커 */}
+          {isSuperAdmin && (
+            <span className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 text-[8px] text-white ring-2 ring-white">
+              👑
+            </span>
+          )}
+        </span>
+        {triggerStyle !== "icon_only" && (
+          <span className="text-xs font-bold text-slate-800 truncate max-w-28">
+            {currentUser.full_name || "투데이 멤버"}
           </span>
         )}
       </button>

@@ -13,7 +13,6 @@ import {
   MapPin,
   Mic,
   Plus,
-  RefreshCw,
   Search,
   Sparkles,
   TrendingUp,
@@ -53,15 +52,14 @@ import GovPolicyFundWidget from "@/components/portal/GovPolicyFundWidget";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 import MQuickMenu from "@/components/layout/MQuickMenu";
 import {
-  FastPinnedAppsBar,
   SmartAppLauncherModal,
   ModeChangerToggle,
   personaToRoleGroup,
   type TopMode,
 } from "@/components/Navigation";
-import { TodayWordmark } from "@/components/brand/TodayLogo";
+import { TMark, TodayWordmark } from "@/components/brand/TodayLogo";
 import QuickMenuGrid from "@/components/home/QuickMenuGrid";
-import CoreSolutionsGrid from "@/components/home/CoreSolutionsGrid";
+import TopSolutionsGrid from "@/components/home/TopSolutionsGrid";
 import PriorityAlertFeed from "@/components/home/PriorityAlertFeed";
 import type { UserPersona } from "@/types/persona";
 
@@ -528,6 +526,86 @@ export default function Home({ initialDong }: HomeProps = {}) {
       {/* 듀얼 PWA Web App Manifest 링크 (Today.) */}
       <link rel="manifest" href="/api/manifest/today" />
 
+      {/* ============================================================== */}
+      {/* 상단 풀위드 글로벌 헤더(GNB) — 3열 전체를 가로지르는 단일 헤더 (PC 전용) */}
+      {/* 좌: 로고 | 좌중앙: 동네 선택 뱃지 | 중앙: 핵심 서비스 내비 | 우: M퀵메뉴 & 계정 */}
+      {/* ============================================================== */}
+      <header className="hidden lg:block sticky top-0 z-40 w-full border-b border-slate-100 bg-white/95 backdrop-blur-md">
+        <div className="mx-auto flex h-16 w-full max-w-7xl xl:max-w-[1440px] items-center gap-4 px-4">
+          {/* 좌측: 공식 today. 로고 (확대, 슬로건 없음) */}
+          <Link href="/" className="shrink-0">
+            <TodayWordmark theme="light" size="lg" className="text-2xl" />
+          </Link>
+
+          {/* 좌측 중앙: 동네 선택 단일 드롭다운 뱃지 */}
+          <button
+            type="button"
+            onClick={() => setIsDongPinSheetOpen(true)}
+            className="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-800 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="내 동네 핀 선택"
+          >
+            <MapPin className="h-3.5 w-3.5 text-blue-600" />
+            <span>
+              {region.sido} {region.gugun} {region.dong}
+            </span>
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+          </button>
+
+          {/* 중앙: 핵심 서비스 통합 GNB 내비게이션 */}
+          <nav className="flex flex-1 items-center justify-center gap-7 text-sm font-bold text-slate-600">
+            <Link href="/workspace" className="flex items-center gap-1 hover:text-blue-600 transition-colors">
+              <TMark size="sm" className="shrink-0" />
+              노트
+            </Link>
+            <Link href="/t-diary" className="flex items-center gap-1 hover:text-blue-600 transition-colors">
+              <TMark size="sm" className="shrink-0" />
+              다이어리
+            </Link>
+            <Link href="/biz/apt-sanggye14/catalog" className="hover:text-blue-600 transition-colors">
+              B2B 카탈로그
+            </Link>
+            <Link href="/t-sign" className="flex items-center gap-1 hover:text-blue-600 transition-colors">
+              <TMark size="sm" className="shrink-0" />
+              싸인
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab("feed");
+                setSelectedCategory("ALL");
+              }}
+              className={`cursor-pointer transition-colors hover:text-blue-600 ${
+                activeTab === "feed" ? "text-blue-600" : ""
+              }`}
+            >
+              동네 소식
+            </button>
+          </nav>
+
+          {/* 우측 끝: 동네 검색 + M 퀵메뉴 + 사용자 계정 영역 */}
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsGlobalSearchOpen(true)}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
+              title="전국 동네 검색"
+              aria-label="동네 검색"
+            >
+              <Search className="h-4 w-4" />
+            </button>
+            <MQuickMenu />
+            <UserAccountDropdown
+              currentUser={currentUser}
+              onOpenLogin={() => setIsLoginModalOpen(true)}
+              onOpenTerms={() => setIsTermsModalOpen(true)}
+              triggerStyle="full"
+              hideMyMenuPill
+              align="right"
+            />
+          </div>
+        </div>
+      </header>
+
       {/* PC 대화면 3열 포털 컨테이너 (lg:grid-cols-12) */}
       <div className="mx-auto w-full max-w-md lg:max-w-7xl xl:max-w-[1440px] lg:px-4 lg:py-3">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6">
@@ -535,20 +613,9 @@ export default function Home({ initialDong }: HomeProps = {}) {
           {/* Col 1~2 (좌측 260px): 로고, 내 동네 핀(2~5곳 전환), 카테고리 트리, CRM 바로가기 */}
           {/* ============================================================== */}
           <aside className="hidden lg:flex lg:col-span-3 xl:col-span-2 flex-col gap-3 h-auto">
-            {/* 로고 & 슬로건 */}
-            <div className="border-b border-slate-100 pb-2.5 space-y-1">
-              {/* PC 데스크톱 사이드바: 앱 아이콘 없이 워드마크만 단독 노출 */}
-              <Link href="/" className="inline-flex items-center gap-2">
-                <div>
-                  <TodayWordmark theme="light" size="lg" />
-                  <p className="text-[10px] text-slate-400 font-normal">
-                    하이퍼로컬 팩트 & 워크OS
-                  </p>
-                </div>
-              </Link>
-
-              {/* 상단 모드 체인저: 이웃 주민 모드 ⟷ 사장님·기업 모드 */}
-              <ModeChangerToggle mode={topMode} onChange={handleModeChange} className="mt-2" />
+            {/* 상단 모드 체인저: 이웃 주민 모드 ⟷ 사장님·기업 모드 (로고는 상단 풀위드 GNB로 이동/단일화) */}
+            <div className="border-b border-slate-100 pb-2.5">
+              <ModeChangerToggle mode={topMode} onChange={handleModeChange} />
             </div>
 
             {/* 내 동네 핀 (2~5곳 전환) */}
@@ -727,66 +794,6 @@ export default function Home({ initialDong }: HomeProps = {}) {
               {/* 상단 모드 체인저: 이웃 주민 모드 ⟷ 사장님·기업 모드 */}
               <div className="flex items-center justify-center px-3 py-2 border-b border-slate-100 bg-white">
                 <ModeChangerToggle mode={topMode} onChange={handleModeChange} />
-              </div>
-            </div>
-
-            {/* 탑 글로벌 헤더 (단일화): 로고 + 동네 핀 선택기 + 핵심 내비게이션 + 미니멀 프로필 + M 퀵메뉴 */}
-            <div className="hidden lg:flex items-center justify-between px-4 py-2.5 border-b border-slate-100 bg-white">
-              <div className="flex items-center gap-3">
-                <Link href="/" className="shrink-0">
-                  <TodayWordmark theme="light" size="md" />
-                </Link>
-                <span className="h-5 w-px bg-slate-200" />
-                <button
-                  type="button"
-                  onClick={() => setIsDongPinSheetOpen(true)}
-                  className="group flex items-center gap-2 cursor-pointer"
-                  title="내 동네 핀 선택"
-                >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-blue-50 text-blue-600 font-bold text-sm">
-                    📍
-                  </span>
-                  <h2 className="text-xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700">
-                    {region.sido} {region.gugun} {region.dong}
-                  </h2>
-                  <span className="rounded-full bg-blue-50 border border-blue-200/80 px-2 py-0.5 text-[10.5px] font-bold text-blue-700">
-                    실시간 팩트 피드
-                  </span>
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {/* 핵심 내비게이션: 상단 GNB 빠른 실행 핀 바 */}
-                <FastPinnedAppsBar className="hidden xl:flex mr-1.5" />
-
-                <button
-                  type="button"
-                  onClick={() => setIsGlobalSearchOpen(true)}
-                  className="flex items-center gap-1 rounded-lg bg-slate-50 hover:bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 transition-colors cursor-pointer border border-slate-100"
-                >
-                  <Search className="h-3 w-3 text-slate-400" />
-                  <span>동네 검색</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={fetchData}
-                  className="flex items-center gap-1 rounded-lg bg-slate-50 hover:bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 transition-colors cursor-pointer border border-slate-100"
-                >
-                  <RefreshCw className={`h-3 w-3 ${loading ? "animate-spin text-blue-600" : ""}`} />
-                  <span>새로고침</span>
-                </button>
-
-                {/* 미니멀 프로필/로그인 아바타 */}
-                <UserAccountDropdown
-                  currentUser={currentUser}
-                  onOpenLogin={() => setIsLoginModalOpen(true)}
-                  onOpenTerms={() => setIsTermsModalOpen(true)}
-                  triggerStyle="icon_only"
-                  align="right"
-                />
-
-                {/* 볼드 [M] 퀵메뉴: t.다이어리·t.노트·t.홈페이지·t.싸인·t.refund·아파트링크·링크픽 */}
-                <MQuickMenu />
               </div>
             </div>
 
@@ -1157,8 +1164,8 @@ export default function Home({ initialDong }: HomeProps = {}) {
                   {/* t.노트 스마트 알림 큐 — 최상단 선제 알림(⭐ D-7 중요 / 오늘 실시간) */}
                   <PriorityAlertFeed />
 
-                  {/* 8대 핵심 솔루션 아이콘 그리드 (모바일 4x2 / PC 8x1) — 상단 전면 배치, 가로 스크롤 없음 */}
-                  <CoreSolutionsGrid />
+                  {/* 핵심 기능 카드 랙: 4대 핵심 솔루션을 뉴닉형 모듈러 카드로 상단 전면 배치 */}
+                  <TopSolutionsGrid />
 
                   {/* 홈: 빠른 메뉴 (최근 사용 → 핀 → 역할 기본 순 자동 정렬) */}
                   {activeTab === "home" && (
@@ -1232,15 +1239,6 @@ export default function Home({ initialDong }: HomeProps = {}) {
                         ({selectedCategory === "CAFE" ? displayedCafes.length : notices.length}건)
                       </span>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={fetchData}
-                      className="flex items-center gap-1 text-[11px] text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      <RefreshCw className={`h-2.5 w-2.5 ${loading ? "animate-spin" : ""}`} />
-                      <span>새로고침</span>
-                    </button>
                   </div>
 
                   {/* 콘텐츠 초경량 슬림 리스트 뷰 (CompactFeedItem) */}
