@@ -383,6 +383,17 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         badge: "HQ 전용",
         keywords: "다이어리 제공자 승인 심사 반려 조건부승인",
       },
+      {
+        id: "app-diary-license-crm",
+        section: "ADMIN",
+        title: "t.다이어리 라이선스 & 타깃 CRM",
+        short: "라이선스CRM",
+        description: "플랜/만료일 즉시 연장, 소속 태그 다중 필터 후 카카오 알림톡 일괄 발송",
+        href: "/admin/diaries",
+        icon: "🪪",
+        badge: "HQ 전용",
+        keywords: "라이선스 플랜 만료 갱신 CRM 알림톡 일괄발송",
+      },
     ],
   },
 ];

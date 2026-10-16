@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  Home,
   Mic,
   Plus,
   RefreshCw,
@@ -24,7 +25,10 @@ import ProviderSearchModal from "@/components/diary/ProviderSearchModal";
 import DiaryEventDetailModal from "@/components/diary/DiaryEventDetailModal";
 import CommunityTab from "@/components/diary/CommunityTab";
 import TeacherEventFormModal from "@/components/diary/TeacherEventFormModal";
+import EnhancedNoteCaptureModal from "@/components/tnote/EnhancedNoteCaptureModal";
+import TSignRequestModal from "@/components/diary/TSignRequestModal";
 import { toDateStr } from "@/lib/diary/dateUtils";
+import { getLicenseBadgeInfo } from "@/lib/diary/licenseUtils";
 import type { DiaryBrand, DiaryEvent, DiaryMember } from "@/types/diary";
 
 const GRADE_OPTIONS = ["1학년", "2학년", "3학년"];
@@ -91,6 +95,11 @@ function TDiaryPageContent() {
 
   // 상세 모달
   const [detailEvent, setDetailEvent] = useState<DiaryEvent | null>(null);
+
+  // t.note / t.sign 통합 액션바 모달
+  const [noteModalEventId, setNoteModalEventId] = useState<string | null>(null);
+  const [signModalEvent, setSignModalEvent] = useState<DiaryEvent | null>(null);
+  const [signRecipients, setSignRecipients] = useState<DiaryMember[]>([]);
 
   const [userId, setUserId] = useState("user-001");
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -308,6 +317,19 @@ function TDiaryPageContent() {
   const officialEvents = brandSlug ? brandEvents : showSubscribedLayer ? subscribedEvents : [];
   const visiblePersonalEvents = showPersonalLayer ? personalEvents : [];
   const isTeacherOrOwner = membership?.status === "APPROVED" && (membership.role === "TEACHER" || membership.role === "OWNER");
+  const licenseInfo = brand ? getLicenseBadgeInfo(brand) : null;
+
+  const handleOpenSign = async (evt: DiaryEvent) => {
+    if (!brand) return;
+    try {
+      const res = await fetch(`/api/t-diary/members?diary_id=${encodeURIComponent(brand.id)}`);
+      const data = await res.json();
+      setSignRecipients(((data.members || []) as DiaryMember[]).filter((m) => m.status === "APPROVED"));
+    } catch {
+      setSignRecipients([]);
+    }
+    setSignModalEvent(evt);
+  };
 
   const handleExportIcs = () => {
     const allEvents = [
@@ -440,7 +462,7 @@ END:VCALENDAR`;
                 {brand.brand_name.slice(0, 1)}
               </div>
             )}
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h1 className="text-base font-black text-slate-900 truncate">
                 {brand.brand_name} 2027 스마트 다이어리
               </h1>
@@ -448,6 +470,34 @@ END:VCALENDAR`;
                 <p className="text-[11px] text-slate-400 truncate">{brand.contact_info}</p>
               )}
             </div>
+            {brand.connected_homepage_slug && (
+              <a
+                href={
+                  brand.connected_homepage_slug.startsWith("/")
+                    ? brand.connected_homepage_slug
+                    : `/biz/${brand.connected_homepage_slug}`
+                }
+                className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <Home className="h-3 w-3 text-blue-600" />
+                t.홈피
+              </a>
+            )}
+          </div>
+        )}
+
+        {/* 라이선스 배지 / 갱신 배너 / 읽기전용 안내 */}
+        {brandSlug && brand && licenseInfo && (licenseInfo.showRenewalBanner || licenseInfo.isReadOnly) && (
+          <div
+            className={`mt-2 rounded-xl border px-3 py-2 text-[11px] font-bold ${
+              licenseInfo.isReadOnly
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : "border-amber-200 bg-amber-50 text-amber-700"
+            }`}
+          >
+            {licenseInfo.isReadOnly
+              ? "⚠️ 라이선스가 만료되어 읽기 전용 모드입니다. 신규 일정·게시글 등록이 제한됩니다."
+              : `🔔 라이선스 만료 D-${licenseInfo.daysLeft} — 갱신이 필요합니다.`}
           </div>
         )}
 
@@ -522,10 +572,10 @@ END:VCALENDAR`;
                 <button
                   type="button"
                   onClick={handleJoinSubmit}
-                  disabled={isJoining}
+                  disabled={isJoining || licenseInfo?.isReadOnly}
                   className="mt-2.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-40 cursor-pointer transition-colors"
                 >
-                  가입 신청하기
+                  {licenseInfo?.isReadOnly ? "라이선스 만료로 가입 신청 불가" : "가입 신청하기"}
                 </button>
               </>
             )}
@@ -588,7 +638,7 @@ END:VCALENDAR`;
             <Download className="h-3.5 w-3.5" />
             <span>iCal(.ics) 내보내기</span>
           </button>
-          {isTeacherOrOwner && (
+          {isTeacherOrOwner && !licenseInfo?.isReadOnly && (
             <button
               type="button"
               onClick={() => setIsEventFormOpen(true)}
@@ -731,7 +781,13 @@ END:VCALENDAR`;
 
         {/* 우리 반 커뮤니티 탭 */}
         {tab === "community" && brand && (
-          <CommunityTab diaryId={brand.id} userId={userId} membership={membership} onShowToast={showToast} />
+          <CommunityTab
+            diaryId={brand.id}
+            userId={userId}
+            membership={membership}
+            isReadOnly={!!licenseInfo?.isReadOnly}
+            onShowToast={showToast}
+          />
         )}
       </div>
 
@@ -743,12 +799,15 @@ END:VCALENDAR`;
         onToggleSubscribe={handleToggleSubscribe}
       />
 
-      {/* 일정 상세 모달 */}
+      {/* 일정 상세 모달 (t.note / t.sign 통합 액션바 포함) */}
       {detailEvent && (
         <DiaryEventDetailModal
           event={detailEvent}
           providerName={providerNameByDiaryId[detailEvent.diary_id]}
+          canManage={isTeacherOrOwner}
           onClose={() => setDetailEvent(null)}
+          onOpenNote={() => setNoteModalEventId(detailEvent.id)}
+          onOpenSign={() => handleOpenSign(detailEvent)}
         />
       )}
 
@@ -759,6 +818,31 @@ END:VCALENDAR`;
           defaultDate={selectedDate}
           onClose={() => setIsEventFormOpen(false)}
           onCreated={fetchBrandData}
+        />
+      )}
+
+      {/* [🎙 t.note] 일정 바인딩 멀티미디어 기록 모달 */}
+      {noteModalEventId && (
+        <EnhancedNoteCaptureModal
+          isOpen
+          diaryEventId={noteModalEventId}
+          userId={userId}
+          onClose={() => setNoteModalEventId(null)}
+          onSaved={() => showToast("📝 t.note 기록이 저장되었습니다.")}
+        />
+      )}
+
+      {/* [✍️ t.sign] 전자계약/동의서 카카오톡 발송 모달 */}
+      {signModalEvent && (
+        <TSignRequestModal
+          eventId={signModalEvent.id}
+          eventTitle={signModalEvent.title}
+          members={signRecipients}
+          onClose={() => setSignModalEvent(null)}
+          onSent={() => {
+            fetchBrandData();
+            showToast("✍️ 전자서명 요청이 발송되었습니다.");
+          }}
         />
       )}
     </div>

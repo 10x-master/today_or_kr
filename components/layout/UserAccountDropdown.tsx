@@ -6,6 +6,7 @@ import {
   Briefcase,
   CalendarCheck,
   Check,
+  CreditCard,
   ChevronRight,
   Crown,
   FileText,
@@ -432,6 +433,21 @@ export default function UserAccountDropdown({
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-blue-600 transition-colors">
                 승인·조건부·반려 →
+              </span>
+            </Link>
+
+            {/* 4-2. [🪪 t.다이어리 라이선스 & 타깃 CRM] */}
+            <Link
+              href="/admin/diaries"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-indigo-600" />
+                <span className="font-medium text-slate-800">🪪 t.다이어리 라이선스 & CRM</span>
+              </div>
+              <span className="text-[10px] text-slate-400 group-hover:text-indigo-600 transition-colors">
+                플랜·만료·알림톡 →
               </span>
             </Link>
 

@@ -248,6 +248,25 @@ export function updateDiaryApprovalStatus(
   return brand;
 }
 
+/** 관리자 CRM — 라이선스(플랜/만료일/최대 회원수/상태) 즉시 연장·수정 */
+export function updateDiaryLicense(
+  id: string,
+  patch: {
+    plan?: DiaryBrand["plan"];
+    valid_until?: string | null;
+    max_members?: number;
+    license_status?: DiaryBrand["license_status"];
+  }
+): DiaryBrand | null {
+  const brand = mockDiaryBrands.find((b) => b.id === id);
+  if (!brand) return null;
+  if (patch.plan !== undefined) brand.plan = patch.plan;
+  if (patch.valid_until !== undefined) brand.valid_until = patch.valid_until;
+  if (patch.max_members !== undefined) brand.max_members = patch.max_members;
+  if (patch.license_status !== undefined) brand.license_status = patch.license_status;
+  return brand;
+}
+
 /** 역할/학년 타깃 노출 판정 — 비회원·미승인 회원은 공개(is_public && target_roles 전체) 일정만 열람 */
 export function isDiaryEventVisibleToMember(event: DiaryEvent, member: DiaryMember | null): boolean {
   if (!member || member.status !== "APPROVED") {
@@ -296,6 +315,15 @@ export function createDiaryEvent(input: {
     target_grades: input.target_grades?.length ? input.target_grades : ["ALL"],
   };
   mockDiaryEvents.push(event);
+  return event;
+}
+
+/** [✍️ t.sign] 상황별 전자계약/동의서 카카오톡 발송 요청 (데모 시뮬레이션) */
+export function requestDiaryEventSign(id: string): DiaryEvent | null {
+  const event = mockDiaryEvents.find((e) => e.id === id);
+  if (!event) return null;
+  event.t_sign_doc_id = event.t_sign_doc_id || `sign-doc-${Date.now()}`;
+  event.sign_status = "REQUESTED";
   return event;
 }
 

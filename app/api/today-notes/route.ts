@@ -75,6 +75,13 @@ export async function POST(request: NextRequest) {
       linked_notice_id,
       linked_kapt_code = null,
       user_id = "user-001",
+      diary_event_id = null,
+      image_urls = [],
+      bookmark_urls = [],
+      audio_duration = 0,
+      record_date = null,
+      t_sign_doc_id = null,
+      sign_status = "NONE",
     } = body;
 
     if (!title) {
@@ -107,6 +114,13 @@ export async function POST(request: NextRequest) {
             sync_status: sync_status || "LOCAL",
             linked_notice_id: linked_notice_id || null,
             linked_kapt_code: linked_kapt_code || null,
+            diary_event_id: diary_event_id || null,
+            image_urls,
+            bookmark_urls,
+            audio_duration,
+            record_date,
+            t_sign_doc_id,
+            sign_status,
           })
           .select()
           .single();
@@ -134,6 +148,13 @@ export async function POST(request: NextRequest) {
         sync_status: sync_status || "LOCAL",
         linked_notice_id: linked_notice_id || null,
         linked_kapt_code: linked_kapt_code || null,
+        diary_event_id: diary_event_id || null,
+        image_urls,
+        bookmark_urls,
+        audio_duration,
+        record_date,
+        t_sign_doc_id,
+        sign_status,
       });
       source = "mock";
     }

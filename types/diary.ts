@@ -6,6 +6,8 @@
 
 export type DiaryApprovalStatus = "APPROVED" | "PENDING" | "CONDITIONAL" | "REJECTED";
 export type DiaryProviderType = "ENTERPRISE" | "LOCAL_BIZ" | "PUBLIC" | "CREATOR";
+export type DiaryLicenseStatus = "ACTIVE" | "GRACE_PERIOD" | "EXPIRED" | "SUSPENDED";
+export type DiaryPlan = "BUNDLE" | "PRO" | "ENTERPRISE";
 
 export interface DiaryBrand {
   id: string;
@@ -28,6 +30,17 @@ export interface DiaryBrand {
   /** 인스타그램 또는 홈페이지 링크 */
   website_url: string | null;
   created_at: string;
+  // --- t.홈피-t.노트-t.싸인 3각 연계 + 라이선스 엔진 (선택 필드 — 레거시 레코드는 ACTIVE/무제한으로 간주) ---
+  /** 'ACTIVE' | 'GRACE_PERIOD' | 'EXPIRED' | 'SUSPENDED'. 미설정 시 ACTIVE로 간주 */
+  license_status?: DiaryLicenseStatus;
+  /** 'BUNDLE' | 'PRO' | 'ENTERPRISE' 요금제 */
+  plan?: DiaryPlan;
+  /** 라이선스 만료일 (ISO) */
+  valid_until?: string | null;
+  /** 최대 구성원 수 */
+  max_members?: number;
+  /** 연결된 t.홈페이지 슬러그 또는 절대경로("/"로 시작 시 그대로, 아니면 /biz/<slug>) */
+  connected_homepage_slug?: string | null;
 }
 
 export type DiaryEventMediaType = "NONE" | "YOUTUBE" | "IMAGE" | "VOICE";
@@ -49,6 +62,27 @@ export interface DiaryEvent {
   target_roles: string[];
   /** 공개 대상 학년/그룹 — 기본 ['ALL']. 예: ['1학년', '2학년'] */
   target_grades: string[];
+  // --- t.note 멀티미디어 고도화 + t.sign 연동 (선택 필드) ---
+  /** 다중 사진 URL 배열 */
+  image_urls?: string[];
+  /** 웹페이지 스크랩 북마크(OG 카드) 배열 */
+  bookmark_urls?: DiaryBookmark[];
+  /** 누적 음성 녹음 시간(초) */
+  audio_duration?: number;
+  /** 사용자 지정 소급/현재 기록 날짜 (event_date와 별개로 "실제 기록 시점"을 의미) */
+  record_date?: string | null;
+  /** 연동된 t.sign 전자계약/동의서 문서 ID */
+  t_sign_doc_id?: string | null;
+  /** 'NONE' | 'REQUESTED' | 'COMPLETED' */
+  sign_status?: "NONE" | "REQUESTED" | "COMPLETED";
+}
+
+/** 웹페이지 스크랩 북마크 (OpenGraph 카드) */
+export interface DiaryBookmark {
+  url: string;
+  title: string;
+  description?: string;
+  image?: string;
 }
 
 export interface UserDiarySubscription {

@@ -17,15 +17,19 @@ export default function CommunityTab({
   diaryId,
   userId,
   membership,
+  isReadOnly = false,
   onShowToast,
 }: {
   diaryId: string;
   userId: string;
   membership: DiaryMember | null;
+  /** 라이선스 만료 등으로 신규 게시글/댓글 작성이 제한되는 읽기 전용 상태 */
+  isReadOnly?: boolean;
   onShowToast: (msg: string) => void;
 }) {
   const isApproved = membership?.status === "APPROVED";
   const isTeacherOrOwner = isApproved && (membership?.role === "TEACHER" || membership?.role === "OWNER");
+  const canPost = isTeacherOrOwner && !isReadOnly;
 
   const [posts, setPosts] = useState<DiaryPost[]>([]);
   const [commentsByPost, setCommentsByPost] = useState<Record<string, DiaryComment[]>>({});
@@ -188,8 +192,8 @@ export default function CommunityTab({
         </div>
       )}
 
-      {/* 선생님/운영자 전용: 알림장 작성 */}
-      {isTeacherOrOwner && (
+      {/* 선생님/운영자 전용: 알림장 작성 (라이선스 만료 시 읽기 전용) */}
+      {canPost && (
         <div className="rounded-2xl border border-slate-100 p-3.5">
           <button
             type="button"
@@ -284,23 +288,27 @@ export default function CommunityTab({
                   {c.content}
                 </div>
               ))}
-              <div className="flex items-center gap-1.5">
-                <input
-                  type="text"
-                  value={commentDrafts[post.id] || ""}
-                  onChange={(e) => setCommentDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))}
-                  placeholder="선생님께만 보이는 비밀 댓글을 남겨보세요"
-                  className="flex-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] focus:outline-hidden focus:border-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleSubmitComment(post.id)}
-                  className="rounded-lg bg-slate-900 p-1.5 text-white cursor-pointer"
-                  aria-label="댓글 등록"
-                >
-                  <Send className="h-3 w-3" />
-                </button>
-              </div>
+              {isReadOnly ? (
+                <p className="text-[10px] text-rose-400">라이선스 만료로 댓글 작성이 제한되었습니다.</p>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={commentDrafts[post.id] || ""}
+                    onChange={(e) => setCommentDrafts((prev) => ({ ...prev, [post.id]: e.target.value }))}
+                    placeholder="선생님께만 보이는 비밀 댓글을 남겨보세요"
+                    className="flex-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] focus:outline-hidden focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSubmitComment(post.id)}
+                    className="rounded-lg bg-slate-900 p-1.5 text-white cursor-pointer"
+                    aria-label="댓글 등록"
+                  >
+                    <Send className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         ))

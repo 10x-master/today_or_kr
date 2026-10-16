@@ -283,6 +283,21 @@ export interface TodayNote {
   created_at?: string;
   updated_at?: string;
   linked_notice?: LocalOfficialNotice | null;
+  // --- t.다이어리 일정 바인딩 + 멀티미디어 고도화 (선택 필드) ---
+  /** 바인딩된 t.다이어리 일정(diary_events) ID */
+  diary_event_id?: string | null;
+  /** 다중 사진 URL 배열 */
+  image_urls?: string[];
+  /** 웹페이지 스크랩 북마크(OG 카드) 배열 */
+  bookmark_urls?: Array<{ url: string; title: string; description?: string; image?: string }>;
+  /** 누적 음성 녹음 시간(초) */
+  audio_duration?: number;
+  /** 사용자 지정 소급/현재 기록 날짜 */
+  record_date?: string | null;
+  /** 연동된 t.sign 전자계약/동의서 문서 ID */
+  t_sign_doc_id?: string | null;
+  /** 'NONE' | 'REQUESTED' | 'COMPLETED' */
+  sign_status?: "NONE" | "REQUESTED" | "COMPLETED";
 }
 
 /** 로컬 단지 제휴 이벤트 테이블 local_complex_events */
