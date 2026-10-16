@@ -394,6 +394,17 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         badge: "HQ 전용",
         keywords: "라이선스 플랜 만료 갱신 CRM 알림톡 일괄발송",
       },
+      {
+        id: "app-diary-qr-console",
+        section: "ADMIN",
+        title: "B2B 인쇄 QR 발급 콘솔",
+        short: "QR발급",
+        description: "오프라인 인쇄 다이어리·탁상달력 부착용 today.or.kr/t-diary 연결 QR(SVG/300DPI PNG) 발급",
+        href: "/admin/diaries/qr",
+        icon: "📲",
+        badge: "HQ 전용",
+        keywords: "QR 인쇄 다이어리 탁상달력 발급 스티커",
+      },
     ],
   },
 ];

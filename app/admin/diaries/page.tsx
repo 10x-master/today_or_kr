@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Send, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, QrCode, Send, ShieldCheck } from "lucide-react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
 import { getLicenseBadgeInfo } from "@/lib/diary/licenseUtils";
 import type { DiaryBrand, DiaryLicenseStatus, DiaryMember, DiaryPlan } from "@/types/diary";
@@ -139,18 +140,27 @@ export default function AdminDiariesPage() {
       )}
 
       <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <UnifiedHomeReturnAnchor currentModule="admin-diaries" />
-          <button
-            type="button"
-            onClick={() => setForceAdminMode(!forceAdminMode)}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold cursor-pointer transition-colors ${
-              forceAdminMode ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-400"
-            }`}
-          >
-            <ShieldCheck className="h-3 w-3" />
-            관리자 권한 {forceAdminMode ? "ON" : "OFF"}
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/diaries/qr"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <QrCode className="h-3 w-3 text-blue-600" />
+              B2B 인쇄 QR 발급
+            </Link>
+            <button
+              type="button"
+              onClick={() => setForceAdminMode(!forceAdminMode)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold cursor-pointer transition-colors ${
+                forceAdminMode ? "border-blue-200 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-400"
+              }`}
+            >
+              <ShieldCheck className="h-3 w-3" />
+              관리자 권한 {forceAdminMode ? "ON" : "OFF"}
+            </button>
+          </div>
         </div>
 
         <h1 className="mt-4 text-xl font-black text-slate-900 tracking-tight">t.다이어리 라이선스 & 타깃 CRM</h1>

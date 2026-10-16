@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, FileSignature, Mic, X } from "lucide-react";
+import { ExternalLink, FileSignature, Home, Mic, X } from "lucide-react";
 import { extractFirstUrl, extractYoutubeId } from "@/lib/diary/dateUtils";
 import type { DiaryEvent } from "@/types/diary";
 
@@ -14,14 +14,17 @@ export default function DiaryEventDetailModal({
   event,
   providerName,
   canManage = false,
+  homepageHref,
   onClose,
   onOpenNote,
   onOpenSign,
 }: {
   event: DiaryEvent;
   providerName?: string;
-  /** 선생님/운영자 등 액션바(t.note·t.sign) 노출 여부 */
+  /** 선생님/운영자 등 액션바(T.노트·T.싸인) 노출 여부 */
   canManage?: boolean;
+  /** 연결된 T.홈페이지 경로 — 있으면 액션바에 [🏠 T.홈페이지] 버튼 노출 */
+  homepageHref?: string | null;
   onClose: () => void;
   onOpenNote?: () => void;
   onOpenSign?: () => void;
@@ -153,8 +156,8 @@ export default function DiaryEventDetailModal({
           </a>
         )}
 
-        {/* 통합 액션바: T.노트 / T.싸인 */}
-        {(onOpenNote || (canManage && onOpenSign)) && (
+        {/* 통합 액션바: T.노트 / T.싸인 / T.홈페이지 */}
+        {(onOpenNote || (canManage && onOpenSign) || homepageHref) && (
           <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
             {onOpenNote && (
               <button
@@ -175,6 +178,15 @@ export default function DiaryEventDetailModal({
                 <FileSignature className="h-3.5 w-3.5" />
                 T.싸인
               </button>
+            )}
+            {homepageHref && (
+              <a
+                href={homepageHref}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                <Home className="h-3.5 w-3.5 text-blue-600" />
+                T.홈페이지
+              </a>
             )}
           </div>
         )}
