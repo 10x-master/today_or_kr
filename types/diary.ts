@@ -4,7 +4,7 @@
  * 유튜브·사진·음성 미디어, 사용자 개인 일정·구독을 통합하는 /t-diary 전용 모델.
  */
 
-export type DiaryApprovalStatus = "APPROVED" | "PENDING" | "CONDITIONAL";
+export type DiaryApprovalStatus = "APPROVED" | "PENDING" | "CONDITIONAL" | "REJECTED";
 export type DiaryProviderType = "ENTERPRISE" | "LOCAL_BIZ" | "PUBLIC" | "CREATOR";
 
 export interface DiaryBrand {
@@ -13,7 +13,7 @@ export interface DiaryBrand {
   brand_name: string;
   logo_url: string | null;
   contact_info: string | null;
-  /** 'APPROVED'(승인완료) | 'PENDING'(심사대기) | 'CONDITIONAL'(조건부 승인) */
+  /** 'APPROVED'(승인완료) | 'PENDING'(심사대기) | 'CONDITIONAL'(조건부 승인) | 'REJECTED'(반려) */
   approval_status: DiaryApprovalStatus;
   /** 'ENTERPRISE'(기업/인쇄) | 'LOCAL_BIZ'(지역 소상공인) | 'PUBLIC'(지자체/공공) | 'CREATOR'(강사/크리에이터) */
   provider_type: DiaryProviderType;
@@ -21,6 +21,12 @@ export interface DiaryBrand {
   region_code: string | null;
   /** 대표 유튜브 채널 URL */
   youtube_channel: string | null;
+  /** 사업자 등록번호 (선택) */
+  business_reg_no: string | null;
+  /** 소개글 */
+  intro: string | null;
+  /** 인스타그램 또는 홈페이지 링크 */
+  website_url: string | null;
   created_at: string;
 }
 

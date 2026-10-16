@@ -1799,6 +1799,9 @@ export const mockDiaryBrands: DiaryBrand[] = [
     provider_type: "ENTERPRISE",
     region_code: null,
     youtube_channel: null,
+    business_reg_no: null,
+    intro: null,
+    website_url: null,
     created_at: "2026-10-17T00:00:00.000Z",
   },
   {
@@ -1811,6 +1814,9 @@ export const mockDiaryBrands: DiaryBrand[] = [
     provider_type: "PUBLIC",
     region_code: null,
     youtube_channel: null,
+    business_reg_no: null,
+    intro: null,
+    website_url: null,
     created_at: "2026-10-17T00:00:00.000Z",
   },
   {
@@ -1823,6 +1829,9 @@ export const mockDiaryBrands: DiaryBrand[] = [
     provider_type: "LOCAL_BIZ",
     region_code: "노원구",
     youtube_channel: null,
+    business_reg_no: null,
+    intro: null,
+    website_url: null,
     created_at: "2026-10-17T00:00:00.000Z",
   },
   {
@@ -1835,6 +1844,9 @@ export const mockDiaryBrands: DiaryBrand[] = [
     provider_type: "PUBLIC",
     region_code: "노원구",
     youtube_channel: null,
+    business_reg_no: null,
+    intro: null,
+    website_url: null,
     created_at: "2026-10-17T00:00:00.000Z",
   },
   {
@@ -1847,6 +1859,9 @@ export const mockDiaryBrands: DiaryBrand[] = [
     provider_type: "CREATOR",
     region_code: "노원구",
     youtube_channel: "https://www.youtube.com/@todayorkr",
+    business_reg_no: null,
+    intro: null,
+    website_url: null,
     created_at: "2026-10-17T00:00:00.000Z",
   },
   {
@@ -1859,6 +1874,9 @@ export const mockDiaryBrands: DiaryBrand[] = [
     provider_type: "LOCAL_BIZ",
     region_code: "노원구",
     youtube_channel: null,
+    business_reg_no: null,
+    intro: null,
+    website_url: null,
     created_at: "2026-10-17T00:00:00.000Z",
   },
   {
@@ -1871,6 +1889,9 @@ export const mockDiaryBrands: DiaryBrand[] = [
     provider_type: "LOCAL_BIZ",
     region_code: "노원구",
     youtube_channel: null,
+    business_reg_no: null,
+    intro: null,
+    website_url: null,
     created_at: "2026-10-17T00:00:00.000Z",
   },
 ];

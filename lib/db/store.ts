@@ -165,13 +165,13 @@ export function getDiaryEvents(diaryId?: string | null): DiaryEvent[] {
   return mockDiaryEvents.filter((e) => e.diary_id === diaryId);
 }
 
-/** t.다이어리 제공자 탐색 — 승인완료/조건부승인 제공자만 노출 (PENDING 제외), 지역/카테고리 필터 */
+/** t.다이어리 제공자 탐색 — 승인완료/조건부승인 제공자만 노출 (PENDING·REJECTED 제외), 지역/카테고리 필터 */
 export function getDiaryProviders(filter?: {
   region?: string | null;
   category?: DiaryBrand["provider_type"] | null;
 }): DiaryBrand[] {
   return mockDiaryBrands.filter((b) => {
-    if (b.approval_status === "PENDING") return false;
+    if (b.approval_status !== "APPROVED" && b.approval_status !== "CONDITIONAL") return false;
     if (filter?.region && b.region_code !== filter.region) return false;
     if (filter?.category && b.provider_type !== filter.category) return false;
     return true;
@@ -182,6 +182,59 @@ export function getDiaryProviders(filter?: {
 export function getDiaryEventsByIds(diaryIds: string[]): DiaryEvent[] {
   if (!diaryIds.length) return [];
   return mockDiaryEvents.filter((e) => diaryIds.includes(e.diary_id) && e.is_public);
+}
+
+/** 관리자 심사 대시보드용 전체 제공자 조회 (승인 상태 무관) */
+export function getAllDiaryProviders(): DiaryBrand[] {
+  return mockDiaryBrands;
+}
+
+/** 제공자 등록 신청 — 항상 PENDING으로 생성되어 관리자 심사를 거쳐야 노출됨 */
+export function createDiaryApplication(input: {
+  brand_name: string;
+  contact_info: string;
+  region_code: string;
+  provider_type: DiaryBrand["provider_type"];
+  business_reg_no?: string | null;
+  intro?: string | null;
+  youtube_channel?: string | null;
+  website_url?: string | null;
+}): DiaryBrand {
+  const slugBase = input.brand_name
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9가-힣-]/g, "");
+
+  const brand: DiaryBrand = {
+    id: `diary-brand-${Date.now()}`,
+    brand_slug: `${slugBase || "provider"}-${Math.random().toString(36).slice(2, 6)}`,
+    brand_name: input.brand_name,
+    logo_url: null,
+    contact_info: input.contact_info,
+    approval_status: "PENDING",
+    provider_type: input.provider_type,
+    region_code: input.region_code || null,
+    youtube_channel: input.youtube_channel || null,
+    business_reg_no: input.business_reg_no || null,
+    intro: input.intro || null,
+    website_url: input.website_url || null,
+    created_at: new Date().toISOString(),
+  };
+
+  mockDiaryBrands.push(brand);
+  return brand;
+}
+
+/** 관리자 심사 — 승인/조건부승인/반려 상태 전환 */
+export function updateDiaryApprovalStatus(
+  id: string,
+  status: DiaryBrand["approval_status"]
+): DiaryBrand | null {
+  const brand = mockDiaryBrands.find((b) => b.id === id);
+  if (!brand) return null;
+  brand.approval_status = status;
+  return brand;
 }
 
 /** 티노트/티단노트(today_notes) 목록 조회 */

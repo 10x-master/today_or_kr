@@ -372,6 +372,17 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         badge: "템플릿 엔진",
         keywords: "템플릿 프리셋 복제 홈페이지 디자인",
       },
+      {
+        id: "app-diary-providers-admin",
+        section: "ADMIN",
+        title: "t.다이어리 제공자 심사",
+        short: "제공자심사",
+        description: "t.다이어리 제공자 등록 신청 승인/조건부승인/반려 심사 대시보드",
+        href: "/admin/providers",
+        icon: "📋",
+        badge: "HQ 전용",
+        keywords: "다이어리 제공자 승인 심사 반려 조건부승인",
+      },
     ],
   },
 ];

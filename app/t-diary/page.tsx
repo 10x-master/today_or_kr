@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   CalendarDays,
@@ -347,14 +348,22 @@ END:VCALENDAR`;
         <div className="flex items-center justify-between">
           <UnifiedHomeReturnAnchor currentModule="t-diary" />
           {!brandSlug && (
-            <button
-              type="button"
-              onClick={() => setIsSearchOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
-            >
-              <Search className="h-3.5 w-3.5 text-blue-600" />
-              제공자 탐색 / 구독
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/t-diary/apply"
+                className="text-[11px] font-bold text-slate-400 hover:text-blue-600 transition-colors underline underline-offset-2"
+              >
+                + 제공자 등록 신청
+              </Link>
+              <button
+                type="button"
+                onClick={() => setIsSearchOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                <Search className="h-3.5 w-3.5 text-blue-600" />
+                제공자 탐색 / 구독
+              </button>
+            </div>
           )}
         </div>
 

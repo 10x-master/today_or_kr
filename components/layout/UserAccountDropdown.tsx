@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Briefcase,
+  CalendarCheck,
   Check,
   ChevronRight,
   Crown,
@@ -416,6 +417,21 @@ export default function UserAccountDropdown({
               </div>
               <span className="text-[10px] text-slate-400 group-hover:text-rose-600 transition-colors">
                 청원·클레임·광고 →
+              </span>
+            </Link>
+
+            {/* 4-1. [📋 t.다이어리 제공자 심사] */}
+            <Link
+              href="/admin/providers"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-normal text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors group"
+            >
+              <div className="flex items-center gap-2">
+                <CalendarCheck className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-slate-800">📋 t.다이어리 제공자 심사</span>
+              </div>
+              <span className="text-[10px] text-slate-400 group-hover:text-blue-600 transition-colors">
+                승인·조건부·반려 →
               </span>
             </Link>
 

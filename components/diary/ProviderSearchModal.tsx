@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Check, ExternalLink, Plus, Search, X } from "lucide-react";
 import type { DiaryBrand, DiaryProviderType } from "@/types/diary";
 
@@ -196,6 +197,16 @@ export default function ProviderSearchModal({
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-4 border-t border-slate-100 pt-3 text-center">
+          <Link
+            href="/t-diary/apply"
+            onClick={onClose}
+            className="text-[11px] font-semibold text-slate-400 hover:text-blue-600 transition-colors"
+          >
+            원하는 제공자가 없나요? 제공자 등록 신청하기 →
+          </Link>
         </div>
       </div>
     </div>
