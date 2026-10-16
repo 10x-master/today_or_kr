@@ -611,59 +611,65 @@ export default function Home({ initialDong }: HomeProps = {}) {
 
       {/* ============================================================== */}
       {/* 상단 2단 50/50 소식 피드 (PC 전용): 좌측 동네 소식 스레드 / 우측 아파트링크 전용 소식&리포트 */}
+      {/* GNB 헤더와 본문 사이에 편안한 여백을 두고, 각 컬럼을 독립된 모듈러 카드로 래핑한다 */}
       {/* ============================================================== */}
-      <section className="hidden w-full border-b border-slate-100 bg-white lg:grid lg:grid-cols-2">
-        {/* 좌측 50%: 우리 동네 소식 — 스레드형 로컬 타임라인, 클릭 시 슬라이드오버로 상세 열림 */}
-        <div className="flex flex-col border-r border-slate-100">
-          <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100">
-            <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-              {region.dong} 우리 동네 소식
-            </h3>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("feed");
-                setSelectedCategory("ALL");
-              }}
-              className="text-[11px] text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
-            >
-              전체보기 →
-            </button>
+      <section className="hidden w-full bg-white pt-6 pb-10 lg:block">
+        <div className="mx-auto grid max-w-7xl grid-cols-2 gap-6 px-4">
+          {/* 좌측: 우리 동네 소식 — 스레드형 로컬 타임라인, 클릭 시 슬라이드오버로 상세 열림 */}
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="flex items-center gap-1.5 text-sm font-bold text-slate-900">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                {region.dong} 우리 동네 소식
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("feed");
+                  setSelectedCategory("ALL");
+                }}
+                className="text-[11px] text-slate-400 hover:text-blue-600 transition-colors cursor-pointer"
+              >
+                전체보기 →
+              </button>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {loading && (
+                <div className="py-10 text-center text-xs text-slate-400">
+                  공식 행정 고시 데이터를 불러오는 중...
+                </div>
+              )}
+              {!loading && notices.length === 0 && (
+                <div className="py-10 text-center text-xs text-slate-400">
+                  선택하신 조건에 해당하는 고시·소식이 없습니다.
+                </div>
+              )}
+              {!loading &&
+                notices.slice(0, 4).map((notice) => (
+                  <CompactFeedItem
+                    key={notice.id}
+                    notice={notice}
+                    isBookmarked={bookmarkedIds.includes(notice.id)}
+                    onClick={() => {
+                      setDetailNotice(notice);
+                      setDetailCafe(null);
+                      setDetailEvent(null);
+                    }}
+                  />
+                ))}
+            </div>
           </div>
-          <div className="divide-y divide-slate-100">
-            {loading && (
-              <div className="py-10 text-center text-xs text-slate-400">
-                공식 행정 고시 데이터를 불러오는 중...
-              </div>
-            )}
-            {!loading && notices.length === 0 && (
-              <div className="py-10 text-center text-xs text-slate-400">
-                선택하신 조건에 해당하는 고시·소식이 없습니다.
-              </div>
-            )}
-            {!loading &&
-              notices.slice(0, 4).map((notice) => (
-                <CompactFeedItem
-                  key={notice.id}
-                  notice={notice}
-                  isBookmarked={bookmarkedIds.includes(notice.id)}
-                  onClick={() => {
-                    setDetailNotice(notice);
-                    setDetailCafe(null);
-                    setDetailEvent(null);
-                  }}
-                />
-              ))}
+
+          {/* 우측: 아파트링크 전용 소식 & 리포트 */}
+          <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+            <AptLinkNewsFeed />
           </div>
         </div>
-
-        {/* 우측 50%: 아파트링크 전용 소식 & 리포트 */}
-        <AptLinkNewsFeed />
       </section>
 
-      {/* PC 대화면 3열 포털 컨테이너 (lg:grid-cols-12) */}
-      <div className="mx-auto w-full max-w-md lg:max-w-7xl xl:max-w-[1440px] lg:px-4 lg:py-3">
+      {/* 모바일/태블릿(<lg) 전용 레이아웃 — 상단 듀얼 피드 카드는 PC 전용이므로 그 아래에서 이어지는
+          기존 1열 포털 스택(헤더/피드/탭)은 lg 미만에서만 노출한다 */}
+      <div className="mx-auto w-full max-w-md lg:hidden">
         <div className="lg:grid lg:grid-cols-12 lg:gap-6">
           {/* ============================================================== */}
           {/* Col 1~2 (좌측 260px): 로고, 내 동네 핀(2~5곳 전환), 카테고리 트리, CRM 바로가기 */}

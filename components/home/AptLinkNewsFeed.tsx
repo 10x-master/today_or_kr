@@ -40,25 +40,30 @@ const APTLINK_NEWS: AptLinkNewsItem[] = [
 ];
 
 /**
- * 우측 50%: 아파트링크 전용 소식 & 리포트 — 단지별 CERA 실거래 검증, 지자체 안심관리
- * 인증 등 아파트 B2B 컨설팅 성과를 스레드형으로 노출하고, 상세 리포트는 /aptlink로 연결한다.
+ * 우측 카드: 아파트링크 전용 소식 & 리포트 — "우리 동네 아파트 입찰 공사, 적절한가요?" 헤드라인을
+ * 강조하고, 단지별 CERA 실거래 검증·지자체 안심관리 인증 리스트를 노출한다. 상세 리포트는
+ * /aptlink로 연결한다. 부모가 p-6 모듈러 카드로 감싸므로 자체 패딩은 두지 않는다.
  */
 export default function AptLinkNewsFeed({ className = "" }: { className?: string }) {
   return (
     <div className={`flex flex-col ${className}`}>
-      <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-slate-100">
-        <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
-          <Building2 className="h-3.5 w-3.5 text-blue-600" />
+      <div className="flex items-center justify-between mb-2">
+        <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600">
+          <Building2 className="h-3.5 w-3.5" />
           아파트링크 전용 소식 &amp; 리포트
-        </h3>
+        </span>
         <Link href="/aptlink" className="text-[11px] text-slate-400 hover:text-blue-600 transition-colors">
           전체보기 →
         </Link>
       </div>
 
-      <div className="divide-y divide-slate-100">
+      <h3 className="text-lg font-black leading-snug text-slate-900">
+        우리 동네 아파트 입찰 공사, 적절한가요?
+      </h3>
+
+      <div className="mt-4 divide-y divide-slate-100">
         {APTLINK_NEWS.map((item) => (
-          <div key={item.id} className="px-3.5 py-2.5">
+          <div key={item.id} className="py-3 first:pt-3">
             <div className="flex items-center gap-1.5 mb-1 text-[11px] flex-wrap">
               <span
                 className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.2 font-medium border ${item.badgeTone}`}

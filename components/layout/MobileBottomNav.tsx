@@ -87,7 +87,7 @@ export default function MobileBottomNav({
   return (
     <nav
       aria-label="주요 메뉴"
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-100 z-40 select-none pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:hidden"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white/95 backdrop-blur-md border-t border-slate-100 z-40 select-none pb-[max(0.5rem,env(safe-area-inset-bottom))] md:hidden"
     >
       <div className="grid grid-cols-5 h-14">
         {tabs.map(({ id, aliases, label, icon: Icon, action, badge }) => {
