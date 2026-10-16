@@ -14,7 +14,7 @@ const TIER_1: MQuickMenuItem[] = [
 ];
 
 const TIER_2: MQuickMenuItem[] = [
-  { label: "🏠 T.홈페이지", href: "/biz/apt-sanggye14" },
+  { label: "🏠 T.홈페이지", href: "/biz/sme-transform/catalog" },
   { label: "✍️ T.싸인", href: "/t-sign" },
 ];
 

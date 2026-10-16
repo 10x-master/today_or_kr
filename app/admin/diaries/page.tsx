@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, QrCode, Send, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Layers, QrCode, Send, ShieldCheck } from "lucide-react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
 import { getLicenseBadgeInfo } from "@/lib/diary/licenseUtils";
 import type { DiaryBrand, DiaryLicenseStatus, DiaryMember, DiaryPlan } from "@/types/diary";
@@ -149,6 +149,13 @@ export default function AdminDiariesPage() {
             >
               <QrCode className="h-3 w-3 text-blue-600" />
               B2B 인쇄 QR 발급
+            </Link>
+            <Link
+              href="/admin/diaries/catalog"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+            >
+              <Layers className="h-3 w-3 text-blue-600" />
+              카탈로그 관리
             </Link>
             <button
               type="button"

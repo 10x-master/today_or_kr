@@ -1,29 +1,36 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
-import { Check, CheckCircle2, Loader2, ShoppingCart, X } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { Check, CheckCircle2, ChevronRight, Loader2, ShoppingCart, X } from "lucide-react";
 import { TodayAppIcon, TodayWordmark } from "@/components/brand/TodayLogo";
+import { DiaryCoverThumbnail } from "@/components/diary/DiaryCoverThumbnail";
+import { lightenHex } from "@/lib/diary/catalogUtils";
 import type { DiaryBrand } from "@/types/diary";
-import type { DiaryProduct, DiaryProductCategory, QuoteItem } from "@/types/quote";
-
-const CATEGORY_TABS: DiaryProductCategory[] = ["양장", "스프링", "시스템", "한정특가"];
+import type { DiaryCategory, DiaryProduct, QuoteItem } from "@/types/quote";
 
 function formatWon(n: number) {
   return `${n.toLocaleString("ko-KR")}원`;
 }
 
+function cartKey(bizId: string) {
+  return `today_diary_catalog_cart_${bizId}`;
+}
+
 function BizCatalogContent() {
   const params = useParams();
+  const router = useRouter();
   const bizId = (params?.bizId as string) || "";
 
   const [brand, setBrand] = useState<DiaryBrand | null>(null);
+  const [categories, setCategories] = useState<DiaryCategory[]>([]);
   const [products, setProducts] = useState<DiaryProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState<DiaryProductCategory>("양장");
+  const [activeCategory, setActiveCategory] = useState<string>("");
 
-  // 선택 상품: productId -> 수량
+  // 선택 상품: productId -> 수량 (상세 페이지와 localStorage로 공유)
   const [selectedQty, setSelectedQty] = useState<Record<string, number>>({});
+  const [cartLoaded, setCartLoaded] = useState(false);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [companyName, setCompanyName] = useState("");
@@ -35,50 +42,72 @@ function BizCatalogContent() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/t-diary/products?brand=${encodeURIComponent(bizId)}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setBrand(data.brand || null);
-        setProducts(data.products || []);
+    if (!bizId) return;
+    Promise.all([
+      fetch(`/api/t-diary/products?brand=${encodeURIComponent(bizId)}`).then((res) => res.json()),
+      fetch(`/api/t-diary/categories?brand=${encodeURIComponent(bizId)}`).then((res) => res.json()),
+    ])
+      .then(([productData, categoryData]) => {
+        setBrand(productData.brand || null);
+        setProducts(productData.products || []);
+        const visible: DiaryCategory[] = (categoryData.categories || []).filter((c: DiaryCategory) => c.is_visible);
+        setCategories(visible);
+        if (visible.length > 0) setActiveCategory(visible[0].name);
       })
       .finally(() => setLoading(false));
   }, [bizId]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(cartKey(bizId));
+      if (raw) setSelectedQty(JSON.parse(raw));
+    } catch {
+      // ignore
+    } finally {
+      setCartLoaded(true);
+    }
+  }, [bizId]);
+
+  useEffect(() => {
+    if (!cartLoaded) return;
+    try {
+      localStorage.setItem(cartKey(bizId), JSON.stringify(selectedQty));
+    } catch {
+      // ignore
+    }
+  }, [selectedQty, bizId, cartLoaded]);
 
   const categoryProducts = useMemo(
     () => products.filter((p) => p.category === activeCategory),
     [products, activeCategory]
   );
 
-  const resolveUnitPrice = (product: DiaryProduct, qty: number) => {
-    const sorted = [...product.price_tiers].sort((a, b) => a.minQty - b.minQty);
-    let price = sorted[0]?.unitPrice ?? 0;
-    for (const tier of sorted) {
-      if (qty >= tier.minQty) price = tier.unitPrice;
-    }
-    return price;
-  };
-
-  const toggleSelect = (product: DiaryProduct) => {
+  const toggleSelect = (e: React.MouseEvent, product: DiaryProduct) => {
+    e.stopPropagation();
     setSelectedQty((prev) => {
       const next = { ...prev };
       if (next[product.id] !== undefined) {
         delete next[product.id];
       } else {
-        next[product.id] = product.price_tiers[0]?.minQty || 100;
+        next[product.id] = 100;
       }
       return next;
     });
   };
 
-  const updateQty = (productId: string, qty: number) => {
-    setSelectedQty((prev) => ({ ...prev, [productId]: Math.max(1, qty) }));
+  const updateQty = (e: React.ChangeEvent<HTMLInputElement>, productId: string) => {
+    e.stopPropagation();
+    setSelectedQty((prev) => ({ ...prev, [productId]: Math.max(1, Number(e.target.value)) }));
   };
 
   const selectedItems = useMemo(() => {
-    return Object.entries(selectedQty).map(([productId, qty]) => {
-      const product = products.find((p) => p.id === productId)!;
-      return { product, qty, unitPrice: resolveUnitPrice(product, qty) };
-    });
+    return Object.entries(selectedQty)
+      .map(([productId, qty]) => {
+        const product = products.find((p) => p.id === productId);
+        if (!product) return null;
+        return { product, qty, unitPrice: product.sell_price };
+      })
+      .filter((v): v is { product: DiaryProduct; qty: number; unitPrice: number } => v !== null);
   }, [selectedQty, products]);
 
   const totalAmount = selectedItems.reduce((sum, item) => sum + item.qty * item.unitPrice, 0);
@@ -118,6 +147,12 @@ function BizCatalogContent() {
         setError(data.error || "견적 요청에 실패했습니다.");
         return;
       }
+      setSelectedQty({});
+      try {
+        localStorage.removeItem(cartKey(bizId));
+      } catch {
+        // ignore
+      }
       setSubmitted(true);
     } finally {
       setIsSubmitting(false);
@@ -152,45 +187,55 @@ function BizCatalogContent() {
           <TodayAppIcon theme="light" size={32} />
           <div>
             <p className="text-sm font-black text-slate-900">{brand?.brand_name || bizId} T.홈페이지 카탈로그</p>
-            <p className="text-[11px] text-slate-400">32절 다이어리 B2B 도매 견적</p>
+            <p className="text-[11px] text-slate-400">32절 다이어리 B2B 도매 견적 · 판매가는 공급가의 200%입니다</p>
           </div>
         </div>
 
         {/* 카테고리 탭 */}
         <div className="mt-5 flex flex-wrap gap-1.5 border-b border-slate-100">
-          {CATEGORY_TABS.map((cat) => (
+          {categories.map((cat) => (
             <button
-              key={cat}
+              key={cat.id}
               type="button"
-              onClick={() => setActiveCategory(cat)}
+              onClick={() => setActiveCategory(cat.name)}
               className={`px-3 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
-                activeCategory === cat ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+                activeCategory === cat.name ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
               }`}
             >
-              {cat}
+              {cat.name}
             </button>
           ))}
         </div>
 
         {/* 상품 목록 */}
-        <div className="mt-4 space-y-3">
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {categoryProducts.length === 0 && (
-            <p className="py-10 text-center text-xs text-slate-300">해당 카테고리에 등록된 상품이 없습니다.</p>
+            <p className="col-span-full py-10 text-center text-xs text-slate-300">해당 카테고리에 등록된 상품이 없습니다.</p>
           )}
           {categoryProducts.map((product) => {
             const isSelected = selectedQty[product.id] !== undefined;
-            const qty = selectedQty[product.id] || product.price_tiers[0]?.minQty || 100;
+            const qty = selectedQty[product.id] || 100;
+            const isTwoTone = product.name.includes("투톤");
             return (
               <div
                 key={product.id}
-                className={`rounded-2xl border p-4 transition-colors ${
+                onClick={() => router.push(`/biz/${bizId}/catalog/${product.id}`)}
+                className={`cursor-pointer rounded-2xl border p-3 transition-colors hover:border-slate-300 ${
                   isSelected ? "border-blue-300 bg-blue-50/30" : "border-slate-100"
                 }`}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start justify-between gap-1.5">
+                  <div className="flex-1 overflow-hidden rounded-xl bg-slate-50 flex items-center justify-center">
+                    <DiaryCoverThumbnail
+                      colorHex={product.color_hex}
+                      secondaryColorHex={isTwoTone ? lightenHex(product.color_hex, 0.4) : undefined}
+                      category={product.category}
+                      size={64}
+                    />
+                  </div>
                   <button
                     type="button"
-                    onClick={() => toggleSelect(product)}
+                    onClick={(e) => toggleSelect(e, product)}
                     className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border cursor-pointer ${
                       isSelected ? "border-blue-600 bg-blue-600" : "border-slate-300 bg-white"
                     }`}
@@ -198,46 +243,33 @@ function BizCatalogContent() {
                   >
                     {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
                   </button>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[10px] font-bold text-slate-500">
-                        {product.product_code}
-                      </span>
-                      <p className="text-xs font-bold text-slate-900">{product.name}</p>
-                    </div>
-                    {product.spec && <p className="mt-0.5 text-[11px] text-slate-400">{product.spec}</p>}
+                </div>
 
-                    {/* 단가표 (2배수 수량) */}
-                    <div className="mt-2 grid grid-cols-4 gap-1.5">
-                      {product.price_tiers.map((tier) => (
-                        <div
-                          key={tier.minQty}
-                          className={`rounded-lg border px-1.5 py-1 text-center ${
-                            qty >= tier.minQty ? "border-blue-200 bg-blue-50" : "border-slate-100 bg-slate-50/50"
-                          }`}
-                        >
-                          <p className="text-[9px] text-slate-400">{tier.minQty.toLocaleString("ko-KR")}부~</p>
-                          <p className="text-[10px] font-bold text-slate-800">{formatWon(tier.unitPrice)}</p>
-                        </div>
-                      ))}
-                    </div>
+                <div className="mt-2 flex items-center gap-1 flex-wrap">
+                  <span className="rounded bg-slate-100 px-1.5 py-0.2 text-[9px] font-bold text-slate-500">
+                    {product.product_code}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs font-bold text-slate-900 leading-snug">{product.name}</p>
+                {product.spec && <p className="mt-0.5 text-[10px] text-slate-400 line-clamp-2">{product.spec}</p>}
+                <p className="mt-1.5 text-sm font-black text-blue-700">{formatWon(product.sell_price)}</p>
 
-                    {isSelected && (
-                      <div className="mt-2.5 flex items-center gap-1.5">
-                        <input
-                          type="number"
-                          min={1}
-                          value={qty}
-                          onChange={(e) => updateQty(product.id, Number(e.target.value))}
-                          className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 text-xs focus:outline-hidden focus:border-blue-500"
-                        />
-                        <span className="text-[11px] text-slate-400">부</span>
-                        <span className="ml-auto text-xs font-bold text-blue-700">
-                          {formatWon(qty * resolveUnitPrice(product, qty))}
-                        </span>
-                      </div>
-                    )}
+                {isSelected && (
+                  <div className="mt-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="number"
+                      min={1}
+                      value={qty}
+                      onChange={(e) => updateQty(e, product.id)}
+                      className="w-16 rounded-lg border border-slate-200 px-1.5 py-1 text-[11px] focus:outline-hidden focus:border-blue-500"
+                    />
+                    <span className="text-[10px] text-slate-400">부</span>
+                    <span className="ml-auto text-[11px] font-bold text-blue-700">{formatWon(qty * product.sell_price)}</span>
                   </div>
+                )}
+
+                <div className="mt-1.5 flex items-center gap-0.5 text-[10px] text-slate-300">
+                  상세보기 <ChevronRight className="h-3 w-3" />
                 </div>
               </div>
             );

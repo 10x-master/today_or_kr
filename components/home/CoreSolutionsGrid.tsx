@@ -14,11 +14,11 @@ const CORE_SOLUTIONS: CoreSolution[] = [
   { label: "T.다이어리", href: "/t-diary", dotColor: "#3B82F6" },
   { label: "T.노트", href: "/workspace", dotColor: "#F59E0B" },
   { label: "T.싸인", href: "/t-sign", dotColor: "#6366F1" },
-  { label: "T.홈페이지", href: "/biz/apt-sanggye14", dotColor: "#10B981" },
+  { label: "T.홈페이지", href: "/biz/sme-transform/catalog", dotColor: "#10B981" },
   { label: "T.환급", href: "/t-refund", dotColor: "#F43F5E" },
   { label: "아파트링크", href: "/aptlink", dotColor: "#0EA5E9" },
   { label: "링크픽", href: "/p/ambassador-01", dotColor: "#8B5CF6" },
-  { label: "지원단", href: "/t-diary?brand=sme-transform", dotColor: "#14B8A6" },
+  { label: "지원단", href: "/biz/sme-transform/catalog", dotColor: "#14B8A6" },
 ];
 
 /**

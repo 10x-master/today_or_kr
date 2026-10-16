@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getDiaryBrandBySlug, getDiaryProducts } from "@/lib/db/store";
+import { createDiaryProduct, getDiaryBrandBySlug, getDiaryProducts } from "@/lib/db/store";
+import { calcSellPrice } from "@/lib/diary/catalogUtils";
 import type { DiaryProduct } from "@/types/quote";
 
 /**
@@ -35,4 +36,68 @@ export async function GET(request: NextRequest) {
   const brand = getDiaryBrandBySlug(brandSlug);
   const products = brand ? getDiaryProducts(brand.id) : [];
   return NextResponse.json({ products, brand });
+}
+
+/**
+ * 관리자 — 상품 신규 등록 (판매가는 공급가 * 200%로 자동 계산)
+ * POST /api/t-diary/products { brand, category, product_code, name, spec?, cost_price, color_hex, image_url?, cover_size?, page_count?, material_info? }
+ */
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const { brand: brandSlug, category, product_code, name, cost_price, color_hex } = body;
+  if (!brandSlug || !category || !product_code || !name || typeof cost_price !== "number" || !color_hex) {
+    return NextResponse.json(
+      { error: "brand, category, product_code, name, cost_price, color_hex는 필수입니다." },
+      { status: 400 }
+    );
+  }
+
+  const brand = getDiaryBrandBySlug(brandSlug);
+  if (!brand) {
+    return NextResponse.json({ error: "존재하지 않는 브랜드입니다." }, { status: 404 });
+  }
+
+  try {
+    const supabase = await createSupabaseServerClient();
+    if (supabase) {
+      const { data, error } = await supabase
+        .from("diary_products")
+        .insert({
+          diary_id: brand.id,
+          category,
+          product_code,
+          name,
+          spec: body.spec || null,
+          cost_price,
+          sell_price: calcSellPrice(cost_price),
+          color_hex,
+          image_url: body.image_url || null,
+          cover_size: body.cover_size || "커버 124×180mm / 123×185mm",
+          page_count: body.page_count ?? 256,
+          material_info: body.material_info || "이태리 습식 원단",
+        })
+        .select()
+        .single();
+      if (!error && data) {
+        return NextResponse.json({ product: data as DiaryProduct });
+      }
+    }
+  } catch (err) {
+    console.warn("Supabase t-diary product insert error, falling back to mock store:", err);
+  }
+
+  const product = createDiaryProduct({
+    diary_id: brand.id,
+    category,
+    product_code,
+    name,
+    spec: body.spec,
+    cost_price,
+    color_hex,
+    image_url: body.image_url,
+    cover_size: body.cover_size,
+    page_count: body.page_count,
+    material_info: body.material_info,
+  });
+  return NextResponse.json({ product });
 }

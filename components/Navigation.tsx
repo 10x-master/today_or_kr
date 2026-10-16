@@ -416,6 +416,17 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         badge: "HQ 전용",
         keywords: "견적 도매 다이어리 PDF 알림톡 세금계산서 전자계약",
       },
+      {
+        id: "app-diary-catalog-console",
+        section: "ADMIN",
+        title: "카테고리 & 제품 등록 콘솔",
+        short: "카탈로그관리",
+        description: "T.홈페이지 B2B 카탈로그 카테고리 추가/순서변경/노출토글 및 제품 등록·수정(공급가 200% 판매가 자동계산)",
+        href: "/admin/diaries/catalog",
+        icon: "🗂️",
+        badge: "HQ 전용",
+        keywords: "카탈로그 카테고리 제품 등록 공급가 판매가 200% 다이어리",
+      },
     ],
   },
 ];

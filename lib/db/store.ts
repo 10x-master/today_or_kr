@@ -20,6 +20,7 @@ import {
   mockDiaryMembers,
   mockDiaryPosts,
   mockDiaryComments,
+  mockDiaryCategories,
   mockDiaryProducts,
   mockQuoteRequests,
 } from "@/lib/db/mockSeed";
@@ -61,7 +62,8 @@ import type {
   DiaryPost,
   DiaryComment,
 } from "@/types/diary";
-import type { DiaryProduct, QuoteItem, QuoteRequest, QuoteStatus } from "@/types/quote";
+import type { DiaryCategory, DiaryProduct, QuoteItem, QuoteRequest, QuoteStatus } from "@/types/quote";
+import { calcSellPrice } from "@/lib/diary/catalogUtils";
 
 const AUTO_BLIND_THRESHOLD = 3;
 
@@ -945,19 +947,97 @@ export function toggleLocalAdActive(id: string, isActive?: boolean): LocalAd | n
   return ad;
 }
 
+/** T.홈페이지 B2B 카탈로그 — 다이어리별 카테고리 목록 조회 (노출 순서대로) */
+export function getDiaryCategories(diaryId: string): DiaryCategory[] {
+  return [...mockDiaryCategories]
+    .filter((c) => c.diary_id === diaryId)
+    .sort((a, b) => a.sort_order - b.sort_order);
+}
+
+/** 관리자 — 카테고리 신규 추가 (맨 뒤 순서로) */
+export function createDiaryCategory(input: { diary_id: string; name: string }): DiaryCategory {
+  const existing = mockDiaryCategories.filter((c) => c.diary_id === input.diary_id);
+  const category: DiaryCategory = {
+    id: `cat-${input.diary_id}-${Date.now()}`,
+    diary_id: input.diary_id,
+    name: input.name,
+    sort_order: existing.length > 0 ? Math.max(...existing.map((c) => c.sort_order)) + 1 : 1,
+    is_visible: true,
+    created_at: new Date().toISOString(),
+  };
+  mockDiaryCategories.push(category);
+  return category;
+}
+
+/** 관리자 — 카테고리 이름/순서/노출여부 수정 */
+export function updateDiaryCategory(
+  id: string,
+  patch: { name?: string; sort_order?: number; is_visible?: boolean }
+): DiaryCategory | null {
+  const category = mockDiaryCategories.find((c) => c.id === id);
+  if (!category) return null;
+  if (patch.name !== undefined) category.name = patch.name;
+  if (patch.sort_order !== undefined) category.sort_order = patch.sort_order;
+  if (patch.is_visible !== undefined) category.is_visible = patch.is_visible;
+  return category;
+}
+
 /** T.홈페이지 B2B 카탈로그 — 다이어리별 상품 목록 조회 */
 export function getDiaryProducts(diaryId: string): DiaryProduct[] {
   return mockDiaryProducts.filter((p) => p.diary_id === diaryId);
 }
 
-/** 수량 구간에 맞는 단가 계산 (가장 높은 minQty 구간 중 수량 이하인 것) */
-export function resolveUnitPrice(product: DiaryProduct, quantity: number): number {
-  const sorted = [...product.price_tiers].sort((a, b) => a.minQty - b.minQty);
-  let price = sorted[0]?.unitPrice ?? 0;
-  for (const tier of sorted) {
-    if (quantity >= tier.minQty) price = tier.unitPrice;
+/** 상품 단건 조회 (상세 페이지용) */
+export function getDiaryProductById(id: string): DiaryProduct | null {
+  return mockDiaryProducts.find((p) => p.id === id) || null;
+}
+
+/** 관리자 — 상품 신규 등록 (판매가는 공급가 * 200%로 자동 계산) */
+export function createDiaryProduct(input: {
+  diary_id: string;
+  category: string;
+  product_code: string;
+  name: string;
+  spec?: string | null;
+  cost_price: number;
+  color_hex: string;
+  image_url?: string | null;
+  cover_size?: string;
+  page_count?: number;
+  material_info?: string;
+}): DiaryProduct {
+  const product: DiaryProduct = {
+    id: `product-${input.product_code.toLowerCase().replace(/[^a-z0-9]/g, "")}-${Date.now()}`,
+    diary_id: input.diary_id,
+    category: input.category,
+    product_code: input.product_code,
+    name: input.name,
+    spec: input.spec || null,
+    cost_price: input.cost_price,
+    sell_price: calcSellPrice(input.cost_price),
+    color_hex: input.color_hex,
+    image_url: input.image_url || null,
+    cover_size: input.cover_size || "커버 124×180mm / 123×185mm",
+    page_count: input.page_count ?? 256,
+    material_info: input.material_info || "이태리 습식 원단",
+    created_at: new Date().toISOString(),
+  };
+  mockDiaryProducts.push(product);
+  return product;
+}
+
+/** 관리자 — 상품 수정 (cost_price 변경 시 sell_price 자동 재계산) */
+export function updateDiaryProduct(
+  id: string,
+  patch: Partial<Omit<DiaryProduct, "id" | "diary_id" | "created_at" | "sell_price">>
+): DiaryProduct | null {
+  const product = mockDiaryProducts.find((p) => p.id === id);
+  if (!product) return null;
+  Object.assign(product, patch);
+  if (patch.cost_price !== undefined) {
+    product.sell_price = calcSellPrice(patch.cost_price);
   }
-  return price;
+  return product;
 }
 
 function computeQuoteAmounts(items: QuoteItem[], packagingFee: number, shippingFee: number) {
