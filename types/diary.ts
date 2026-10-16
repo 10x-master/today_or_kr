@@ -45,11 +45,53 @@ export interface DiaryEvent {
   media_url: string | null;
   /** 음성 메모 링크 */
   voice_url: string | null;
+  /** 공개 대상 역할 — 기본 ['ALL']. 'PARENT'/'STUDENT'/'TEACHER' 등으로 제한 가능 */
+  target_roles: string[];
+  /** 공개 대상 학년/그룹 — 기본 ['ALL']. 예: ['1학년', '2학년'] */
+  target_grades: string[];
 }
 
 export interface UserDiarySubscription {
   id: string;
   user_id: string;
   diary_id: string;
+  created_at: string;
+}
+
+/** 폐쇄형 커뮤니티 구성원 역할 */
+export type DiaryMemberRole = "OWNER" | "TEACHER" | "PARENT" | "STUDENT";
+export type DiaryMemberStatus = "APPROVED" | "PENDING";
+
+export interface DiaryMember {
+  id: string;
+  diary_id: string;
+  user_id: string;
+  role: DiaryMemberRole;
+  /** 담당/소속 학년·그룹 태그. 예: ['1학년'] */
+  grade_tags: string[];
+  status: DiaryMemberStatus;
+  created_at: string;
+}
+
+/** 우리 반/우리 그룹 커뮤니티 게시글 (알림장/활동 사진·영상) */
+export interface DiaryPost {
+  id: string;
+  diary_id: string;
+  author_id: string;
+  author_role: DiaryMemberRole;
+  title: string;
+  content: string | null;
+  media_urls: string[];
+  /** 노출 대상 학년/그룹. 기본 ['ALL'] */
+  target_grades: string[];
+  created_at: string;
+}
+
+/** 커뮤니티 게시글 비밀 댓글 (안심 소통창구) */
+export interface DiaryComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
   created_at: string;
 }

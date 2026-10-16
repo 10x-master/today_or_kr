@@ -17,6 +17,9 @@ import {
   mockUsers,
   mockDiaryBrands,
   mockDiaryEvents,
+  mockDiaryMembers,
+  mockDiaryPosts,
+  mockDiaryComments,
 } from "@/lib/db/mockSeed";
 import type {
   LocalPickCategory,
@@ -47,7 +50,15 @@ import type {
   AdStatus,
 } from "@/types/officialNotice";
 import type { AppPwaSetting, AppPwaTarget } from "@/types/pwa";
-import type { DiaryBrand, DiaryEvent } from "@/types/diary";
+import type {
+  DiaryBrand,
+  DiaryEvent,
+  DiaryMember,
+  DiaryMemberRole,
+  DiaryMemberStatus,
+  DiaryPost,
+  DiaryComment,
+} from "@/types/diary";
 
 const AUTO_BLIND_THRESHOLD = 3;
 
@@ -235,6 +246,159 @@ export function updateDiaryApprovalStatus(
   if (!brand) return null;
   brand.approval_status = status;
   return brand;
+}
+
+/** 역할/학년 타깃 노출 판정 — 비회원·미승인 회원은 공개(is_public && target_roles 전체) 일정만 열람 */
+export function isDiaryEventVisibleToMember(event: DiaryEvent, member: DiaryMember | null): boolean {
+  if (!member || member.status !== "APPROVED") {
+    return event.is_public && event.target_roles.includes("ALL");
+  }
+  const roleMatch = event.target_roles.includes("ALL") || event.target_roles.includes(member.role);
+  const gradeMatch =
+    event.target_grades.includes("ALL") ||
+    member.grade_tags.includes("ALL") ||
+    event.target_grades.some((g) => member.grade_tags.includes(g));
+  return roleMatch && gradeMatch;
+}
+
+/** 단일 다이어리의 역할/학년 타깃 필터링된 일정 조회 (폐쇄형 커뮤니티 대응) */
+export function getDiaryEventsForMember(diaryId: string, member: DiaryMember | null): DiaryEvent[] {
+  return mockDiaryEvents
+    .filter((e) => e.diary_id === diaryId)
+    .filter((e) => isDiaryEventVisibleToMember(e, member));
+}
+
+/** 선생님/관리자가 공개 대상(역할·학년)을 지정하여 신규 일정 등록 */
+export function createDiaryEvent(input: {
+  diary_id: string;
+  title: string;
+  description?: string | null;
+  event_date: string;
+  is_public?: boolean;
+  target_roles?: string[];
+  target_grades?: string[];
+  media_type?: DiaryEvent["media_type"];
+  media_url?: string | null;
+  voice_url?: string | null;
+}): DiaryEvent {
+  const event: DiaryEvent = {
+    id: `diary-evt-${Date.now()}`,
+    diary_id: input.diary_id,
+    title: input.title,
+    description: input.description || null,
+    event_date: input.event_date,
+    is_public: input.is_public ?? false,
+    send_alimtalk: false,
+    media_type: input.media_type || "NONE",
+    media_url: input.media_url || null,
+    voice_url: input.voice_url || null,
+    target_roles: input.target_roles?.length ? input.target_roles : ["ALL"],
+    target_grades: input.target_grades?.length ? input.target_grades : ["ALL"],
+  };
+  mockDiaryEvents.push(event);
+  return event;
+}
+
+/** 특정 다이어리 커뮤니티의 구성원(선생님/학부모/학생) 조회 */
+export function getDiaryMembersByDiaryId(diaryId: string): DiaryMember[] {
+  return mockDiaryMembers.filter((m) => m.diary_id === diaryId);
+}
+
+/** 유저가 속한 전체 커뮤니티 멤버십 조회 */
+export function getDiaryMembersForUser(userId: string): DiaryMember[] {
+  return mockDiaryMembers.filter((m) => m.user_id === userId);
+}
+
+/** 특정 다이어리에서 유저의 멤버십 단건 조회 */
+export function getDiaryMemberForUser(diaryId: string, userId: string): DiaryMember | null {
+  return mockDiaryMembers.find((m) => m.diary_id === diaryId && m.user_id === userId) || null;
+}
+
+/** 커뮤니티 가입 신청 — 이미 신청/가입된 경우 기존 레코드를 그대로 반환 (항상 PENDING으로 생성) */
+export function createOrUpdateDiaryMembership(input: {
+  diary_id: string;
+  user_id: string;
+  role: DiaryMemberRole;
+  grade_tags: string[];
+}): DiaryMember {
+  const existing = getDiaryMemberForUser(input.diary_id, input.user_id);
+  if (existing) return existing;
+
+  const member: DiaryMember = {
+    id: `diary-member-${Date.now()}`,
+    diary_id: input.diary_id,
+    user_id: input.user_id,
+    role: input.role,
+    grade_tags: input.grade_tags.length ? input.grade_tags : ["ALL"],
+    status: "PENDING",
+    created_at: new Date().toISOString(),
+  };
+  mockDiaryMembers.push(member);
+  return member;
+}
+
+/** 선생님/관리자의 가입 승인 처리 */
+export function updateDiaryMemberStatus(id: string, status: DiaryMemberStatus): DiaryMember | null {
+  const member = mockDiaryMembers.find((m) => m.id === id);
+  if (!member) return null;
+  member.status = status;
+  return member;
+}
+
+/** 우리 반/우리 그룹 커뮤니티 피드 조회 (최신순) */
+export function getDiaryPosts(diaryId: string): DiaryPost[] {
+  return mockDiaryPosts
+    .filter((p) => p.diary_id === diaryId)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+}
+
+/** 선생님/관리자의 알림장·활동 게시글 작성 */
+export function createDiaryPost(input: {
+  diary_id: string;
+  author_id: string;
+  author_role: DiaryMemberRole;
+  title: string;
+  content?: string | null;
+  media_urls?: string[];
+  target_grades?: string[];
+}): DiaryPost {
+  const post: DiaryPost = {
+    id: `diary-post-${Date.now()}`,
+    diary_id: input.diary_id,
+    author_id: input.author_id,
+    author_role: input.author_role,
+    title: input.title,
+    content: input.content || null,
+    media_urls: input.media_urls || [],
+    target_grades: input.target_grades?.length ? input.target_grades : ["ALL"],
+    created_at: new Date().toISOString(),
+  };
+  mockDiaryPosts.push(post);
+  return post;
+}
+
+/** 게시글 비밀 댓글(안심 소통창구) 조회 */
+export function getDiaryComments(postId: string): DiaryComment[] {
+  return mockDiaryComments
+    .filter((c) => c.post_id === postId)
+    .sort((a, b) => a.created_at.localeCompare(b.created_at));
+}
+
+/** 커뮤니티 구성원의 비밀 댓글 작성 */
+export function createDiaryComment(input: {
+  post_id: string;
+  author_id: string;
+  content: string;
+}): DiaryComment {
+  const comment: DiaryComment = {
+    id: `diary-comment-${Date.now()}`,
+    post_id: input.post_id,
+    author_id: input.author_id,
+    content: input.content,
+    created_at: new Date().toISOString(),
+  };
+  mockDiaryComments.push(comment);
+  return comment;
 }
 
 /** 티노트/티단노트(today_notes) 목록 조회 */

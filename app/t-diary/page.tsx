@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
   Check,
@@ -11,17 +11,23 @@ import {
   ChevronRight,
   Download,
   Mic,
+  Plus,
   RefreshCw,
   Search,
   Trash2,
+  Users,
 } from "lucide-react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
 import { getCurrentAuthUser } from "@/lib/auth/kakaoAuth";
 import VoiceTaskInput, { type ParsedVoiceTask } from "@/components/workspace/VoiceTaskInput";
 import ProviderSearchModal from "@/components/diary/ProviderSearchModal";
 import DiaryEventDetailModal from "@/components/diary/DiaryEventDetailModal";
+import CommunityTab from "@/components/diary/CommunityTab";
+import TeacherEventFormModal from "@/components/diary/TeacherEventFormModal";
 import { toDateStr } from "@/lib/diary/dateUtils";
-import type { DiaryBrand, DiaryEvent } from "@/types/diary";
+import type { DiaryBrand, DiaryEvent, DiaryMember } from "@/types/diary";
+
+const GRADE_OPTIONS = ["1학년", "2학년", "3학년"];
 
 interface PersonalDiaryEvent {
   id: string;
@@ -44,9 +50,13 @@ function escapeIcsText(text: string) {
 }
 
 function TDiaryPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const brandSlug = searchParams.get("brand");
   const storageKey = `today_diary_events_${brandSlug || "default"}`;
+  const [tab, setTab] = useState<"calendar" | "community">(
+    searchParams.get("tab") === "community" ? "community" : "calendar"
+  );
 
   const today = useMemo(() => new Date(), []);
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -57,6 +67,13 @@ function TDiaryPageContent() {
   const [brand, setBrand] = useState<DiaryBrand | null>(null);
   const [brandEvents, setBrandEvents] = useState<DiaryEvent[]>([]);
   const [brandLoading, setBrandLoading] = useState(!!brandSlug);
+
+  // 폐쇄형 커뮤니티 멤버십 (선생님/학부모/학생)
+  const [membership, setMembership] = useState<DiaryMember | null>(null);
+  const [joinRole, setJoinRole] = useState<"PARENT" | "STUDENT" | "TEACHER">("PARENT");
+  const [joinGrades, setJoinGrades] = useState<string[]>([]);
+  const [isJoining, setIsJoining] = useState(false);
+  const [isEventFormOpen, setIsEventFormOpen] = useState(false);
 
   // 일반 포털 모드: 제공자 탐색/구독
   const [allProviders, setAllProviders] = useState<DiaryBrand[]>([]);
@@ -85,27 +102,35 @@ function TDiaryPageContent() {
     setTimeout(() => setToast(null), 2600);
   };
 
-  // 브랜드 고정 모드: 브랜드 정보 및 공식 행사 일정 조회
-  useEffect(() => {
+  // 브랜드 고정 모드: 브랜드 정보, 역할/학년 타깃 필터링된 일정, 내 멤버십 조회
+  const fetchBrandData = () => {
     if (!brandSlug) {
       setBrand(null);
       setBrandEvents([]);
+      setMembership(null);
       setBrandLoading(false);
       return;
     }
     setBrandLoading(true);
-    fetch(`/api/t-diary?brand=${encodeURIComponent(brandSlug)}`)
+    fetch(`/api/t-diary?brand=${encodeURIComponent(brandSlug)}&userId=${encodeURIComponent(userId)}`)
       .then((res) => res.json())
       .then((data) => {
         setBrand(data.brand || null);
         setBrandEvents(data.events || []);
+        setMembership(data.membership || null);
       })
       .catch(() => {
         setBrand(null);
         setBrandEvents([]);
+        setMembership(null);
       })
       .finally(() => setBrandLoading(false));
-  }, [brandSlug]);
+  };
+
+  useEffect(() => {
+    fetchBrandData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandSlug, userId]);
 
   // 일반 포털 모드: 전체 제공자 목록(탐색/구독 해석용) 조회
   useEffect(() => {
@@ -244,8 +269,45 @@ function TDiaryPageContent() {
     window.location.href = `/api/auth/google?userId=${encodeURIComponent(userId)}&redirect=${encodeURIComponent(currentPath)}`;
   };
 
+  const handleSwitchTab = (next: "calendar" | "community") => {
+    setTab(next);
+    const params = new URLSearchParams(searchParams.toString());
+    if (next === "community") params.set("tab", "community");
+    else params.delete("tab");
+    router.replace(`/t-diary?${params.toString()}`);
+  };
+
+  const toggleJoinGrade = (grade: string) => {
+    setJoinGrades((prev) => (prev.includes(grade) ? prev.filter((g) => g !== grade) : [...prev, grade]));
+  };
+
+  const handleJoinSubmit = async () => {
+    if (!brand) return;
+    setIsJoining(true);
+    try {
+      const res = await fetch("/api/t-diary/members", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          diary_id: brand.id,
+          user_id: userId,
+          role: joinRole,
+          grade_tags: joinGrades.length ? joinGrades : ["ALL"],
+        }),
+      });
+      const data = await res.json();
+      if (data.member) {
+        setMembership(data.member);
+        showToast("가입 신청이 접수되었습니다. 선생님 승인을 기다려주세요.");
+      }
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
   const officialEvents = brandSlug ? brandEvents : showSubscribedLayer ? subscribedEvents : [];
   const visiblePersonalEvents = showPersonalLayer ? personalEvents : [];
+  const isTeacherOrOwner = membership?.status === "APPROVED" && (membership.role === "TEACHER" || membership.role === "OWNER");
 
   const handleExportIcs = () => {
     const allEvents = [
@@ -389,6 +451,87 @@ END:VCALENDAR`;
           </div>
         )}
 
+        {/* 캘린더 / 우리 반 커뮤니티 탭 전환 */}
+        {brandSlug && brand && (
+          <div className="mt-3 flex gap-1.5 border-b border-slate-100">
+            <button
+              type="button"
+              onClick={() => handleSwitchTab("calendar")}
+              className={`px-3 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+                tab === "calendar" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              캘린더
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSwitchTab("community")}
+              className={`flex items-center gap-1 px-3 py-2 text-xs font-bold border-b-2 transition-colors cursor-pointer ${
+                tab === "community" ? "border-slate-900 text-slate-900" : "border-transparent text-slate-400 hover:text-slate-600"
+              }`}
+            >
+              <Users className="h-3.5 w-3.5" />
+              우리 반 커뮤니티
+            </button>
+          </div>
+        )}
+
+        {/* 커뮤니티 가입 신청 패널 (미가입/승인대기 상태) */}
+        {brandSlug && brand && !brandLoading && (!membership || membership.status === "PENDING") && (
+          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/40 p-3.5">
+            {membership?.status === "PENDING" ? (
+              <p className="text-xs font-bold text-blue-700">
+                가입 신청이 접수되었습니다. 선생님 승인을 기다리고 있어요. ({membership.role === "PARENT" ? "학부모" : membership.role === "STUDENT" ? "학생" : "선생님"} · {membership.grade_tags.join(", ")})
+              </p>
+            ) : (
+              <>
+                <p className="text-xs font-bold text-slate-900">우리 반 커뮤니티에 가입하시겠어요?</p>
+                <p className="mt-0.5 text-[11px] text-slate-400">
+                  역할과 자녀 학년을 선택하면 선생님 승인 후 해당 학년의 알림장·행사만 모아볼 수 있어요.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {(["PARENT", "STUDENT", "TEACHER"] as const).map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => setJoinRole(role)}
+                      className={`rounded-full border px-2.5 py-1 text-[11px] font-bold cursor-pointer transition-colors ${
+                        joinRole === role ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 text-slate-500"
+                      }`}
+                    >
+                      {role === "PARENT" ? "학부모" : role === "STUDENT" ? "학생" : "선생님"}
+                    </button>
+                  ))}
+                </div>
+                {joinRole !== "TEACHER" && (
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {GRADE_OPTIONS.map((g) => (
+                      <button
+                        key={g}
+                        type="button"
+                        onClick={() => toggleJoinGrade(g)}
+                        className={`rounded-full border px-2.5 py-1 text-[11px] font-bold cursor-pointer transition-colors ${
+                          joinGrades.includes(g) ? "border-blue-600 bg-blue-50 text-blue-700" : "border-slate-200 text-slate-500"
+                        }`}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={handleJoinSubmit}
+                  disabled={isJoining}
+                  className="mt-2.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-40 cursor-pointer transition-colors"
+                >
+                  가입 신청하기
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
         {!brandSlug && (
           <div className="mt-4">
             <h1 className="text-xl font-black text-slate-900 tracking-tight">t.다이어리 스마트 캘린더</h1>
@@ -396,6 +539,8 @@ END:VCALENDAR`;
           </div>
         )}
 
+        {tab === "calendar" && (
+        <>
         {/* 레이어 토글 (일반 포털 모드) */}
         {!brandSlug && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -443,6 +588,16 @@ END:VCALENDAR`;
             <Download className="h-3.5 w-3.5" />
             <span>iCal(.ics) 내보내기</span>
           </button>
+          {isTeacherOrOwner && (
+            <button
+              type="button"
+              onClick={() => setIsEventFormOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>일정 등록</span>
+            </button>
+          )}
         </div>
 
         {/* 월간 캘린더 */}
@@ -571,6 +726,13 @@ END:VCALENDAR`;
           </p>
           <VoiceTaskInput onTaskParsed={handleVoiceParsed} className="mt-3" />
         </div>
+        </>
+        )}
+
+        {/* 우리 반 커뮤니티 탭 */}
+        {tab === "community" && brand && (
+          <CommunityTab diaryId={brand.id} userId={userId} membership={membership} onShowToast={showToast} />
+        )}
       </div>
 
       {/* 제공자 탐색/구독 모달 */}
@@ -587,6 +749,16 @@ END:VCALENDAR`;
           event={detailEvent}
           providerName={providerNameByDiaryId[detailEvent.diary_id]}
           onClose={() => setDetailEvent(null)}
+        />
+      )}
+
+      {/* 선생님/운영자 전용: 공개 대상 지정 일정 등록 모달 */}
+      {isEventFormOpen && brand && (
+        <TeacherEventFormModal
+          diaryId={brand.id}
+          defaultDate={selectedDate}
+          onClose={() => setIsEventFormOpen(false)}
+          onCreated={fetchBrandData}
         />
       )}
     </div>

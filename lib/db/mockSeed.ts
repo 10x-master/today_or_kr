@@ -14,7 +14,13 @@ import type {
   LocalAd,
 } from "@/types/officialNotice";
 import type { AppPwaSetting } from "@/types/pwa";
-import type { DiaryBrand, DiaryEvent } from "@/types/diary";
+import type {
+  DiaryBrand,
+  DiaryEvent,
+  DiaryMember,
+  DiaryPost,
+  DiaryComment,
+} from "@/types/diary";
 
 /** 상대 시간 계산 헬퍼 (예: '방금 전', '12분 전', '2시간 전', '어제', '3일 전') */
 export function formatRelativeTime(dateString?: string): string {
@@ -1894,6 +1900,21 @@ export const mockDiaryBrands: DiaryBrand[] = [
     website_url: null,
     created_at: "2026-10-17T00:00:00.000Z",
   },
+  {
+    id: "diary-brand-after-school",
+    brand_slug: "sanggye-after-school",
+    brand_name: "상계 꿈나무 공부방",
+    logo_url: null,
+    contact_info: "02-930-3333",
+    approval_status: "APPROVED",
+    provider_type: "LOCAL_BIZ",
+    region_code: "노원구",
+    youtube_channel: null,
+    business_reg_no: null,
+    intro: "선생님·학부모·학생이 함께하는 역할별 폐쇄형 학급 커뮤니티 다이어리",
+    website_url: null,
+    created_at: "2026-10-19T00:00:00.000Z",
+  },
 ];
 
 /** t.다이어리 공식 행사 일정 시드 (관리자 등록 · 캘린더 마커 표시 · 미디어 포함) */
@@ -1909,6 +1930,8 @@ export const mockDiaryEvents: DiaryEvent[] = [
     media_type: "NONE",
     media_url: null,
     voice_url: null,
+    target_roles: ["ALL"],
+    target_grades: ["ALL"],
   },
   {
     id: "diary-evt-donghwa-02",
@@ -1921,6 +1944,8 @@ export const mockDiaryEvents: DiaryEvent[] = [
     media_type: "NONE",
     media_url: null,
     voice_url: null,
+    target_roles: ["ALL"],
+    target_grades: ["ALL"],
   },
   {
     id: "diary-evt-sme-01",
@@ -1933,6 +1958,8 @@ export const mockDiaryEvents: DiaryEvent[] = [
     media_type: "NONE",
     media_url: null,
     voice_url: null,
+    target_roles: ["ALL"],
+    target_grades: ["ALL"],
   },
   {
     id: "diary-evt-sme-02",
@@ -1945,6 +1972,8 @@ export const mockDiaryEvents: DiaryEvent[] = [
     media_type: "NONE",
     media_url: null,
     voice_url: null,
+    target_roles: ["ALL"],
+    target_grades: ["ALL"],
   },
   {
     id: "diary-evt-nowon-market-01",
@@ -1958,6 +1987,8 @@ export const mockDiaryEvents: DiaryEvent[] = [
     media_url:
       "https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&q=80,https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=600&q=80",
     voice_url: null,
+    target_roles: ["ALL"],
+    target_grades: ["ALL"],
   },
   {
     id: "diary-evt-nowon-gu-01",
@@ -1970,6 +2001,8 @@ export const mockDiaryEvents: DiaryEvent[] = [
     media_type: "VOICE",
     media_url: null,
     voice_url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+    target_roles: ["ALL"],
+    target_grades: ["ALL"],
   },
   {
     id: "diary-evt-ambassador-01",
@@ -1982,6 +2015,8 @@ export const mockDiaryEvents: DiaryEvent[] = [
     media_type: "YOUTUBE",
     media_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     voice_url: null,
+    target_roles: ["ALL"],
+    target_grades: ["ALL"],
   },
   {
     id: "diary-evt-conditional-01",
@@ -1994,6 +2029,8 @@ export const mockDiaryEvents: DiaryEvent[] = [
     media_type: "NONE",
     media_url: null,
     voice_url: null,
+    target_roles: ["ALL"],
+    target_grades: ["ALL"],
   },
   {
     id: "diary-evt-pending-01",
@@ -2006,6 +2043,139 @@ export const mockDiaryEvents: DiaryEvent[] = [
     media_type: "NONE",
     media_url: null,
     voice_url: null,
+    target_roles: ["ALL"],
+    target_grades: ["ALL"],
+  },
+  // --- 상계 꿈나무 공부방: 역할/학년별 타깃 노출 데모 일정 ---
+  {
+    id: "diary-evt-afterschool-01",
+    diary_id: "diary-brand-after-school",
+    title: "1학년 그림책 만들기 활동 안내",
+    description: "1학년 학부모 대상 활동 사진 공유 및 준비물 안내",
+    event_date: "2026-10-22",
+    is_public: false,
+    send_alimtalk: true,
+    media_type: "IMAGE",
+    media_url: "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=600&q=80",
+    voice_url: null,
+    target_roles: ["PARENT"],
+    target_grades: ["1학년"],
+  },
+  {
+    id: "diary-evt-afterschool-02",
+    diary_id: "diary-brand-after-school",
+    title: "2학년 현장학습 (서울숲) 공지",
+    description: "2학년 전체 현장학습 일정 및 집합 시간 안내",
+    event_date: "2026-10-24",
+    is_public: false,
+    send_alimtalk: true,
+    media_type: "NONE",
+    media_url: null,
+    voice_url: null,
+    target_roles: ["PARENT", "STUDENT"],
+    target_grades: ["2학년"],
+  },
+  {
+    id: "diary-evt-afterschool-03",
+    diary_id: "diary-brand-after-school",
+    title: "전체 학부모 상담 주간",
+    description: "1~3학년 전체 학부모 대상 개별 상담 신청 안내",
+    event_date: "2026-10-27",
+    is_public: false,
+    send_alimtalk: true,
+    media_type: "NONE",
+    media_url: null,
+    voice_url: null,
+    target_roles: ["PARENT"],
+    target_grades: ["ALL"],
+  },
+];
+
+/** 상계 꿈나무 공부방 — 역할별 폐쇄형 커뮤니티 구성원 시드 */
+export const mockDiaryMembers: DiaryMember[] = [
+  {
+    id: "diary-member-owner-01",
+    diary_id: "diary-brand-after-school",
+    user_id: "teacher-kim",
+    role: "OWNER",
+    grade_tags: ["ALL"],
+    status: "APPROVED",
+    created_at: "2026-10-19T00:00:00.000Z",
+  },
+  {
+    id: "diary-member-teacher-01",
+    diary_id: "diary-brand-after-school",
+    user_id: "teacher-lee",
+    role: "TEACHER",
+    grade_tags: ["1학년", "2학년"],
+    status: "APPROVED",
+    created_at: "2026-10-19T00:00:00.000Z",
+  },
+  {
+    id: "diary-member-parent-01",
+    diary_id: "diary-brand-after-school",
+    user_id: "user-001",
+    role: "PARENT",
+    grade_tags: ["1학년"],
+    status: "APPROVED",
+    created_at: "2026-10-19T00:00:00.000Z",
+  },
+  {
+    id: "diary-member-parent-02",
+    diary_id: "diary-brand-after-school",
+    user_id: "parent-park",
+    role: "PARENT",
+    grade_tags: ["2학년"],
+    status: "PENDING",
+    created_at: "2026-10-19T00:00:00.000Z",
+  },
+  {
+    id: "diary-member-student-01",
+    diary_id: "diary-brand-after-school",
+    user_id: "student-choi",
+    role: "STUDENT",
+    grade_tags: ["1학년"],
+    status: "APPROVED",
+    created_at: "2026-10-19T00:00:00.000Z",
+  },
+];
+
+/** 상계 꿈나무 공부방 — 우리 반 커뮤니티 알림장/활동 게시글 시드 */
+export const mockDiaryPosts: DiaryPost[] = [
+  {
+    id: "diary-post-01",
+    diary_id: "diary-brand-after-school",
+    author_id: "teacher-lee",
+    author_role: "TEACHER",
+    title: "1학년 그림책 만들기 활동 사진 공유",
+    content: "오늘 1학년 친구들이 직접 만든 그림책을 소개합니다! 모두 집중해서 멋진 작품을 완성했어요.",
+    media_urls: [
+      "https://images.unsplash.com/photo-1427504494785-3a9ca7044f45?w=600&q=80",
+    ],
+    target_grades: ["1학년"],
+    created_at: "2026-10-19T09:30:00.000Z",
+  },
+  {
+    id: "diary-post-02",
+    diary_id: "diary-brand-after-school",
+    author_id: "teacher-kim",
+    author_role: "OWNER",
+    title: "10월 전체 공지 - 독감 예방접종 안내",
+    content: "전체 학년 대상 독감 예방접종 안내문을 배포했습니다. 가정통신문을 꼭 확인해주세요.",
+    media_urls: [],
+    target_grades: ["ALL"],
+    created_at: "2026-10-18T14:00:00.000Z",
+  },
+];
+
+/** t.다이어리 커뮤니티 게시글 비밀 댓글(안심 소통창구) 시드 */
+export const mockDiaryComments: DiaryComment[] = [
+  {
+    id: "diary-comment-01",
+    post_id: "diary-post-01",
+    author_id: "user-001",
+    content: "선생님 감사합니다! 아이가 정말 즐거워했어요 :)",
+    created_at: "2026-10-19T10:15:00.000Z",
   },
 ];
 
