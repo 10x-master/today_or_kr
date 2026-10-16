@@ -14,6 +14,7 @@ import type {
   LocalAd,
 } from "@/types/officialNotice";
 import type { AppPwaSetting } from "@/types/pwa";
+import type { DiaryBrand, DiaryEvent } from "@/types/diary";
 
 /** 상대 시간 계산 헬퍼 (예: '방금 전', '12분 전', '2시간 전', '어제', '3일 전') */
 export function formatRelativeTime(dateString?: string): string {
@@ -1783,6 +1784,66 @@ export const mockLocalAds: LocalAd[] = [
     end_date: "2026-10-17",
     reject_reason: "과장 광고 및 공정거래 표기 위반 사유 (최저가/무조건 문구 수정 필요)",
     created_at: "2026-10-10T11:00:00Z",
+  },
+];
+
+/** t.다이어리 지류 결합 솔루션 — 발행 브랜드(파트너사) 시드 */
+export const mockDiaryBrands: DiaryBrand[] = [
+  {
+    id: "diary-brand-donghwa-av",
+    brand_slug: "donghwa-av",
+    brand_name: "동화에이브이",
+    logo_url: null,
+    contact_info: "02-1234-5678",
+    created_at: "2026-10-17T00:00:00.000Z",
+  },
+  {
+    id: "diary-brand-sme-transform",
+    brand_slug: "sme-transform",
+    brand_name: "중소기업사업전환지원단",
+    logo_url: null,
+    contact_info: "1661-0783",
+    created_at: "2026-10-17T00:00:00.000Z",
+  },
+];
+
+/** t.다이어리 공식 행사 일정 시드 (관리자 등록 · 캘린더 마커 표시) */
+export const mockDiaryEvents: DiaryEvent[] = [
+  {
+    id: "diary-evt-donghwa-01",
+    diary_id: "diary-brand-donghwa-av",
+    title: "2027 스마트 다이어리 신년 배포 행사",
+    description: "전국 대리점 대상 2027 스마트 다이어리 신제품 배포 및 활용 설명회",
+    event_date: "2027-01-05",
+    is_public: true,
+    send_alimtalk: true,
+  },
+  {
+    id: "diary-evt-donghwa-02",
+    diary_id: "diary-brand-donghwa-av",
+    title: "설 연휴 고객센터 운영 안내",
+    description: "설 연휴 기간 고객센터 운영시간 단축 안내",
+    event_date: "2027-02-06",
+    is_public: true,
+    send_alimtalk: false,
+  },
+  {
+    id: "diary-evt-sme-01",
+    diary_id: "diary-brand-sme-transform",
+    title: "중소기업 사업전환 지원사업 설명회",
+    description: "2027년도 사업전환 지원사업 공고 및 신청 절차 설명회",
+    event_date: "2027-01-15",
+    is_public: true,
+    send_alimtalk: true,
+  },
+  {
+    id: "diary-evt-sme-02",
+    diary_id: "diary-brand-sme-transform",
+    title: "사업전환계획 승인 신청 마감",
+    description: "1차 사업전환계획 승인 신청 접수 마감일",
+    event_date: "2027-01-31",
+    is_public: true,
+    send_alimtalk: true,
   },
 ];
 

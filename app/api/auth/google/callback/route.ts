@@ -8,8 +8,11 @@ import { saveGoogleTokens } from "@/lib/calendar/googleCalendar";
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get("code");
-  const state = searchParams.get("state"); // userId
-  const userId = state || "user-001";
+  const rawState = searchParams.get("state"); // "userId" 또는 "userId::encodedRedirectPath"
+  const [stateUserId, encodedRedirectPath] = (rawState || "").split("::");
+  const userId = stateUserId || "user-001";
+  const redirectPath = encodedRedirectPath ? decodeURIComponent(encodedRedirectPath) : "/workspace";
+  const safeRedirectPath = redirectPath.startsWith("/") ? redirectPath : "/workspace";
 
   const host = request.headers.get("host") || "localhost:3000";
   const protocol = host.includes("localhost") ? "http" : "https";
@@ -62,7 +65,7 @@ export async function GET(request: NextRequest) {
           is_active: true,
         });
 
-        return NextResponse.redirect(`${protocol}://${host}/workspace?google_sync=success`);
+        return NextResponse.redirect(`${protocol}://${host}${safeRedirectPath}?google_sync=success`);
       }
     } catch (err) {
       console.error("Google OAuth token exchange error:", err);
@@ -80,5 +83,5 @@ export async function GET(request: NextRequest) {
     is_active: true,
   });
 
-  return NextResponse.redirect(`${protocol}://${host}/workspace?google_sync=success`);
+  return NextResponse.redirect(`${protocol}://${host}${safeRedirectPath}?google_sync=success`);
 }

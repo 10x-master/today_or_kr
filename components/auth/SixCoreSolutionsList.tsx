@@ -1,7 +1,7 @@
 import { Building2, Coins, FileSignature, MapPinned, Mic, Store } from "lucide-react";
 
 const SIX_CORE_SOLUTIONS = [
-  { icon: Mic, name: "t.note", desc: "음성 메모 · AI 일정 비서", color: "text-amber-600 bg-amber-50" },
+  { icon: Mic, name: "t.note & t.다이어리", desc: "음성 메모 · 스마트 캘린더 일정 비서", color: "text-amber-600 bg-amber-50" },
   { icon: Store, name: "t.홈피 & 세일즈", desc: "소상공인 모바일 홈 & CRM", color: "text-emerald-600 bg-emerald-50" },
   { icon: FileSignature, name: "t.sign", desc: "말 한마디로 완성하는 음성 전자계약", color: "text-indigo-600 bg-indigo-50" },
   { icon: MapPinned, name: "t.check", desc: "지오펜싱 출퇴근 · 현장 안심 인증", color: "text-rose-600 bg-rose-50" },

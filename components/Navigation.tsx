@@ -311,6 +311,16 @@ export const LAUNCHER_SECTIONS: LauncherSection[] = [
         badge: "2-Tap",
         keywords: "투데이노트 사진 음성 소싱룸 숏링크 링크픽 등록",
       },
+      {
+        id: "app-t-diary",
+        section: "WORK",
+        title: "t.다이어리 스마트 캘린더",
+        short: "t.다이어리",
+        description: "지류 다이어리 결합 브랜드 공식 행사 일정과 개인 일정을 통합하는 음성 메모 캘린더",
+        href: "/t-diary",
+        icon: "📔",
+        keywords: "다이어리 캘린더 음성메모 지류 행사일정",
+      },
     ],
   },
   {

@@ -1,0 +1,446 @@
+"use client";
+
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import {
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Mic,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
+import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
+import { getCurrentAuthUser } from "@/lib/auth/kakaoAuth";
+import VoiceTaskInput, { type ParsedVoiceTask } from "@/components/workspace/VoiceTaskInput";
+import type { DiaryBrand, DiaryEvent } from "@/types/diary";
+
+interface PersonalDiaryEvent {
+  id: string;
+  date: string; // "YYYY-MM-DD"
+  title: string;
+  source: "voice" | "manual";
+}
+
+const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+function toDateStr(year: number, month: number, day: number) {
+  return `${year}-${pad2(month + 1)}-${pad2(day)}`;
+}
+
+function escapeIcsText(text: string) {
+  return text.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+}
+
+function TDiaryPageContent() {
+  const searchParams = useSearchParams();
+  const brandSlug = searchParams.get("brand");
+  const storageKey = `today_diary_events_${brandSlug || "default"}`;
+
+  const today = useMemo(() => new Date(), []);
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth()); // 0-indexed
+  const [selectedDate, setSelectedDate] = useState(toDateStr(today.getFullYear(), today.getMonth(), today.getDate()));
+
+  const [brand, setBrand] = useState<DiaryBrand | null>(null);
+  const [officialEvents, setOfficialEvents] = useState<DiaryEvent[]>([]);
+  const [brandLoading, setBrandLoading] = useState(!!brandSlug);
+
+  const [personalEvents, setPersonalEvents] = useState<PersonalDiaryEvent[]>([]);
+  const [manualTitle, setManualTitle] = useState("");
+
+  const [userId, setUserId] = useState("user-001");
+  const [googleConnected, setGoogleConnected] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2600);
+  };
+
+  // 브랜드 정보 및 공식 행사 일정 조회
+  useEffect(() => {
+    if (!brandSlug) {
+      setBrand(null);
+      setOfficialEvents([]);
+      setBrandLoading(false);
+      return;
+    }
+    setBrandLoading(true);
+    fetch(`/api/t-diary?brand=${encodeURIComponent(brandSlug)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setBrand(data.brand || null);
+        setOfficialEvents(data.events || []);
+      })
+      .catch(() => {
+        setBrand(null);
+        setOfficialEvents([]);
+      })
+      .finally(() => setBrandLoading(false));
+  }, [brandSlug]);
+
+  // 개인 일정 로컬스토리지 복원
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      setPersonalEvents(saved ? JSON.parse(saved) : []);
+    } catch {
+      setPersonalEvents([]);
+    }
+  }, [storageKey]);
+
+  // 로그인 사용자 및 구글 캘린더 연동 상태 확인
+  useEffect(() => {
+    getCurrentAuthUser().then((user) => {
+      const uid = user?.id || "user-001";
+      setUserId(uid);
+      fetch(`/api/auth/google/status?userId=${encodeURIComponent(uid)}`)
+        .then((res) => res.json())
+        .then((data) => setGoogleConnected(!!data.isConnected))
+        .catch(() => {});
+    });
+
+    if (searchParams.get("google_sync") === "success") {
+      showToast("📅 구글 캘린더 연동이 완료되었습니다!");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const savePersonalEvents = (next: PersonalDiaryEvent[]) => {
+    setPersonalEvents(next);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(next));
+    } catch {}
+  };
+
+  const addPersonalEvent = (date: string, title: string, source: "voice" | "manual") => {
+    const next = [...personalEvents, { id: `diary-personal-${Date.now()}`, date, title, source }];
+    savePersonalEvents(next);
+    setSelectedDate(date);
+
+    if (googleConnected) {
+      fetch("/api/calendar/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          summary: title,
+          startDateTime: new Date(`${date}T09:00:00`).toISOString(),
+        }),
+      }).catch(() => {});
+    }
+  };
+
+  const handleVoiceParsed = (task: ParsedVoiceTask) => {
+    const date = task.dueDate || selectedDate;
+    addPersonalEvent(date, task.title, "voice");
+    showToast(`🎙️ "${task.title}" 일정이 ${date}에 등록되었습니다.`);
+  };
+
+  const handleManualAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualTitle.trim()) return;
+    addPersonalEvent(selectedDate, manualTitle.trim(), "manual");
+    setManualTitle("");
+    showToast(`✅ ${selectedDate}에 일정이 등록되었습니다.`);
+  };
+
+  const handleDeletePersonal = (id: string) => {
+    savePersonalEvents(personalEvents.filter((e) => e.id !== id));
+  };
+
+  const handleToggleGoogleSync = () => {
+    if (googleConnected) {
+      fetch("/api/auth/google/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, action: "disconnect" }),
+      }).then(() => {
+        setGoogleConnected(false);
+        showToast("구글 캘린더 연동이 해제되었습니다.");
+      });
+      return;
+    }
+
+    setIsSyncing(true);
+    const currentPath = `/t-diary${brandSlug ? `?brand=${encodeURIComponent(brandSlug)}` : ""}`;
+    window.location.href = `/api/auth/google?userId=${encodeURIComponent(userId)}&redirect=${encodeURIComponent(currentPath)}`;
+  };
+
+  const handleExportIcs = () => {
+    const allEvents = [
+      ...officialEvents.map((e) => ({ id: e.id, date: e.event_date, title: e.title, description: e.description || "" })),
+      ...personalEvents.map((e) => ({ id: e.id, date: e.date, title: e.title, description: "" })),
+    ];
+
+    const nowStamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+    const vevents = allEvents
+      .map(
+        (e) => `BEGIN:VEVENT
+UID:${e.id}@today.or.kr
+DTSTAMP:${nowStamp}
+DTSTART;VALUE=DATE:${e.date.replace(/-/g, "")}
+SUMMARY:${escapeIcsText(e.title)}
+DESCRIPTION:${escapeIcsText(e.description)}
+END:VEVENT`
+      )
+      .join("\r\n");
+
+    const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Today.//t.diary//KO
+METHOD:PUBLISH
+${vevents}
+END:VCALENDAR`;
+
+    const blob = new Blob([icsContent], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${brand?.brand_name || "today"}-diary.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("📆 iCal(.ics) 파일로 내보냈습니다.");
+  };
+
+  // 캘린더 그리드 계산
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const startWeekday = new Date(viewYear, viewMonth, 1).getDay();
+  const gridCells: Array<{ day: number; dateStr: string } | null> = [
+    ...Array(startWeekday).fill(null),
+    ...Array.from({ length: daysInMonth }, (_, i) => ({
+      day: i + 1,
+      dateStr: toDateStr(viewYear, viewMonth, i + 1),
+    })),
+  ];
+
+  const eventsByDate = useMemo(() => {
+    const map: Record<string, { official: DiaryEvent[]; personal: PersonalDiaryEvent[] }> = {};
+    officialEvents.forEach((e) => {
+      map[e.event_date] ??= { official: [], personal: [] };
+      map[e.event_date].official.push(e);
+    });
+    personalEvents.forEach((e) => {
+      map[e.date] ??= { official: [], personal: [] };
+      map[e.date].personal.push(e);
+    });
+    return map;
+  }, [officialEvents, personalEvents]);
+
+  const selectedDayEvents = eventsByDate[selectedDate] || { official: [], personal: [] };
+  const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
+
+  const navigateMonth = (delta: number) => {
+    let nextMonth = viewMonth + delta;
+    let nextYear = viewYear;
+    if (nextMonth < 0) {
+      nextMonth = 11;
+      nextYear -= 1;
+    } else if (nextMonth > 11) {
+      nextMonth = 0;
+      nextYear += 1;
+    }
+    setViewMonth(nextMonth);
+    setViewYear(nextYear);
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-white">
+      {/* 토스트 */}
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-bold text-white shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+          <CheckCircle2 className="h-4 w-4 text-blue-400 shrink-0" />
+          <span>{toast}</span>
+        </div>
+      )}
+
+      <div className="mx-auto w-full max-w-2xl px-4 py-6 sm:px-6">
+        {/* 상단 네비게이션 */}
+        <div className="flex items-center justify-between">
+          <UnifiedHomeReturnAnchor currentModule="t-diary" />
+        </div>
+
+        {/* 브랜드 헤더 (?brand=xxx) */}
+        {brandSlug && !brandLoading && brand && (
+          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+            {brand.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={brand.logo_url} alt={brand.brand_name} className="h-11 w-11 rounded-xl object-cover shrink-0" />
+            ) : (
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-black text-white">
+                {brand.brand_name.slice(0, 1)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <h1 className="text-base font-black text-slate-900 truncate">
+                {brand.brand_name} 2027 스마트 다이어리
+              </h1>
+              {brand.contact_info && (
+                <p className="text-[11px] text-slate-400 truncate">{brand.contact_info}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!brandSlug && (
+          <div className="mt-4">
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">t.다이어리 스마트 캘린더</h1>
+            <p className="mt-0.5 text-xs text-slate-400">지류 다이어리와 결합되는 공식 행사 일정 & 개인 일정 통합 캘린더</p>
+          </div>
+        )}
+
+        {/* 구글 캘린더 연동 / iCal 내보내기 */}
+        <div className="mt-4 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleGoogleSync}
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-colors cursor-pointer ${
+              googleConnected
+                ? "border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+            <span>{googleConnected ? "구글 캘린더 연동됨" : "구글 캘린더 연동"}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleExportIcs}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors cursor-pointer"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>iCal(.ics) 내보내기</span>
+          </button>
+        </div>
+
+        {/* 월간 캘린더 */}
+        <div className="mt-5 rounded-2xl border border-slate-100 p-4">
+          <div className="flex items-center justify-between">
+            <button type="button" onClick={() => navigateMonth(-1)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer" aria-label="이전 달">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <span className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <CalendarDays className="h-4 w-4 text-blue-600" />
+              {viewYear}년 {viewMonth + 1}월
+            </span>
+            <button type="button" onClick={() => navigateMonth(1)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer" aria-label="다음 달">
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-400">
+            {WEEKDAY_LABELS.map((w) => (
+              <div key={w}>{w}</div>
+            ))}
+          </div>
+
+          <div className="mt-1 grid grid-cols-7 gap-1">
+            {gridCells.map((cell, idx) => {
+              if (!cell) return <div key={`blank-${idx}`} />;
+              const dayData = eventsByDate[cell.dateStr];
+              const isSelected = cell.dateStr === selectedDate;
+              const isToday = cell.dateStr === todayStr;
+              return (
+                <button
+                  key={cell.dateStr}
+                  type="button"
+                  onClick={() => setSelectedDate(cell.dateStr)}
+                  className={`relative flex flex-col items-center gap-0.5 rounded-xl py-2 text-xs transition-colors cursor-pointer ${
+                    isSelected ? "bg-slate-900 text-white font-bold" : isToday ? "bg-blue-50 text-blue-700 font-bold" : "text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  <span>{cell.day}</span>
+                  <span className="flex gap-0.5 h-1">
+                    {dayData?.official.length ? <span className="h-1 w-1 rounded-full bg-amber-400" /> : null}
+                    {dayData?.personal.length ? <span className={`h-1 w-1 rounded-full ${isSelected ? "bg-white" : "bg-blue-500"}`} /> : null}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 선택된 날짜 상세 일정 */}
+        <div className="mt-5 space-y-2">
+          <h2 className="text-xs font-bold text-slate-400">{selectedDate} 일정</h2>
+
+          {selectedDayEvents.official.map((e) => (
+            <div key={e.id} className="rounded-xl border border-amber-100 bg-amber-50/50 p-3">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                <span>공식 행사 일정</span>
+              </div>
+              <p className="mt-1 text-xs font-bold text-slate-900">{e.title}</p>
+              {e.description && <p className="mt-0.5 text-[11px] text-slate-500">{e.description}</p>}
+            </div>
+          ))}
+
+          {selectedDayEvents.personal.map((e) => (
+            <div key={e.id} className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-500" />
+                <span className="text-xs text-slate-800 truncate">{e.title}</span>
+                {e.source === "voice" && <Mic className="h-3 w-3 text-slate-300 shrink-0" />}
+              </div>
+              <button type="button" onClick={() => handleDeletePersonal(e.id)} className="p-1 text-slate-300 hover:text-rose-600 cursor-pointer shrink-0">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+
+          {!selectedDayEvents.official.length && !selectedDayEvents.personal.length && (
+            <p className="text-[11px] text-slate-300">등록된 일정이 없습니다.</p>
+          )}
+
+          {/* 수동 일정 추가 */}
+          <form onSubmit={handleManualAdd} className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-1.5 focus-within:ring-2 focus-within:ring-blue-500/20">
+            <input
+              type="text"
+              value={manualTitle}
+              onChange={(e) => setManualTitle(e.target.value)}
+              placeholder={`${selectedDate}에 일정 추가`}
+              className="flex-1 bg-transparent px-2 py-1.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden"
+            />
+            <button
+              type="submit"
+              disabled={!manualTitle.trim()}
+              className="flex items-center gap-1 rounded-lg bg-slate-900 disabled:opacity-30 px-3 py-1.5 text-xs font-bold text-white cursor-pointer"
+            >
+              <Check className="h-3 w-3" />
+              <span>추가</span>
+            </button>
+          </form>
+        </div>
+
+        {/* 음성 메모 (t.note) */}
+        <div className="mt-5 rounded-2xl border border-slate-100 p-4">
+          <h2 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
+            <Mic className="h-3.5 w-3.5 text-blue-600" />
+            음성 메모로 바로 일정 등록 (t.note)
+          </h2>
+          <p className="mt-0.5 text-[11px] text-slate-400">
+            말씀하신 내용이 자동으로 분석되어 캘린더 날짜에 텍스트로 등록됩니다.
+          </p>
+          <VoiceTaskInput onTaskParsed={handleVoiceParsed} className="mt-3" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function TDiaryPage() {
+  return (
+    <Suspense fallback={null}>
+      <TDiaryPageContent />
+    </Suspense>
+  );
+}

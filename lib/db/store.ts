@@ -15,6 +15,8 @@ import {
   mockPlatformProducts,
   mockLocalAds,
   mockUsers,
+  mockDiaryBrands,
+  mockDiaryEvents,
 } from "@/lib/db/mockSeed";
 import type {
   LocalPickCategory,
@@ -45,6 +47,7 @@ import type {
   AdStatus,
 } from "@/types/officialNotice";
 import type { AppPwaSetting, AppPwaTarget } from "@/types/pwa";
+import type { DiaryBrand, DiaryEvent } from "@/types/diary";
 
 const AUTO_BLIND_THRESHOLD = 3;
 
@@ -149,6 +152,17 @@ export function toggleWorkLogStatus(id: string): WorkLog | null {
 export function getAppPwaSetting(target: AppPwaTarget = "TODAY_MAIN"): AppPwaSetting {
   const setting = mockAppPwaSettings.find((s) => s.app_target === target);
   return setting || mockAppPwaSettings[0];
+}
+
+/** t.다이어리 브랜드 slug 조회 (?brand=xxx 쿼리 파라미터 식별용) */
+export function getDiaryBrandBySlug(slug: string): DiaryBrand | null {
+  return mockDiaryBrands.find((b) => b.brand_slug === slug) || null;
+}
+
+/** t.다이어리 공식 행사 일정 조회 (브랜드 미지정 시 빈 배열) */
+export function getDiaryEvents(diaryId?: string | null): DiaryEvent[] {
+  if (!diaryId) return [];
+  return mockDiaryEvents.filter((e) => e.diary_id === diaryId);
 }
 
 /** 티노트/티단노트(today_notes) 목록 조회 */
