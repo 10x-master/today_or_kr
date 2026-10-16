@@ -46,7 +46,8 @@ export function UnifiedHomeReturnAnchor({
       title="Today. 최상위 포털 메인으로 이동"
     >
       <ArrowLeft className="h-3.5 w-3.5 text-slate-400 group-hover:-translate-x-0.5 group-hover:text-blue-600 transition-transform" />
-      <TodayAppIcon theme="light" size={20} />
+      {/* 아이콘은 모바일 상단에서만, PC 데스크톱에서는 워드마크만 노출 */}
+      <TodayAppIcon theme="light" size={20} className="sm:hidden" />
       <div className="flex items-center gap-1">
         <TodayWordmark theme="light" size="sm" className="group-hover:text-blue-600 transition-colors" />
         <span className="text-[11px] text-slate-500 font-normal">홈으로</span>
@@ -70,7 +71,8 @@ export function TodayBreadcrumbs({ items, className = "" }: TodayBreadcrumbsProp
         href="/"
         className="font-bold text-slate-900 hover:text-blue-600 transition-colors flex items-center gap-1 shrink-0"
       >
-        <TodayAppIcon theme="light" size={16} />
+        {/* 아이콘은 모바일 상단에서만, PC 데스크톱에서는 워드마크만 노출 */}
+        <TodayAppIcon theme="light" size={16} className="sm:hidden" />
         <TodayWordmark theme="light" size="sm" />
       </Link>
 

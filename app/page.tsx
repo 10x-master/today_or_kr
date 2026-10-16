@@ -59,7 +59,7 @@ import {
   personaToRoleGroup,
   type TopMode,
 } from "@/components/Navigation";
-import { TodayAppIcon, TodayWordmark } from "@/components/brand/TodayLogo";
+import { TodayWordmark } from "@/components/brand/TodayLogo";
 import QuickMenuGrid from "@/components/home/QuickMenuGrid";
 import InstallAppButton from "@/components/common/InstallAppButton";
 import type { UserPersona } from "@/types/persona";
@@ -536,8 +536,8 @@ export default function Home({ initialDong }: HomeProps = {}) {
           <aside className="hidden lg:flex lg:col-span-3 xl:col-span-2 flex-col gap-3 h-auto">
             {/* 로고 & 슬로건 */}
             <div className="border-b border-slate-100 pb-2.5 space-y-1">
+              {/* PC 데스크톱 사이드바: 앱 아이콘 없이 워드마크만 단독 노출 */}
               <Link href="/" className="inline-flex items-center gap-2">
-                <TodayAppIcon theme="light" size={36} />
                 <div>
                   <TodayWordmark theme="light" size="lg" />
                   <p className="text-[10px] text-slate-400 font-normal">

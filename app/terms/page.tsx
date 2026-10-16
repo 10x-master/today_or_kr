@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   ArrowLeft,
+  Building2,
   FileText,
   Scale,
   Shield,
@@ -10,6 +11,12 @@ import {
   Video,
   CheckCircle2,
 } from "lucide-react";
+import {
+  LEGAL_OPERATOR_NAME,
+  PRIVACY_OFFICER_NAME,
+  PRIVACY_OFFICER_CONTACT,
+  DATA_RETENTION_POLICY_SUMMARY,
+} from "@/lib/legal/legalInfo";
 
 export default function TermsPage() {
   return (
@@ -23,9 +30,17 @@ export default function TermsPage() {
           <ArrowLeft className="h-4 w-4" />
           Today. 홈으로 돌아가기
         </Link>
-        <span className="text-xs font-semibold text-slate-400">
-          최종 개정일: 2026년 10월 13일
-        </span>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/privacy"
+            className="text-xs font-bold text-slate-600 hover:text-slate-900 underline underline-offset-2 transition-colors"
+          >
+            개인정보 처리방침 보기
+          </Link>
+          <span className="text-xs font-semibold text-slate-400">
+            최종 개정일: 2026년 10월 17일
+          </span>
+        </div>
       </div>
 
       <div className="mt-8 space-y-8 bg-white p-6 sm:p-10 rounded-3xl border border-slate-200 shadow-sm">
@@ -40,10 +55,29 @@ export default function TermsPage() {
                 투데이(Today.) 서비스 이용약관 및 초상권 면책 규정
               </h1>
               <p className="mt-1 text-xs text-slate-500">
-                한국AI인테리어공간협회 주관 하이퍼로컬 공공 팩트 피드 및 엠버서더 플랫폼
+                {LEGAL_OPERATOR_NAME} 운영 하이퍼로컬 공공 팩트 피드 및 엠버서더 플랫폼
               </p>
             </div>
           </div>
+        </div>
+
+        {/* 운영 주체 및 개인정보 보호책임자 고지 박스 */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 text-xs text-slate-700 space-y-2">
+          <div className="flex items-center gap-2 font-black text-slate-900 text-sm">
+            <Building2 className="h-5 w-5 text-blue-600 shrink-0" />
+            <span>서비스 운영 주체 및 개인정보 보호책임자 고지</span>
+          </div>
+          <ul className="space-y-1.5 pl-1">
+            <li>
+              <strong className="text-slate-900">서비스 운영 주체 :</strong> {LEGAL_OPERATOR_NAME}
+            </li>
+            <li>
+              <strong className="text-slate-900">개인정보 보호책임자(CPO) :</strong> {PRIVACY_OFFICER_NAME} (문의 {PRIVACY_OFFICER_CONTACT})
+            </li>
+            <li>
+              <strong className="text-slate-900">개인정보 보관 및 파기 기준 :</strong> {DATA_RETENTION_POLICY_SUMMARY}
+            </li>
+          </ul>
         </div>
 
         {/* 중요 고시 안내 박스 */}
@@ -66,7 +100,7 @@ export default function TermsPage() {
               제1조 (목적 및 정의)
             </h2>
             <p>
-              1. 본 약관은 한국AI인테리어공간협회(이하 &quot;협회&quot;) 및 투데이 운영팀이 제공하는 로컬 팩트 미디어, 아파트 단지 협업 시스템, 티노트(t.note), 엠버서더 쇼츠 쇼룸(이하 &quot;서비스&quot;)의 이용 조건과 회원 및 운영자의 권리, 의무, 책임 사항을 명확히 함을 목적으로 합니다.
+              1. 본 약관은 {LEGAL_OPERATOR_NAME}(이하 &quot;운영자&quot;) 및 투데이 운영팀이 제공하는 로컬 팩트 미디어, 아파트 단지 협업 시스템, 티노트(t.note), 엠버서더 쇼츠 쇼룸(이하 &quot;서비스&quot;)의 이용 조건과 회원 및 운영자의 권리, 의무, 책임 사항을 명확히 함을 목적으로 합니다.
             </p>
             <p>
               2. &quot;회원&quot;이라 함은 카카오 간편인증 또는 일반 절차를 통해 본 약관에 동의하고 서비스 이용 자격을 획득한 개인 또는 단체를 의미합니다.
@@ -100,7 +134,7 @@ export default function TermsPage() {
               2. 회원이 등록한 게시물 또는 미디어로 인하여 제3자로부터 초상권, 저작권, 사생활의 비밀 침해, 명예훼손 등에 따른 손해배상 청구, 소송, 형사 고소·고발이 제기되는 경우, <strong>모든 민·형사상 법적 책임 및 이로 인하여 발생하는 일체의 손해배상금, 변호사 보수 등 비용은 등록한 회원(작성자) 본인이 전적으로 부담합니다.</strong>
             </p>
             <p>
-              3. 협회 및 투데이 서비스 제공자는 회원이 게시한 콘텐츠의 진실성이나 적법성에 대해 사전 검열 의무를 부담하지 아니하며, 회원 간 또는 회원과 제3자 간의 분쟁에 대해 어떠한 법적 책임도 부담하지 않습니다.
+              3. 운영자 및 투데이 서비스 제공자는 회원이 게시한 콘텐츠의 진실성이나 적법성에 대해 사전 검열 의무를 부담하지 아니하며, 회원 간 또는 회원과 제3자 간의 분쟁에 대해 어떠한 법적 책임도 부담하지 않습니다.
             </p>
           </section>
 
