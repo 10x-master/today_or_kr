@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDown, Search, Bell, Sparkles } from "lucide-react";
+import { ChevronDown, Search, Bell } from "lucide-react";
 import type { AuthProfile } from "@/types/auth";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 import InstallAppButton from "@/components/common/InstallAppButton";
+import MQuickMenu from "@/components/layout/MQuickMenu";
 
 interface MobileTopBarProps {
   dongName: string;
@@ -30,38 +31,27 @@ export default function MobileTopBar({
 }: MobileTopBarProps) {
   return (
     <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-slate-100">
-      <div className="flex items-center justify-between px-3 sm:px-4 h-14">
-        {/* 좌측: 현재 동네 이름 (투데이 대표 블루 컬러 text-blue-600 font-bold text-xl) */}
+      <div className="flex items-center justify-between gap-1.5 px-3 sm:px-4 h-14">
+        {/* 좌측: 현재 동네 이름 (투데이 대표 블루 컬러 text-blue-600 font-bold text-xl) — 말줄임 처리로 우측 버튼과 겹침 방지 */}
         <button
           type="button"
           onClick={onOpenDongSelector}
-          className="group flex items-center gap-1.5 py-1 text-left focus:outline-hidden active:opacity-70 transition-opacity"
+          className="group flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left focus:outline-hidden active:opacity-70 transition-opacity"
           aria-label="내 동네 핀 변경"
         >
-          <span className="text-xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700">
+          <span className="truncate text-xl font-bold tracking-tight text-blue-600 group-hover:text-blue-700">
             {dongName || "내 동네"}
           </span>
-          <ChevronDown className="h-4 w-4 text-blue-600 transition-transform group-hover:translate-y-0.5" />
+          <ChevronDown className="h-4 w-4 shrink-0 text-blue-600 transition-transform group-hover:translate-y-0.5" />
           {currentUser?.role === "SUPER_ADMIN" && (
-            <span className="ml-0.5 rounded-full bg-blue-100 px-1.5 py-0.2 text-[9px] font-black text-blue-800 border border-blue-300">
+            <span className="ml-0.5 shrink-0 rounded-full bg-blue-100 px-1.5 py-0.2 text-[9px] font-black text-blue-800 border border-blue-300">
               👑 관리
             </span>
           )}
         </button>
 
-        {/* 우측: 마이 메뉴(✨), 검색(🔍), 알림(🔔), 프로필(👤) */}
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          {/* 스마트 마이 메뉴 앱 런처 버튼 */}
-          <button
-            type="button"
-            onClick={() => window.dispatchEvent(new CustomEvent("today_open_app_launcher"))}
-            className="flex h-8 sm:h-9 px-2 sm:px-2.5 items-center gap-1 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-bold text-xs active:scale-95 cursor-pointer border border-blue-200/80 shadow-2xs"
-            title="스마트 마이 메뉴 앱 런처 열기"
-            aria-label="마이 메뉴"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-400 shrink-0" />
-            <span className="hidden xs:inline">마이 메뉴</span>
-          </button>
+        {/* 우측: M 퀵메뉴, 검색(🔍), 알림(🔔), 프로필(👤) — flex-wrap 방지, 고정 폭 유지 */}
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           {/* 검색 아이콘 */}
           <button
             type="button"
@@ -108,6 +98,9 @@ export default function MobileTopBar({
             triggerStyle="icon_only"
             align="right"
           />
+
+          {/* 볼드 [M] t.솔루션 퀵메뉴 — 터치 시 화면 안에 고정되는 슬림 드롭다운 */}
+          <MQuickMenu />
         </div>
       </div>
     </header>

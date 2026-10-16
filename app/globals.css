@@ -31,3 +31,10 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* 모바일 뷰포트 가로 스크롤바(덜렁거림) 원천 차단 */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100%;
+}

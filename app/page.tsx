@@ -61,6 +61,7 @@ import {
 } from "@/components/Navigation";
 import { TodayWordmark } from "@/components/brand/TodayLogo";
 import QuickMenuGrid from "@/components/home/QuickMenuGrid";
+import CoreSolutionsGrid from "@/components/home/CoreSolutionsGrid";
 import InstallAppButton from "@/components/common/InstallAppButton";
 import type { UserPersona } from "@/types/persona";
 
@@ -706,7 +707,7 @@ export default function Home({ initialDong }: HomeProps = {}) {
           {/* ============================================================== */}
           {/* Col 3~9 (중앙 메인 스테이지): 카카오 비즈보드, 4분할 포털 보드, 엠버서더 쇼츠, 고밀도 피드 */}
           {/* ============================================================== */}
-          <div className="col-span-12 lg:col-span-6 xl:col-span-7 bg-white relative pb-20 lg:pb-8 border-x border-slate-100 overflow-x-hidden min-h-screen lg:min-h-0">
+          <div className="col-span-12 lg:col-span-6 xl:col-span-7 bg-white relative pb-4 lg:pb-8 border-x border-slate-100 overflow-x-hidden lg:min-h-0">
             {/* 모바일 상단 네비게이션바 (MobileTopBar: 모바일에서만 노출, PC는 좌우측 사이드바 활용) */}
             <div className="lg:hidden">
               <MobileTopBar
@@ -1156,6 +1157,9 @@ export default function Home({ initialDong }: HomeProps = {}) {
               {/* ============================================================== */}
               {(activeTab === "home" || activeTab === "feed") && (
                 <div>
+                  {/* 8대 핵심 솔루션 아이콘 그리드 (모바일 4x2 / PC 8x1) — 상단 전면 배치, 가로 스크롤 없음 */}
+                  <CoreSolutionsGrid />
+
                   {/* 홈: 빠른 메뉴 (최근 사용 → 핀 → 역할 기본 순 자동 정렬) */}
                   {activeTab === "home" && (
                     <QuickMenuGrid
@@ -1164,8 +1168,8 @@ export default function Home({ initialDong }: HomeProps = {}) {
                       onOpenAllServices={() => setIsAppLauncherModalOpen(true)}
                     />
                   )}
-                  {/* 역할 선택 칩: [👤 입주민], [👔 동대표], [🏢 관리소장], [🏠 동네주민] */}
-                  <div className="px-3 py-1.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar border-b border-slate-100 bg-white">
+                  {/* 역할 선택 칩: [👤 입주민], [👔 동대표], [🏢 관리소장], [🏠 동네주민] — flex-wrap으로 가로 스크롤 제거 */}
+                  <div className="px-3 py-1.5 flex flex-wrap items-center gap-1.5 border-b border-slate-100 bg-white">
                     <span className="text-[10px] font-normal text-slate-400 shrink-0">
                       맞춤시각:
                     </span>
@@ -1189,8 +1193,8 @@ export default function Home({ initialDong }: HomeProps = {}) {
                     })}
                   </div>
 
-                  {/* 상단 카테고리 칩 바 */}
-                  <div className="sticky top-0 lg:top-10 z-30 flex items-center gap-1.5 overflow-x-auto no-scrollbar bg-white/95 backdrop-blur-md px-3 py-1.5 border-b border-slate-100">
+                  {/* 상단 카테고리 칩 바 — flex-wrap으로 구형 가로 슬라이더 제거 */}
+                  <div className="sticky top-0 lg:top-10 z-30 flex flex-wrap items-center gap-1.5 bg-white/95 backdrop-blur-md px-3 py-1.5 border-b border-slate-100">
                     {CATEGORY_CHIPS.map((cat) => {
                       const active = selectedCategory === cat.id;
                       return (
@@ -1357,9 +1361,9 @@ export default function Home({ initialDong }: HomeProps = {}) {
           </div>
 
           {/* ============================================================== */}
-          {/* Col 10~12 (우측 360px): t.note 퀵 등록, 링크픽 세일즈 — 프로필은 탑 글로벌 헤더로 단일화됨 */}
+          {/* Col 10~12 (우측 360px, 모바일에서는 메인 피드 하단에 스택): t.note 퀵 등록, 링크픽 세일즈 */}
           {/* ============================================================== */}
-          <aside className="hidden lg:flex lg:col-span-3 xl:col-span-3 flex-col gap-3 h-auto">
+          <aside className="flex flex-col gap-3 h-auto px-3 pt-3 pb-20 border-t-8 border-slate-50 lg:border-t-0 lg:px-0 lg:pt-0 lg:pb-0 lg:col-span-3 xl:col-span-3">
             {/* 1. 🎙️ t.note 빠른 등록기 (구글 캘린더 오늘 일정 위젯 연동) */}
             <div className="border-b border-slate-100 pb-2.5 space-y-2">
               <div className="flex items-center justify-between">
