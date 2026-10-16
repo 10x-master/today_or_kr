@@ -30,9 +30,20 @@ export default function PwaInstallBanner({
   const [isIos, setIsIos] = useState(false);
   const [showIosGuide, setShowIosGuide] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  // PC/태블릿 전면 차단: 터치 환경 + 430px 이하 뷰포트에서만 배너 자체를 마운트한다.
+  const [canShowOnDevice, setCanShowOnDevice] = useState(false);
 
   // 1.5초 딜레이 및 플랫폼 감지 & 동적 매니페스트 바인딩
   useEffect(() => {
+    // PC/태블릿에서는 설치 유도 배너를 DOM에 마운트하지 않는다 — 터치 환경 + 430px 이하 뷰포트 전용
+    const deviceMq = window.matchMedia("(max-width: 430px) and (pointer: coarse)");
+    setCanShowOnDevice(deviceMq.matches);
+    const handleDeviceChange = (e: MediaQueryListEvent) => setCanShowOnDevice(e.matches);
+    deviceMq.addEventListener("change", handleDeviceChange);
+    if (!deviceMq.matches) {
+      return () => deviceMq.removeEventListener("change", handleDeviceChange);
+    }
+
     // 이미 독립 실행형(PWA)으로 진입한 경우 노출 안 함
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -40,14 +51,14 @@ export default function PwaInstallBanner({
 
     if (isStandalone) {
       setIsInstalled(true);
-      return;
+      return () => deviceMq.removeEventListener("change", handleDeviceChange);
     }
 
     // 24시간 닫기 확인
     try {
       const dismissedUntil = localStorage.getItem(`today_pwa_dismissed_${bizId}`);
       if (dismissedUntil && Number(dismissedUntil) > Date.now()) {
-        return;
+        return () => deviceMq.removeEventListener("change", handleDeviceChange);
       }
     } catch {}
 
@@ -128,6 +139,7 @@ export default function PwaInstallBanner({
       clearTimeout(timer);
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("appinstalled", handleAppInstalled);
+      deviceMq.removeEventListener("change", handleDeviceChange);
     };
   }, [bizId, bizName, referrerId, normalizedType, onInstalled]);
 
@@ -159,7 +171,7 @@ export default function PwaInstallBanner({
     } catch {}
   };
 
-  if (!isVisible || isInstalled) return null;
+  if (!canShowOnDevice || !isVisible || isInstalled) return null;
 
   const iconUrl = `/api/pwa/icon/${encodeURIComponent(bizId)}?name=${encodeURIComponent(bizName)}&type=${normalizedType}&size=192`;
 

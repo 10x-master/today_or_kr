@@ -215,9 +215,9 @@ function ShopInShopContent() {
         </div>
       </section>
 
-      {/* 3. 모듈 1: PWA 앱 설치 배너 (PWA_BANNER) */}
+      {/* 3. 모듈 1: PWA 앱 설치 배너 (PWA_BANNER) — PC/태블릿 전면 차단: 430px 이하 모바일 뷰포트 전용 */}
       {isEnabled("PWA_BANNER") && (
-        <section className="max-w-4xl mx-auto px-4 sm:px-6 mb-12">
+        <section className="hidden max-[430px]:block max-w-4xl mx-auto px-4 sm:px-6 mb-12">
           <div className="bg-gradient-to-r from-blue-50/70 to-indigo-50/70 rounded-2xl p-4 sm:p-5 border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">

@@ -21,14 +21,27 @@ export default function PwaInstallBanner({
   const [showBanner, setShowBanner] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [showIosGuide, setShowIosGuide] = useState(false);
+  // PC/태블릿 전면 차단: 터치 환경 + 430px 이하 뷰포트에서만 배너 자체를 마운트한다.
+  const [canShowOnDevice, setCanShowOnDevice] = useState(false);
 
   useEffect(() => {
+    // PC/태블릿에서는 설치 유도 배너를 DOM에 마운트하지 않는다 — 터치 환경 + 430px 이하 뷰포트 전용
+    const deviceMq = window.matchMedia("(max-width: 430px) and (pointer: coarse)");
+    setCanShowOnDevice(deviceMq.matches);
+    const handleDeviceChange = (e: MediaQueryListEvent) => setCanShowOnDevice(e.matches);
+    deviceMq.addEventListener("change", handleDeviceChange);
+    if (!deviceMq.matches) {
+      return () => deviceMq.removeEventListener("change", handleDeviceChange);
+    }
+
     // 이미 독립형 PWA로 실행 중인지 확인
     const isStandalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as unknown as { standalone?: boolean }).standalone;
 
-    if (isStandalone) return;
+    if (isStandalone) {
+      return () => deviceMq.removeEventListener("change", handleDeviceChange);
+    }
 
     // iOS 감지
     const userAgent = window.navigator.userAgent.toLowerCase();
@@ -50,6 +63,7 @@ export default function PwaInstallBanner({
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
+      deviceMq.removeEventListener("change", handleDeviceChange);
     };
   }, []);
 
@@ -66,7 +80,7 @@ export default function PwaInstallBanner({
     }
   };
 
-  if (!showBanner) return null;
+  if (!canShowOnDevice || !showBanner) return null;
 
   return (
     <>
