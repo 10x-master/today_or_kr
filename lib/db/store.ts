@@ -430,13 +430,17 @@ export function createDiaryComment(input: {
 }
 
 /** 티노트/티단노트(today_notes) 목록 조회 */
-export function getTodayNotes(filter?: { kaptCode?: string | null }): TodayNote[] {
+export function getTodayNotes(filter?: { kaptCode?: string | null; userId?: string }): TodayNote[] {
   return mockTodayNotes.filter((note) => {
     if (filter?.kaptCode !== undefined) {
       if (filter.kaptCode === null) {
-        return !note.linked_kapt_code;
+        if (note.linked_kapt_code) return false;
+      } else if (note.linked_kapt_code !== filter.kaptCode) {
+        return false;
       }
-      return note.linked_kapt_code === filter.kaptCode;
+    }
+    if (filter?.userId && note.user_id !== filter.userId) {
+      return false;
     }
     return true;
   });

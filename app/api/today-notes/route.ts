@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
       ? null
       : rawKapt
     : undefined;
+  const userId = searchParams.get("user_id") || undefined;
 
   // 1. Supabase 조회 시도
   try {
@@ -35,6 +36,9 @@ export async function GET(request: NextRequest) {
           query = query.eq("linked_kapt_code", kaptCode);
         }
       }
+      if (userId) {
+        query = query.eq("user_id", userId);
+      }
 
       const { data, error } = await query;
       if (!error && data) {
@@ -51,6 +55,7 @@ export async function GET(request: NextRequest) {
   // 2. Mock store fallback
   const notes = getTodayNotes({
     kaptCode,
+    userId,
   });
 
   return NextResponse.json({
@@ -82,6 +87,9 @@ export async function POST(request: NextRequest) {
       record_date = null,
       t_sign_doc_id = null,
       sign_status = "NONE",
+      is_important = false,
+      reminder_days_before = 7,
+      target_alert_date = null,
     } = body;
 
     if (!title) {
@@ -106,6 +114,7 @@ export async function POST(request: NextRequest) {
             title,
             content,
             note_type,
+            user_id,
             due_date: finalDueDate,
             scheduled_at: scheduled_at || null,
             location: location || null,
@@ -121,6 +130,9 @@ export async function POST(request: NextRequest) {
             record_date,
             t_sign_doc_id,
             sign_status,
+            is_important: Boolean(is_important),
+            reminder_days_before,
+            target_alert_date,
           })
           .select()
           .single();
@@ -140,6 +152,7 @@ export async function POST(request: NextRequest) {
         title,
         content: content || "",
         note_type,
+        user_id,
         due_date: finalDueDate,
         scheduled_at: scheduled_at || null,
         location: location || null,
@@ -155,6 +168,9 @@ export async function POST(request: NextRequest) {
         record_date,
         t_sign_doc_id,
         sign_status,
+        is_important: Boolean(is_important),
+        reminder_days_before,
+        target_alert_date,
       });
       source = "mock";
     }

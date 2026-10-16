@@ -13,6 +13,7 @@ import {
   Plus,
   RotateCcw,
   Square,
+  Star,
   Trash2,
   X,
 } from "lucide-react";
@@ -69,6 +70,7 @@ export default function EnhancedNoteCaptureModal({
 }) {
   const [title, setTitle] = useState("");
   const [recordDate, setRecordDate] = useState(toDateInputValue(new Date()));
+  const [isImportant, setIsImportant] = useState(false);
 
   // 음성 녹음 상태
   const [speechSupported, setSpeechSupported] = useState(true);
@@ -231,7 +233,7 @@ export default function EnhancedNoteCaptureModal({
 
   const handleSubmit = async () => {
     const persistedImageUrls = images.filter((img) => img.isPersisted).map((img) => img.url);
-    const noteTitle = title.trim() || accumulatedText.slice(0, 30) || "새 t.note 기록";
+    const noteTitle = title.trim() || accumulatedText.slice(0, 30) || "새 T.노트 기록";
 
     if (!accumulatedText.trim() && persistedImageUrls.length === 0 && bookmarks.length === 0) {
       setFeedbackMsg("음성 기록, 사진, 웹링크 중 최소 하나는 추가해주세요.");
@@ -255,6 +257,9 @@ export default function EnhancedNoteCaptureModal({
           image_urls: persistedImageUrls,
           bookmark_urls: bookmarks,
           audio_duration: audioSeconds,
+          is_important: isImportant,
+          reminder_days_before: 7,
+          target_alert_date: isImportant ? new Date(`${recordDate}T09:00:00`).toISOString() : null,
         }),
       });
       onSaved?.();
@@ -281,7 +286,7 @@ export default function EnhancedNoteCaptureModal({
 
         <h3 className="flex items-center gap-1.5 pr-6 text-sm font-black text-slate-900">
           <Mic className="h-4 w-4 text-blue-600" />
-          t.note 기록 {diaryEventId ? "(일정에 바인딩됨)" : ""}
+          T.노트 기록 {diaryEventId ? "(일정에 바인딩됨)" : ""}
         </h3>
 
         {/* 제목 */}
@@ -304,6 +309,23 @@ export default function EnhancedNoteCaptureModal({
           />
           <span className="text-[10px] text-slate-400">기록 날짜 (과거 날짜로 소급 작성 가능)</span>
         </div>
+
+        {/* 중요 알림 토글 — D-7부터 메인 알림 큐 최상단 선제 노출 */}
+        <label className="mt-2.5 flex cursor-pointer items-center gap-2 rounded-xl border border-amber-100 bg-amber-50/50 px-3 py-2">
+          <input
+            type="checkbox"
+            checked={isImportant}
+            onChange={(e) => setIsImportant(e.target.checked)}
+            className="h-4 w-4 accent-amber-500 cursor-pointer"
+          />
+          <Star className={`h-3.5 w-3.5 shrink-0 ${isImportant ? "text-amber-500 fill-amber-400" : "text-slate-300"}`} />
+          <span className="text-xs font-bold text-slate-700">⭐ 일주일 전부터 중요 알림</span>
+        </label>
+        {isImportant && (
+          <p className="mt-1 pl-1 text-[10px] text-amber-600">
+            기록 날짜({recordDate}) 기준 D-7부터 메인 알림 큐 최상단에 선제 노출됩니다.
+          </p>
+        )}
 
         {/* 음성 녹음 컨트롤러 */}
         <div className="mt-3 rounded-2xl border border-indigo-100 bg-indigo-50/30 p-3">
@@ -471,7 +493,7 @@ export default function EnhancedNoteCaptureModal({
           className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-2xl bg-blue-600 py-3 text-xs font-bold text-white hover:bg-blue-700 disabled:opacity-40 cursor-pointer transition-colors"
         >
           {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-          t.note 기록 저장
+          T.노트 기록 저장
         </button>
       </div>
     </div>

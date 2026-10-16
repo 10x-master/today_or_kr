@@ -78,14 +78,16 @@ export function TodayWordmark({ theme = "light", size = "md", className = "" }: 
   );
 }
 
-/** 3. 앱 아이콘 — 둥근 스퀴클(Squircle) 안의 't.' (테마별 배경 반전) */
+/** 3. 앱 아이콘 — 둥근 스퀴클(Squircle) 안의 대문자 'T.' 시그니처 심볼 (테마별 배경 반전) */
 interface TodayAppIconProps {
   theme?: LogoTheme;
   size?: number;
   className?: string;
+  /** 포인트 닷 색상 — 미지정 시 시그니처 블루(#3B82F6) */
+  dotColor?: string;
 }
 
-export function TodayAppIcon({ theme = "light", size = 28, className = "" }: TodayAppIconProps) {
+export function TodayAppIcon({ theme = "light", size = 28, className = "", dotColor }: TodayAppIconProps) {
   const bg = theme === "dark" ? "#FFFFFF" : "#0F172A";
   const fg = theme === "dark" ? "#0F172A" : "#FFFFFF";
   return (
@@ -99,18 +101,19 @@ export function TodayAppIcon({ theme = "light", size = 28, className = "" }: Tod
     >
       {/* 스퀴클: rx가 큰 라운드 사각형으로 근사 */}
       <rect x="0" y="0" width="32" height="32" rx="11" fill={bg} />
+      {/* 중앙 대문자 'T' — 볼드·크게 부각되는 시그니처 심볼 */}
       <text
-        x="11.5"
-        y="22.5"
+        x="13.5"
+        y="23.5"
         fontFamily="var(--font-geist-sans), ui-rounded, system-ui, sans-serif"
         fontWeight="800"
-        fontSize="17"
+        fontSize="21"
         fill={fg}
         textAnchor="middle"
       >
-        t
+        T
       </text>
-      <circle cx="21.5" cy="20.5" r="2.4" fill={TODAY_BRAND_DOT_COLOR} />
+      <circle cx="23" cy="22.5" r="3" fill={dotColor || TODAY_BRAND_DOT_COLOR} />
     </svg>
   );
 }

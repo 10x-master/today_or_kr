@@ -75,6 +75,13 @@ export interface DiaryEvent {
   t_sign_doc_id?: string | null;
   /** 'NONE' | 'REQUESTED' | 'COMPLETED' */
   sign_status?: "NONE" | "REQUESTED" | "COMPLETED";
+  // --- T.노트 스마트 알림 큐 (선택 필드, 기본값: is_important=false, reminder_days_before=7) ---
+  /** 중요도 체크 — true면 target_alert_date 기준 D-7부터 최상단 선제 노출 */
+  is_important?: boolean;
+  /** D-N 사전 알림 시작 일수 (기본 7) */
+  reminder_days_before?: number;
+  /** 알림 기준 시각 (ISO) — 미설정 시 event_date를 기준으로 판정 */
+  target_alert_date?: string | null;
 }
 
 /** 웹페이지 스크랩 북마크 (OpenGraph 카드) */

@@ -62,6 +62,7 @@ import {
 import { TodayWordmark } from "@/components/brand/TodayLogo";
 import QuickMenuGrid from "@/components/home/QuickMenuGrid";
 import CoreSolutionsGrid from "@/components/home/CoreSolutionsGrid";
+import PriorityAlertFeed from "@/components/home/PriorityAlertFeed";
 import InstallAppButton from "@/components/common/InstallAppButton";
 import type { UserPersona } from "@/types/persona";
 
@@ -1157,6 +1158,9 @@ export default function Home({ initialDong }: HomeProps = {}) {
               {/* ============================================================== */}
               {(activeTab === "home" || activeTab === "feed") && (
                 <div>
+                  {/* T.노트 스마트 알림 큐 — 최상단 선제 알림(⭐ D-7 중요 / 오늘 실시간) */}
+                  <PriorityAlertFeed />
+
                   {/* 8대 핵심 솔루션 아이콘 그리드 (모바일 4x2 / PC 8x1) — 상단 전면 배치, 가로 스크롤 없음 */}
                   <CoreSolutionsGrid />
 
