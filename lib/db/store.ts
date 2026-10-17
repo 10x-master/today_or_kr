@@ -25,6 +25,7 @@ import {
   mockQuoteRequests,
   mockTnoteCards,
   mockTsignContracts,
+  mockTcheckLogs,
 } from "@/lib/db/mockSeed";
 import type {
   LocalPickCategory,
@@ -68,6 +69,7 @@ import type { CatalogCategory, DiaryProduct, QuoteItem, QuoteRequest, QuoteStatu
 import { normalizeImageUrl, suggestSellPrice } from "@/lib/diary/catalogUtils";
 import type { TnoteCard } from "@/types/note";
 import type { TsignContract } from "@/types/tsign";
+import type { TcheckLog } from "@/types/tcheck";
 
 const AUTO_BLIND_THRESHOLD = 3;
 
@@ -1378,4 +1380,19 @@ export function signTsignContract(
   return contract;
 }
 
+export function getTcheckLogs(filter?: { userId?: string }): TcheckLog[] {
+  return mockTcheckLogs.filter((log) => {
+    if (filter?.userId && log.created_by_user_id !== filter.userId) return false;
+    return log.check_type === "CARD_FEE_DIAGNOSIS";
+  });
+}
 
+export function createTcheckLog(input: Omit<TcheckLog, "id" | "created_at">): TcheckLog {
+  const log: TcheckLog = {
+    ...input,
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+  };
+  mockTcheckLogs.unshift(log);
+  return log;
+}

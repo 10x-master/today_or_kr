@@ -16,6 +16,7 @@ import type {
 import type { AppPwaSetting } from "@/types/pwa";
 import type { TnoteCard } from "@/types/note";
 import type { TsignContract } from "@/types/tsign";
+import type { TcheckLog } from "@/types/tcheck";
 import type {
   DiaryBrand,
   DiaryEvent,
@@ -2741,6 +2742,12 @@ export const mockTsignContracts: TsignContract[] = [
     updated_at: "2026-09-18T14:10:30.000Z",
   },
 ];
+
+/**
+ * t.체크(/t-check) 카드 수수료 진단 기록 시드 (tcheck_logs, check_type = 'CARD_FEE_DIAGNOSIS').
+ * 화면의 초기 상태와 동일하게 빈 배열로 시작하며, 사용자가 진단을 돌릴 때마다 쌓인다.
+ */
+export const mockTcheckLogs: TcheckLog[] = [];
 
 
 
