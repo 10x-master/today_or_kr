@@ -12,7 +12,10 @@ import {
   X,
   ImageIcon,
   Sparkles,
+  Loader2,
 } from "lucide-react";
+import { getCurrentAuthUser } from "@/lib/auth/kakaoAuth";
+import type { TnoteCard } from "@/types/note";
 
 interface SourcingItem {
   id: string;
@@ -28,6 +31,17 @@ interface NoteEntry {
   sourcingItem?: SourcingItem;
   shortLink: string;
   createdAt: string;
+}
+
+function toNoteEntry(card: TnoteCard): NoteEntry {
+  return {
+    id: card.id,
+    photoUrl: card.photo_url || "",
+    caption: card.content || card.title,
+    sourcingItem: card.sourcing_item || undefined,
+    shortLink: card.short_link || "",
+    createdAt: card.created_at ? new Date(card.created_at).toLocaleDateString("ko-KR") : "",
+  };
 }
 
 const SOURCING_ROOM_ITEMS: SourcingItem[] = [
@@ -58,6 +72,8 @@ export default function TodayNoteQuickCapture() {
   const [selectedSourcing, setSelectedSourcing] = useState<SourcingItem | null>(null);
   const [notes, setNotes] = useState<NoteEntry[]>([]);
   const [toast, setToast] = useState<string | null>(null);
+  const [userId, setUserId] = useState("user-001");
+  const [isSaving, setIsSaving] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -73,6 +89,21 @@ export default function TodayNoteQuickCapture() {
       if (timerRef.current) clearInterval(timerRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
+  }, []);
+
+  // 로그인 사용자 확인 후 본인의 투데이노트 카드 기록 불러오기
+  useEffect(() => {
+    getCurrentAuthUser().then((user) => {
+      const resolvedId = user?.id || "user-001";
+      setUserId(resolvedId);
+      fetch(`/api/t-note/cards?user_id=${encodeURIComponent(resolvedId)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const cards: TnoteCard[] = data.cards || [];
+          setNotes(cards.map(toNoteEntry));
+        })
+        .catch(() => {});
+    });
   }, []);
 
   const handlePhotoSelect = (file: File | undefined) => {
@@ -117,23 +148,50 @@ export default function TodayNoteQuickCapture() {
 
   const canRegister = !!photoPreview && voiceCaptured;
 
-  const handleRegister = () => {
-    if (!canRegister || !photoPreview) return;
-    const entry: NoteEntry = {
-      id: `n-${Date.now()}`,
-      photoUrl: photoPreview,
-      caption: MOCK_CAPTIONS[notes.length % MOCK_CAPTIONS.length],
-      sourcingItem: selectedSourcing ?? undefined,
-      shortLink: makeShortLink(),
-      createdAt: "방금 전",
-    };
-    setNotes((prev) => [entry, ...prev]);
-    setPhotoPreview(null);
-    setPhotoSizeInfo(null);
-    setVoiceCaptured(false);
-    setVoiceSeconds(0);
-    setSelectedSourcing(null);
-    showToast("투데이노트가 등록되고 LinkPick 숏링크가 자동 결합되었습니다.");
+  const handleRegister = async () => {
+    if (!canRegister || !photoPreview || isSaving) return;
+    const caption = MOCK_CAPTIONS[notes.length % MOCK_CAPTIONS.length];
+
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/t-note/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          card_type: "NOTE",
+          title: caption.slice(0, 30),
+          content: caption,
+          photo_url: photoPreview,
+          voice_duration_sec: voiceSeconds,
+          sourcing_item: selectedSourcing ?? null,
+          is_public_feed: true,
+          is_private: false,
+          is_anonymous: false,
+        }),
+      });
+      const data = await res.json();
+      const card: TnoteCard | undefined = data.card;
+      const entry: NoteEntry = card
+        ? { ...toNoteEntry(card), createdAt: "방금 전" }
+        : {
+            id: `n-${Date.now()}`,
+            photoUrl: photoPreview,
+            caption,
+            sourcingItem: selectedSourcing ?? undefined,
+            shortLink: makeShortLink(),
+            createdAt: "방금 전",
+          };
+      setNotes((prev) => [entry, ...prev]);
+      setPhotoPreview(null);
+      setPhotoSizeInfo(null);
+      setVoiceCaptured(false);
+      setVoiceSeconds(0);
+      setSelectedSourcing(null);
+      showToast("투데이노트가 등록되고 LinkPick 숏링크가 자동 결합되었습니다.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -227,14 +285,15 @@ export default function TodayNoteQuickCapture() {
 
         <button
           type="button"
-          disabled={!canRegister}
+          disabled={!canRegister || isSaving}
           onClick={handleRegister}
           className={`w-full flex items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-bold transition-all ${
-            !canRegister
+            !canRegister || isSaving
               ? "bg-slate-100 text-slate-400 cursor-not-allowed"
               : "bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.99]"
           }`}
         >
+          {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
           투데이노트 등록하기
         </button>
       </section>

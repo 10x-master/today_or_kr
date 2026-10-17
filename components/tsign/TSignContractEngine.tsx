@@ -19,8 +19,37 @@ import {
   X,
   Loader2,
 } from "lucide-react";
+import { getCurrentAuthUser } from "@/lib/auth/kakaoAuth";
+import type { TsignContract, TsignContractType } from "@/types/tsign";
 
 type TemplateId = "PART_TIME" | "B2B_SUPPLY" | "OUTSOURCING";
+
+const TEMPLATE_TO_CONTRACT_TYPE: Record<TemplateId, TsignContractType> = {
+  PART_TIME: "LABOR_PART_TIME",
+  B2B_SUPPLY: "B2B_SUPPLY",
+  OUTSOURCING: "OUTSOURCING",
+};
+
+const CONTRACT_TYPE_TO_TEMPLATE: Partial<Record<TsignContractType, TemplateId>> = {
+  LABOR_PART_TIME: "PART_TIME",
+  B2B_SUPPLY: "B2B_SUPPLY",
+  OUTSOURCING: "OUTSOURCING",
+};
+
+function formatDate(iso?: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function toVaultEntry(contract: TsignContract): VaultEntry {
+  return {
+    id: contract.id,
+    title: contract.title,
+    template: CONTRACT_TYPE_TO_TEMPLATE[contract.contract_type] || "PART_TIME",
+    signedAt: formatDate(contract.employee_signed_at || contract.created_at),
+  };
+}
 
 interface ParsedFields {
   partyA: string;
@@ -66,11 +95,6 @@ const MOCK_PARSE_RESULT: ParsedFields = {
   workScope: "홀 서빙 및 포장 응대",
 };
 
-const MOCK_VAULT: VaultEntry[] = [
-  { id: "v1", title: "정자동 숯불화로구이 - 김지수 알바 근로계약서", template: "PART_TIME", signedAt: "2026.10.02" },
-  { id: "v2", title: "㈜상계유통 - 3분기 식자재 납품공급계약서", template: "B2B_SUPPLY", signedAt: "2026.09.18" },
-];
-
 export default function TSignContractEngine() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordSeconds, setRecordSeconds] = useState(0);
@@ -85,7 +109,10 @@ export default function TSignContractEngine() {
   const [phone, setPhone] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [isSigned, setIsSigned] = useState(false);
+  const [isSubmittingSign, setIsSubmittingSign] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [userId, setUserId] = useState("user-001");
+  const [vault, setVault] = useState<VaultEntry[]>([]);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -102,6 +129,21 @@ export default function TSignContractEngine() {
       if (timerRef.current) clearInterval(timerRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
+  }, []);
+
+  // 로그인 사용자 확인 후 본인의 전자보관함 계약서 목록 불러오기
+  useEffect(() => {
+    getCurrentAuthUser().then((user) => {
+      const resolvedId = user?.id || "user-001";
+      setUserId(resolvedId);
+      fetch(`/api/t-sign/contracts?user_id=${encodeURIComponent(resolvedId)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const contracts: TsignContract[] = data.contracts || [];
+          setVault(contracts.map(toVaultEntry));
+        })
+        .catch(() => {});
+    });
   }, []);
 
   const startRecording = async () => {
@@ -160,13 +202,50 @@ export default function TSignContractEngine() {
     }, 1400);
   };
 
-  const handleConfirmSign = () => {
-    if (!agreed || !phone) {
+  const handleConfirmSign = async () => {
+    if (!agreed || !phone || !parsed || !selectedTemplate || isSubmittingSign) {
       showToast("상대방 연락처와 본인인증 동의가 필요합니다.");
       return;
     }
-    setIsSigned(true);
-    showToast("전자 체결이 완료되었습니다. 전자보관함에 저장됐어요.");
+
+    setIsSubmittingSign(true);
+    try {
+      const createRes = await fetch("/api/t-sign/contracts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          created_by_user_id: userId,
+          contract_type: TEMPLATE_TO_CONTRACT_TYPE[selectedTemplate],
+          title: `${parsed.partyA.split(" ")[0]} - ${parsed.partyB} 계약서`,
+          employer_name: parsed.partyA,
+          employee_name: parsed.partyB,
+          employee_phone: phone,
+          contract_body: { rate: parsed.rate, period: parsed.period, workScope: parsed.workScope },
+          ai_parsed_fields: parsed,
+        }),
+      });
+      const createData = await createRes.json();
+      const draftContract: TsignContract | undefined = createData.contract;
+      if (!draftContract) {
+        showToast("계약서 생성에 실패했습니다. 다시 시도해주세요.");
+        return;
+      }
+
+      const signRes = await fetch(`/api/t-sign/contracts/${draftContract.id}/sign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ identity_provider: "KAKAO", employee_phone: phone }),
+      });
+      const signData = await signRes.json();
+      const signedContract: TsignContract = signData.contract || draftContract;
+
+      const entry = toVaultEntry(signedContract);
+      setVault((prev) => [entry, ...prev]);
+      setIsSigned(true);
+      showToast("전자 체결이 완료되었습니다. 전자보관함에 저장됐어요.");
+    } finally {
+      setIsSubmittingSign(false);
+    }
   };
 
   const resetFlow = () => {
@@ -376,9 +455,11 @@ export default function TSignContractEngine() {
           <button
             type="button"
             onClick={handleConfirmSign}
-            className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-white font-bold text-sm py-3 hover:bg-blue-700 transition-colors active:scale-[0.99]"
+            disabled={isSubmittingSign}
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-white font-bold text-sm py-3 hover:bg-blue-700 transition-colors active:scale-[0.99] disabled:opacity-50"
           >
-            <ShieldCheck className="h-4 w-4" /> 본인인증 원클릭 동의 체결
+            {isSubmittingSign ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+            본인인증 원클릭 동의 체결
           </button>
         </section>
       )}
@@ -417,18 +498,10 @@ export default function TSignContractEngine() {
           <Archive className="h-4 w-4 text-slate-500" /> 전자보관함
         </h2>
         <div className="space-y-2">
-          {(isSigned
-            ? [
-                {
-                  id: "new",
-                  title: `${parsed?.partyA.split(" ")[0] ?? "신규"} - ${parsed?.partyB ?? ""} 계약서`,
-                  template: selectedTemplate ?? "PART_TIME",
-                  signedAt: "방금 전",
-                } as VaultEntry,
-                ...MOCK_VAULT,
-              ]
-            : MOCK_VAULT
-          ).map((v) => (
+          {vault.length === 0 && (
+            <p className="text-[11px] text-slate-400">아직 전자 체결된 계약서가 없습니다.</p>
+          )}
+          {vault.map((v) => (
             <div
               key={v.id}
               className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5"

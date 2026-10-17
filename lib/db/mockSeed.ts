@@ -14,6 +14,8 @@ import type {
   LocalAd,
 } from "@/types/officialNotice";
 import type { AppPwaSetting } from "@/types/pwa";
+import type { TnoteCard } from "@/types/note";
+import type { TsignContract } from "@/types/tsign";
 import type {
   DiaryBrand,
   DiaryEvent,
@@ -2648,6 +2650,95 @@ export const mockQuoteRequests: QuoteRequest[] = [
     payment_requested: false,
     created_at: "2026-10-16T09:00:00.000Z",
     updated_at: "2026-10-16T09:00:00.000Z",
+  },
+];
+
+/**
+ * t.노트(/t-note) 2-Tap 캡처 카드 시드 (tnote_cards). 화면의 초기 상태와 동일하게
+ * 빈 배열로 시작하며, 사용자가 직접 등록한 카드만 쌓인다.
+ */
+export const mockTnoteCards: TnoteCard[] = [];
+
+/**
+ * t.싸인(/t-sign) 전자보관함 시드 (tsign_contracts) — TSignContractEngine.tsx의
+ * 기존 하드코딩 MOCK_VAULT 2건과 동일한 내용으로, API 전환 후에도 동일하게 보이도록 유지.
+ */
+export const mockTsignContracts: TsignContract[] = [
+  {
+    id: "tsign-v1",
+    tenant_id: null,
+    workforce_id: null,
+    created_by_user_id: "user-001",
+    contract_type: "LABOR_PART_TIME",
+    title: "정자동 숯불화로구이 - 김지수 알바 근로계약서",
+    employer_name: "정자동 숯불화로구이 본점 (대표 최성호)",
+    employer_sign_svg: null,
+    employer_signed_at: "2026-10-02T10:00:00.000Z",
+    employee_name: "김지수",
+    employee_phone: "010-2222-3333",
+    employee_sign_svg: null,
+    employee_signed_at: "2026-10-02T10:05:00.000Z",
+    contract_body: {
+      rate: "시급 10,500원",
+      period: "2026.11.01 ~ 2027.04.30 (주 4일, 1일 6시간)",
+      workScope: "홀 서빙 및 포장 응대",
+    },
+    contract_pdf_url: null,
+    sha256_hash: "a1b2c3d4e5f60718293a4b5c6d7e8f901a2b3c4d5e6f708192a3b4c5d6e7f80",
+    status: "SIGNED",
+    effective_start_date: "2026-11-01",
+    effective_end_date: "2027-04-30",
+    source_audio_url: null,
+    ai_parsed_fields: {
+      partyA: "정자동 숯불화로구이 본점 (대표 최성호)",
+      partyB: "김지수",
+      rate: "시급 10,500원",
+      period: "2026.11.01 ~ 2027.04.30 (주 4일, 1일 6시간)",
+      workScope: "홀 서빙 및 포장 응대",
+    },
+    identity_verify_provider: "KAKAO",
+    identity_verify_status: "VERIFIED",
+    vault_stored_at: "2026-10-02T10:05:30.000Z",
+    created_at: "2026-10-02T09:50:00.000Z",
+    updated_at: "2026-10-02T10:05:30.000Z",
+  },
+  {
+    id: "tsign-v2",
+    tenant_id: null,
+    workforce_id: null,
+    created_by_user_id: "user-001",
+    contract_type: "B2B_SUPPLY",
+    title: "㈜상계유통 - 3분기 식자재 납품공급계약서",
+    employer_name: "㈜상계유통",
+    employer_sign_svg: null,
+    employer_signed_at: "2026-09-18T14:00:00.000Z",
+    employee_name: "거래처 대표",
+    employee_phone: "010-5555-7777",
+    employee_sign_svg: null,
+    employee_signed_at: "2026-09-18T14:10:00.000Z",
+    contract_body: {
+      rate: "분기 단가 협의가",
+      period: "2026.07.01 ~ 2026.09.30",
+      workScope: "식자재 정기 납품",
+    },
+    contract_pdf_url: null,
+    sha256_hash: "f1e2d3c4b5a69788796a5b4c3d2e1f092a1b0c9d8e7f6a5b4c3d2e1f0a9b8c7",
+    status: "SIGNED",
+    effective_start_date: "2026-07-01",
+    effective_end_date: "2026-09-30",
+    source_audio_url: null,
+    ai_parsed_fields: {
+      partyA: "㈜상계유통",
+      partyB: "거래처 대표",
+      rate: "분기 단가 협의가",
+      period: "2026.07.01 ~ 2026.09.30",
+      workScope: "식자재 정기 납품",
+    },
+    identity_verify_provider: "NAVER",
+    identity_verify_status: "VERIFIED",
+    vault_stored_at: "2026-09-18T14:10:30.000Z",
+    created_at: "2026-09-18T13:50:00.000Z",
+    updated_at: "2026-09-18T14:10:30.000Z",
   },
 ];
 

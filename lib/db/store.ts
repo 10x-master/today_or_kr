@@ -23,6 +23,8 @@ import {
   mockCatalogCategories,
   mockDiaryProducts,
   mockQuoteRequests,
+  mockTnoteCards,
+  mockTsignContracts,
 } from "@/lib/db/mockSeed";
 import type {
   LocalPickCategory,
@@ -64,6 +66,8 @@ import type {
 } from "@/types/diary";
 import type { CatalogCategory, DiaryProduct, QuoteItem, QuoteRequest, QuoteStatus } from "@/types/quote";
 import { normalizeImageUrl, suggestSellPrice } from "@/lib/diary/catalogUtils";
+import type { TnoteCard } from "@/types/note";
+import type { TsignContract } from "@/types/tsign";
 
 const AUTO_BLIND_THRESHOLD = 3;
 
@@ -1276,6 +1280,102 @@ export function markQuotePaymentRequested(id: string): QuoteRequest | null {
   quote.status = "PAID";
   quote.updated_at = new Date().toISOString();
   return quote;
+}
+
+// ============================================================================
+// t.노트(tnote_cards) — Google Keep 스타일 2-Tap 캡처 카드
+// ============================================================================
+
+export function getTnoteCards(filter?: { userId?: string; publicFeedOnly?: boolean }): TnoteCard[] {
+  return mockTnoteCards.filter((card) => {
+    if (filter?.publicFeedOnly) return card.is_public_feed === true;
+    if (filter?.userId && card.user_id !== filter.userId) return false;
+    return true;
+  });
+}
+
+export function createTnoteCard(input: Omit<TnoteCard, "id" | "created_at" | "updated_at">): TnoteCard {
+  const card: TnoteCard = {
+    ...input,
+    id: crypto.randomUUID(),
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  mockTnoteCards.unshift(card);
+  return card;
+}
+
+export function updateTnoteCard(id: string, patch: Partial<TnoteCard>): TnoteCard | null {
+  const card = mockTnoteCards.find((c) => c.id === id);
+  if (!card) return null;
+  Object.assign(card, patch, { updated_at: new Date().toISOString() });
+  return card;
+}
+
+export function deleteTnoteCard(id: string): boolean {
+  const index = mockTnoteCards.findIndex((c) => c.id === id);
+  if (index < 0) return false;
+  mockTnoteCards.splice(index, 1);
+  return true;
+}
+
+// ============================================================================
+// t.싸인(tsign_contracts) — 음성 조판 전자계약 · 간편인증 · 전자금고 보관
+// ============================================================================
+
+export function getTsignContracts(filter?: { userId?: string }): TsignContract[] {
+  return mockTsignContracts.filter((c) => {
+    if (filter?.userId && c.created_by_user_id !== filter.userId) return false;
+    return true;
+  });
+}
+
+export function getTsignContractById(id: string): TsignContract | null {
+  return mockTsignContracts.find((c) => c.id === id) || null;
+}
+
+export function createTsignContract(
+  input: Omit<TsignContract, "id" | "created_at" | "updated_at" | "status" | "identity_verify_status" | "vault_stored_at"> & {
+    status?: TsignContract["status"];
+  }
+): TsignContract {
+  const contract: TsignContract = {
+    ...input,
+    id: crypto.randomUUID(),
+    status: input.status || "DRAFT",
+    identity_verify_status: "PENDING",
+    vault_stored_at: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+  mockTsignContracts.unshift(contract);
+  return contract;
+}
+
+export function updateTsignContract(id: string, patch: Partial<TsignContract>): TsignContract | null {
+  const contract = mockTsignContracts.find((c) => c.id === id);
+  if (!contract) return null;
+  Object.assign(contract, patch, { updated_at: new Date().toISOString() });
+  return contract;
+}
+
+/** 카카오/네이버 간편인증 동의 체결 — 서명 완료 + 전자금고 보관 동시 처리 */
+export function signTsignContract(
+  id: string,
+  input: { identityProvider: "KAKAO" | "NAVER"; employeePhone?: string }
+): TsignContract | null {
+  const contract = mockTsignContracts.find((c) => c.id === id);
+  if (!contract) return null;
+  const now = new Date().toISOString();
+  contract.status = "SIGNED";
+  contract.identity_verify_provider = input.identityProvider;
+  contract.identity_verify_status = "VERIFIED";
+  contract.employee_phone = input.employeePhone || contract.employee_phone;
+  contract.employer_signed_at = contract.employer_signed_at || now;
+  contract.employee_signed_at = now;
+  contract.vault_stored_at = now;
+  contract.updated_at = now;
+  return contract;
 }
 
 

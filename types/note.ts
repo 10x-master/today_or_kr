@@ -30,3 +30,39 @@ export interface AudioProcessingState {
   transcriptionProgress?: number;
   errorMessage?: string | null;
 }
+
+/**
+ * t.노트(/t-note) Google Keep 스타일 카드 — DB 테이블 tnote_cards 매핑.
+ * 2-Tap(사진+음성) 캡처로 생성되며 LinkPick 숏링크가 자동 결합된다.
+ */
+export interface TnoteCard {
+  id: string;
+  tenant_id?: string | null;
+  user_id?: string | null;
+  card_type: "VOICE" | "LOCATION" | "TODO" | "NOTE";
+  title: string;
+  content?: string;
+  voice_audio_url?: string | null;
+  voice_duration_sec?: number | null;
+  location_address?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  todo_items?: Array<{ text: string; done: boolean }>;
+  color?: string;
+  is_pinned?: boolean;
+  is_archived?: boolean;
+  order_index?: number;
+  tags?: string[];
+  /** 기본값 true — 본인만 보이는 비공개 카드 */
+  is_private?: boolean;
+  /** true면 /t-note 공개 피드(투데이노트 숏링크 피드)에 노출 */
+  is_public_feed?: boolean;
+  /** true면 공개 피드에서 작성자 신원을 숨김 */
+  is_anonymous?: boolean;
+  photo_url?: string | null;
+  youtube_url?: string | null;
+  short_link?: string | null;
+  sourcing_item?: { id: string; name: string; price: string; emoji: string } | null;
+  created_at?: string;
+  updated_at?: string;
+}
