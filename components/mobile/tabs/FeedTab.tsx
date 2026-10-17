@@ -1,7 +1,8 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
-import { AlertTriangle, HeartHandshake, Pin, Plus, Sparkles } from "lucide-react";
+import { AlertTriangle, HeartHandshake, Pin, Sparkles } from "lucide-react";
+import FloatingWriteButton from "@/components/common/FloatingWriteButton";
 import ComposeModal from "@/components/mobile/ComposeModal";
 import OfficialNoticeFactFeed from "@/components/mobile/OfficialNoticeFactFeed";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
@@ -304,14 +305,7 @@ export default function FeedTab({
         </>
       )}
 
-      <button
-        type="button"
-        onClick={() => setComposeOpen(true)}
-        aria-label="소식 등록하기"
-        className="fixed bottom-20 right-4 z-30 flex h-13 w-13 items-center justify-center rounded-full bg-amber-400 text-zinc-900 shadow-lg transition-colors hover:bg-amber-300 sm:right-6"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+      <FloatingWriteButton label="글쓰기" onClick={() => setComposeOpen(true)} />
 
       {composeOpen && (
         <ComposeModal

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { UnifiedHomeReturnAnchor } from "@/components/Navigation";
 import { TMark } from "@/components/brand/TodayLogo";
+import FloatingWriteButton from "@/components/common/FloatingWriteButton";
 import TodayNoteQuickCapture from "@/components/tnote/TodayNoteQuickCapture";
 import UserAccountDropdown from "@/components/layout/UserAccountDropdown";
 import KakaoLoginModal from "@/components/auth/KakaoLoginModal";
@@ -52,6 +53,12 @@ export default function TNotePage() {
       <main className="max-w-3xl mx-auto px-4 py-5">
         <TodayNoteQuickCapture />
       </main>
+
+      {/* 글쓰기 영역(캡처 카드)은 이미 페이지 상단에 있으므로, 버튼은 그 위치로 스크롤시킨다. */}
+      <FloatingWriteButton
+        label="글쓰기"
+        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      />
 
       <KakaoLoginModal
         isOpen={isLoginModalOpen}

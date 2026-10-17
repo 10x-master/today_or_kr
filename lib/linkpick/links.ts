@@ -45,6 +45,34 @@ export const LINK_TITLE_MAX = 40;
 export const LINK_DESCRIPTION_MAX = 80;
 export const LINK_URL_MAX = 500;
 
+// 일반 회원 어뷰징 방지용 생성 개수 제한. 쿠팡 제휴 상품 카드와 그 외 외부 링크를 따로 센다.
+// DB에는 20261027120000_user_links_creation_limit.sql 트리거로 동일한 값이 적용되어 있다.
+export const LINKPICK_COUPANG_CARD_LIMIT = 30;
+export const LINKPICK_EXTERNAL_LINK_LIMIT = 50;
+
+export function countLinksByGroup(links: Pick<UserLink, "platform_type">[]): {
+  coupangCount: number;
+  externalCount: number;
+} {
+  let coupangCount = 0;
+  let externalCount = 0;
+  for (const link of links) {
+    if (link.platform_type === "coupang") coupangCount += 1;
+    else externalCount += 1;
+  }
+  return { coupangCount, externalCount };
+}
+
+// 다음에 추가할 링크의 platform이 이미 한도에 닿아 있는지 확인한다.
+export function isLinkLimitReached(
+  platform: PlatformType,
+  counts: { coupangCount: number; externalCount: number }
+): boolean {
+  return platform === "coupang"
+    ? counts.coupangCount >= LINKPICK_COUPANG_CARD_LIMIT
+    : counts.externalCount >= LINKPICK_EXTERNAL_LINK_LIMIT;
+}
+
 export function isPlatformType(value: unknown): value is PlatformType {
   return typeof value === "string" && (PLATFORM_TYPES as readonly string[]).includes(value);
 }

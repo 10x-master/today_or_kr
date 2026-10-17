@@ -5,7 +5,11 @@ import {
   LINK_DESCRIPTION_MAX,
   LINK_TITLE_MAX,
   LINK_URL_MAX,
+  LINKPICK_COUPANG_CARD_LIMIT,
+  LINKPICK_EXTERNAL_LINK_LIMIT,
   PLATFORM_TYPES,
+  countLinksByGroup,
+  isLinkLimitReached,
   isPlatformType,
   isSafeHttpUrl,
   normalizeUrl,
@@ -103,6 +107,7 @@ export function LinkManager() {
       <LinkForm
         userId={userId}
         nextSortOrder={links.length}
+        counts={countLinksByGroup(links)}
         onSaved={() => setReloadKey((key) => key + 1)}
       />
 
@@ -128,10 +133,12 @@ export function LinkManager() {
 function LinkForm({
   userId,
   nextSortOrder,
+  counts,
   onSaved,
 }: {
   userId: string;
   nextSortOrder: number;
+  counts: { coupangCount: number; externalCount: number };
   onSaved: () => void;
 }) {
   const [title, setTitle] = useState("");
@@ -219,6 +226,15 @@ function LinkForm({
     setErrors(nextErrors);
     setSubmitError("");
     if (Object.keys(nextErrors).length > 0) return;
+
+    if (isLinkLimitReached(platform, counts)) {
+      setSubmitError(
+        platform === "coupang"
+          ? `쿠팡 제휴 상품 카드는 최대 ${LINKPICK_COUPANG_CARD_LIMIT}개까지 등록할 수 있습니다.`
+          : `외부 링크는 최대 ${LINKPICK_EXTERNAL_LINK_LIMIT}개까지 등록할 수 있습니다.`
+      );
+      return;
+    }
 
     setPending(true);
     const { error } = await client.from("user_links").insert({
@@ -366,6 +382,10 @@ function LinkForm({
               </option>
             ))}
           </select>
+          <p className="mt-1 text-xs text-slate-400">
+            쿠팡 상품 카드 {counts.coupangCount}/{LINKPICK_COUPANG_CARD_LIMIT} · 외부 링크{" "}
+            {counts.externalCount}/{LINKPICK_EXTERNAL_LINK_LIMIT}
+          </p>
         </div>
 
         <div>
@@ -385,8 +405,12 @@ function LinkForm({
 
       {submitError && <p className={errorText}>{submitError}</p>}
 
-      <button type="submit" disabled={pending} className={`${primaryButtonClass("md")} w-full sm:w-auto sm:self-start`}>
-        {pending ? "저장 중..." : "링크 추가"}
+      <button
+        type="submit"
+        disabled={pending || isLinkLimitReached(platform, counts)}
+        className={`${primaryButtonClass("md")} w-full sm:w-auto sm:self-start`}
+      >
+        {pending ? "저장 중..." : isLinkLimitReached(platform, counts) ? "등록 한도 초과" : "링크 추가"}
       </button>
     </form>
   );
