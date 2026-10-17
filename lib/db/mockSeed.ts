@@ -17,6 +17,7 @@ import type { AppPwaSetting } from "@/types/pwa";
 import type { TnoteCard } from "@/types/note";
 import type { TsignContract } from "@/types/tsign";
 import type { TcheckLog } from "@/types/tcheck";
+import type { TsalesLead, TsalesActivityLog } from "@/types/tsales";
 import type {
   DiaryBrand,
   DiaryEvent,
@@ -2748,6 +2749,13 @@ export const mockTsignContracts: TsignContract[] = [
  * 화면의 초기 상태와 동일하게 빈 배열로 시작하며, 사용자가 진단을 돌릴 때마다 쌓인다.
  */
 export const mockTcheckLogs: TcheckLog[] = [];
+
+/**
+ * t.세일즈(/t-sales) 영업 리드 & 활동 로그 시드 (tsales_leads / tsales_activity_logs).
+ * 화면의 초기 상태와 동일하게 빈 배열로 시작하며, 영업 담당자가 직접 리드를 등록할 때마다 쌓인다.
+ */
+export const mockTsalesLeads: TsalesLead[] = [];
+export const mockTsalesActivityLogs: TsalesActivityLog[] = [];
 
 
 

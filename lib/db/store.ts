@@ -26,6 +26,8 @@ import {
   mockTnoteCards,
   mockTsignContracts,
   mockTcheckLogs,
+  mockTsalesLeads,
+  mockTsalesActivityLogs,
 } from "@/lib/db/mockSeed";
 import type {
   LocalPickCategory,
@@ -70,6 +72,7 @@ import { normalizeImageUrl, suggestSellPrice } from "@/lib/diary/catalogUtils";
 import type { TnoteCard } from "@/types/note";
 import type { TsignContract } from "@/types/tsign";
 import type { TcheckLog } from "@/types/tcheck";
+import type { TsalesLead, TsalesActivityLog, TsalesLeadStatus } from "@/types/tsales";
 
 const AUTO_BLIND_THRESHOLD = 3;
 
@@ -1394,5 +1397,45 @@ export function createTcheckLog(input: Omit<TcheckLog, "id" | "created_at">): Tc
     created_at: new Date().toISOString(),
   };
   mockTcheckLogs.unshift(log);
+  return log;
+}
+
+export function getTsalesLeads(filter?: { userId?: string; status?: TsalesLeadStatus }): TsalesLead[] {
+  return mockTsalesLeads.filter((lead) => {
+    if (filter?.userId && lead.created_by_user_id !== filter.userId) return false;
+    if (filter?.status && lead.status !== filter.status) return false;
+    return true;
+  });
+}
+
+export function getTsalesLeadById(id: string): TsalesLead | null {
+  return mockTsalesLeads.find((lead) => lead.id === id) || null;
+}
+
+export function createTsalesLead(input: Omit<TsalesLead, "id" | "created_at" | "updated_at">): TsalesLead {
+  const now = new Date().toISOString();
+  const lead: TsalesLead = { ...input, id: crypto.randomUUID(), created_at: now, updated_at: now };
+  mockTsalesLeads.unshift(lead);
+  return lead;
+}
+
+export function updateTsalesLead(id: string, patch: Partial<TsalesLead>): TsalesLead | null {
+  const lead = mockTsalesLeads.find((l) => l.id === id);
+  if (!lead) return null;
+  Object.assign(lead, patch, { updated_at: new Date().toISOString() });
+  return lead;
+}
+
+export function getTsalesActivities(leadId: string): TsalesActivityLog[] {
+  return mockTsalesActivityLogs
+    .filter((a) => a.lead_id === leadId)
+    .sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+}
+
+export function createTsalesActivity(
+  input: Omit<TsalesActivityLog, "id" | "created_at">
+): TsalesActivityLog {
+  const log: TsalesActivityLog = { ...input, id: crypto.randomUUID(), created_at: new Date().toISOString() };
+  mockTsalesActivityLogs.unshift(log);
   return log;
 }
