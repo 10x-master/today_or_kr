@@ -14,6 +14,12 @@ const VALID_CONTRACT_TYPES: TsignContractType[] = [
   "OUTSOURCING",
 ];
 
+// 현장 음성 녹음/통화 파일을 data URL로 받아 그대로 저장한다 (tnote_cards의 photo_url과 동일한 방식).
+// DB 행이 과도하게 커지지 않도록 용량을 제한한다.
+const MAX_AUDIO_DATA_URL_LENGTH = 2_000_000;
+// MediaRecorder가 만드는 "data:audio/webm;codecs=opus;base64,..." 같은 부가 파라미터도 허용한다.
+const AUDIO_DATA_URL_PATTERN = /^data:audio\/[a-z0-9.+-]+(;[-\w=]+)*;base64,[A-Za-z0-9+/]+=*$/i;
+
 /**
  * t.싸인(tsign_contracts) — 음성 조판 전자계약 전자보관함 조회/초안 생성
  * GET  /api/t-sign/contracts?user_id=user-001
@@ -68,6 +74,17 @@ export async function POST(request: NextRequest) {
     if (!title || !employer_name || !employee_name || !employee_phone) {
       return NextResponse.json(
         { error: "title, employer_name, employee_name, employee_phone은 필수입니다." },
+        { status: 400 }
+      );
+    }
+    if (
+      source_audio_url &&
+      (typeof source_audio_url !== "string" ||
+        source_audio_url.length > MAX_AUDIO_DATA_URL_LENGTH ||
+        !AUDIO_DATA_URL_PATTERN.test(source_audio_url))
+    ) {
+      return NextResponse.json(
+        { error: "음성 파일 형식이 올바르지 않거나 용량이 너무 큽니다." },
         { status: 400 }
       );
     }

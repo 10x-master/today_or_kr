@@ -48,8 +48,23 @@ function toVaultEntry(contract: TsignContract): VaultEntry {
     title: contract.title,
     template: CONTRACT_TYPE_TO_TEMPLATE[contract.contract_type] || "PART_TIME",
     signedAt: formatDate(contract.employee_signed_at || contract.created_at),
+    identityProvider: contract.identity_verify_provider,
+    vaultStoredAt: contract.vault_stored_at,
   };
 }
+
+const PARSED_FIELD_LABELS: Record<keyof ParsedFields, string> = {
+  partyA: "갑(발행자)",
+  partyB: "을(상대방)",
+  rate: "시급·단가",
+  period: "근무기간",
+  workScope: "업무내용",
+};
+
+const IDENTITY_PROVIDER_LABEL: Record<"KAKAO" | "NAVER", string> = {
+  KAKAO: "카카오",
+  NAVER: "네이버",
+};
 
 interface ParsedFields {
   partyA: string;
@@ -64,6 +79,8 @@ interface VaultEntry {
   title: string;
   template: TemplateId;
   signedAt: string;
+  identityProvider?: TsignContract["identity_verify_provider"];
+  vaultStoredAt?: string | null;
 }
 
 const TEMPLATES: Array<{ id: TemplateId; icon: typeof FileText; title: string; desc: string }> = [
@@ -100,6 +117,7 @@ export default function TSignContractEngine() {
   const [recordSeconds, setRecordSeconds] = useState(0);
   const [recordedLabel, setRecordedLabel] = useState<string | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [audioDataUrl, setAudioDataUrl] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
   const [isParsing, setIsParsing] = useState(false);
@@ -110,6 +128,7 @@ export default function TSignContractEngine() {
   const [agreed, setAgreed] = useState(false);
   const [isSigned, setIsSigned] = useState(false);
   const [isSubmittingSign, setIsSubmittingSign] = useState(false);
+  const [signedMeta, setSignedMeta] = useState<{ provider: string; vaultStoredAt: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [userId, setUserId] = useState("user-001");
   const [vault, setVault] = useState<VaultEntry[]>([]);
@@ -118,6 +137,7 @@ export default function TSignContractEngine() {
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -152,10 +172,21 @@ export default function TSignContractEngine() {
       streamRef.current = stream;
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRef.current, { type: recorder.mimeType || "audio/webm" });
+        const reader = new FileReader();
+        reader.onload = () => setAudioDataUrl(typeof reader.result === "string" ? reader.result : null);
+        reader.readAsDataURL(blob);
+      };
       recorder.start();
       setIsRecording(true);
       setRecordSeconds(0);
       setUploadedFile(null);
+      setAudioDataUrl(null);
 
       timerRef.current = setInterval(() => {
         setRecordSeconds((prev) => {
@@ -188,6 +219,10 @@ export default function TSignContractEngine() {
     }
     setUploadedFile(file);
     setRecordedLabel(null);
+    setAudioDataUrl(null);
+    const reader = new FileReader();
+    reader.onload = () => setAudioDataUrl(typeof reader.result === "string" ? reader.result : null);
+    reader.readAsDataURL(file);
   };
 
   const canParse = !!recordedLabel || !!uploadedFile;
@@ -202,7 +237,7 @@ export default function TSignContractEngine() {
     }, 1400);
   };
 
-  const handleConfirmSign = async () => {
+  const handleConfirmSign = async (identityProvider: "KAKAO" | "NAVER") => {
     if (!agreed || !phone || !parsed || !selectedTemplate || isSubmittingSign) {
       showToast("상대방 연락처와 본인인증 동의가 필요합니다.");
       return;
@@ -222,25 +257,34 @@ export default function TSignContractEngine() {
           employee_phone: phone,
           contract_body: { rate: parsed.rate, period: parsed.period, workScope: parsed.workScope },
           ai_parsed_fields: parsed,
+          source_audio_url: audioDataUrl,
         }),
       });
-      const createData = await createRes.json();
-      const draftContract: TsignContract | undefined = createData.contract;
-      if (!draftContract) {
-        showToast("계약서 생성에 실패했습니다. 다시 시도해주세요.");
+      const createData = await createRes.json().catch(() => null);
+      const draftContract: TsignContract | undefined = createData?.contract;
+      if (!createRes.ok || !draftContract) {
+        showToast(createData?.error || "계약서 생성에 실패했습니다. 다시 시도해주세요.");
         return;
       }
 
       const signRes = await fetch(`/api/t-sign/contracts/${draftContract.id}/sign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identity_provider: "KAKAO", employee_phone: phone }),
+        body: JSON.stringify({ identity_provider: identityProvider, employee_phone: phone }),
       });
-      const signData = await signRes.json();
-      const signedContract: TsignContract = signData.contract || draftContract;
+      const signData = await signRes.json().catch(() => null);
+      if (!signRes.ok || !signData?.contract) {
+        showToast("본인인증 체결에 실패했습니다. 다시 시도해주세요.");
+        return;
+      }
+      const signedContract: TsignContract = signData.contract;
 
       const entry = toVaultEntry(signedContract);
       setVault((prev) => [entry, ...prev]);
+      setSignedMeta({
+        provider: IDENTITY_PROVIDER_LABEL[identityProvider],
+        vaultStoredAt: signedContract.vault_stored_at || new Date().toISOString(),
+      });
       setIsSigned(true);
       showToast("전자 체결이 완료되었습니다. 전자보관함에 저장됐어요.");
     } finally {
@@ -253,9 +297,11 @@ export default function TSignContractEngine() {
     setSelectedTemplate(null);
     setRecordedLabel(null);
     setUploadedFile(null);
+    setAudioDataUrl(null);
     setPhone("");
     setAgreed(false);
     setIsSigned(false);
+    setSignedMeta(null);
   };
 
   return (
@@ -358,16 +404,14 @@ export default function TSignContractEngine() {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {([
-              ["당사자", parsed.partyA + " / " + parsed.partyB],
-              ["시급·단가", parsed.rate],
-              ["근무기간", parsed.period],
-              ["업무내용", parsed.workScope],
-            ] as const).map(([label, value]) => (
-              <label key={label} className="space-y-1 block">
-                <span className="text-[11px] font-bold text-slate-500">{label}</span>
+            {(Object.keys(PARSED_FIELD_LABELS) as Array<keyof ParsedFields>).map((key) => (
+              <label key={key} className="space-y-1 block">
+                <span className="text-[11px] font-bold text-slate-500">{PARSED_FIELD_LABELS[key]}</span>
                 <input
-                  defaultValue={value}
+                  value={parsed[key]}
+                  onChange={(e) =>
+                    setParsed((prev) => (prev ? { ...prev, [key]: e.target.value } : prev))
+                  }
                   className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-900 focus:border-blue-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-100"
                 />
               </label>
@@ -452,15 +496,27 @@ export default function TSignContractEngine() {
             </span>
           </label>
 
-          <button
-            type="button"
-            onClick={handleConfirmSign}
-            disabled={isSubmittingSign}
-            className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 text-white font-bold text-sm py-3 hover:bg-blue-700 transition-colors active:scale-[0.99] disabled:opacity-50"
-          >
-            {isSubmittingSign ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-            본인인증 원클릭 동의 체결
-          </button>
+          <p className="text-[11px] font-bold text-slate-500 pt-1">간편인증 수단을 선택해 체결하세요</p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => handleConfirmSign("KAKAO")}
+              disabled={isSubmittingSign}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-amber-400 text-amber-950 font-bold text-sm py-3 hover:bg-amber-300 transition-colors active:scale-[0.99] disabled:opacity-50"
+            >
+              {isSubmittingSign ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+              카카오 인증 체결
+            </button>
+            <button
+              type="button"
+              onClick={() => handleConfirmSign("NAVER")}
+              disabled={isSubmittingSign}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-[#03C75A] text-white font-bold text-sm py-3 hover:brightness-110 transition-colors active:scale-[0.99] disabled:opacity-50"
+            >
+              {isSubmittingSign ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+              네이버 인증 체결
+            </button>
+          </div>
         </section>
       )}
 
@@ -473,6 +529,12 @@ export default function TSignContractEngine() {
           <p className="text-xs text-emerald-700">
             계약서가 전자서명되어 양 당사자 전자보관함에 저장되었습니다.
           </p>
+          {signedMeta && (
+            <p className="flex items-center gap-1 text-[11px] font-semibold text-emerald-800">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              {signedMeta.provider} 간편인증 완료 · 전자금고 보관 완료 ({formatDate(signedMeta.vaultStoredAt)})
+            </p>
+          )}
           <div className="flex gap-2">
             <button
               type="button"
@@ -509,6 +571,11 @@ export default function TSignContractEngine() {
               <div className="flex items-center gap-2 min-w-0">
                 <FileText className="h-4 w-4 text-slate-400 shrink-0" />
                 <span className="text-xs font-semibold text-slate-800 truncate">{v.title}</span>
+                {v.identityProvider && v.identityProvider !== "NONE" && (
+                  <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                    {IDENTITY_PROVIDER_LABEL[v.identityProvider]}
+                  </span>
+                )}
               </div>
               <span className="text-[10.5px] text-slate-400 shrink-0 ml-2">{v.signedAt}</span>
             </div>
